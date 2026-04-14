@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing Opportunities</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Pricing</p>
+        <h1>Historical Opportunities</h1>
+        <p class="subtext">
+          Search by opportunity name or ID, then choose Details or Reprice.
+        </p>
+      </div>
+      <nav class="top-nav">
+        <a class="nav-link" href="./index.html">⌂ Home</a>
+        <a class="nav-link active" href="./history.html">◱ Opportunities</a>
+      </nav>
+    </header>
+
+    <div class="grid one-col">
+      <!-- New opportunity action is separated above the search panel for better visibility. -->
+      <section class="card">
+        <div class="card-header">
+          <h2>✦ Create a New Opportunity</h2>
+          <a class="nav-link primary-link" href="./new-quote.html">＋ New Opportunity</a>
+        </div>
+        <p class="subtext">
+          Create a new opportunity and request an algorithmic price by clicking the plus button.
+        </p>
+      </section>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>⌕ Search</h2>
+          <div id="statusBadge" class="status-badge idle">Idle</div>
+        </div>
+        <div class="form-grid cols-2">
+          <div class="field">
+            <label for="searchInput">Opportunity Name or ID</label>
+            <input id="searchInput" type="text" placeholder="Type to filter..." />
+          </div>
+          <div class="field search-actions">
+            <button id="refreshBtn" class="secondary" type="button">↻ Refresh</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card result-column">
+        <div class="card-header">
+          <h2>▤ Results</h2>
+          <div class="tag"><span id="resultCount">0</span> opportunities</div>
+        </div>
+
+        <div id="opportunitiesWrap" class="table-wrap">
+          <div class="empty-state">Loading...</div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="./assets/config.js"></script>
+  <script src="./assets/opportunities.js"></script>
+</body>
+</html>
