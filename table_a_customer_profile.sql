@@ -9,4 +9,4 @@ SELECT
     c.Status AS customer_status,
     c.CreditRating AS credit_rating,
     SYSUTCDATETIME() AS load_date_time
-FROM billing.Customer c;
+FROM billing.Customers c;
