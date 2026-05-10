@@ -8,8 +8,8 @@ SELECT
     svc.ServiceName AS service_name,
     svc.ServiceCategory AS service_category,
     s.Quantity AS quantity,
-    rp.StandardRate AS standard_rate,
-    s.CurrentRate AS current_rate,
+    rp.MonthlyBaseFee AS standard_rate,
+    rp.MonthlyBaseFee AS current_rate,
     SYSUTCDATETIME() AS load_date_time
 FROM billing.Customers c
 INNER JOIN billing.Subscriptions s
