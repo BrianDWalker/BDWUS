@@ -9,12 +9,12 @@ SELECT
     svc.ServiceName AS service_name,
     svc.ServiceCategory AS service_category,
     SYSUTCDATETIME() AS load_date_time
-FROM billing.Customer c
-INNER JOIN billing.Subscription s
+FROM billing.Customers c
+INNER JOIN billing.Subscriptions s
     ON c.CustomerId = s.CustomerId
-INNER JOIN billing.UsageEvent u
+INNER JOIN billing.UsageEvents u
     ON s.SubscriptionId = u.SubscriptionId
-INNER JOIN billing.RatePlan rp
+INNER JOIN billing.RatePlans rp
     ON s.RatePlanId = rp.RatePlanId
-INNER JOIN billing.Service svc
+INNER JOIN billing.Services svc
     ON rp.ServiceId = svc.ServiceId;
