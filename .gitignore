@@ -6,3 +6,5 @@ __pycache__/
 .vscode/
 
 .databricks
+web-ui/dist/
+web-ui/node_modules/
