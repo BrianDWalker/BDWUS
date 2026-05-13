@@ -1,0 +1,40 @@
+KOTF Player Commands + Controls Patch Manifest
+Date: 2026-04-20 (America/Chicago)
+
+Target app copy:
+/Users/brianwalker/Library/Application Support/Steam/steamapps/common/Jedi Academy/SWJKJA_KOTF_OUTCAST.app
+
+Patched archive:
+- /Users/brianwalker/Library/Application Support/Steam/steamapps/common/Jedi Academy/SWJKJA_KOTF_OUTCAST.app/Contents/KotF/zzzz_kotf_commands_menu_patch.pk3
+
+Latest fixes in this revision:
+1) Force command reliability
+- Replaced unsupported `give force 999` with `give force`.
+- Added `helpusobi 1` directly in command actions before execution for reliability.
+
+2) In-game controls access restored
+- Added `CONTROLS` button to KOTF system menu opening `IngameControls`.
+- Added `Open Controls` button to `PLAYER COMMANDS` page opening `IngameControls`.
+- Fixed syntax typo on inserted controls button (`visible` line) that could break UI behavior.
+
+3) Manual block option in controls
+- Added a bind row in `ui/ingamecontrols.menu` under attack controls:
+  - Label: `Manual Block`
+  - Bind command: `+button14`
+
+Current patch-modified files inside PK3:
+- ui/IngameKotFSystem.menu
+- ui/IngameKotFCommands.menu
+- ui/ingamecontrols.menu
+- ui/ingame.txt
+
+Compatibility note:
+- The controls option and bind are now present.
+- Full Movie Duels manual-block behavior can still depend on MD-specific gamecode/cvars/hud not present in KOTF.
+
+Rollback (safe):
+- Disable patch only:
+  mv "/Users/brianwalker/Library/Application Support/Steam/steamapps/common/Jedi Academy/SWJKJA_KOTF_OUTCAST.app/Contents/KotF/zzzz_kotf_commands_menu_patch.pk3" "/Users/brianwalker/Library/Application Support/Steam/steamapps/common/Jedi Academy/SWJKJA_KOTF_OUTCAST.app/Contents/KotF/zzzz_kotf_commands_menu_patch.pk3.disabled"
+
+Re-enable:
+  mv "/Users/brianwalker/Library/Application Support/Steam/steamapps/common/Jedi Academy/SWJKJA_KOTF_OUTCAST.app/Contents/KotF/zzzz_kotf_commands_menu_patch.pk3.disabled" "/Users/brianwalker/Library/Application Support/Steam/steamapps/common/Jedi Academy/SWJKJA_KOTF_OUTCAST.app/Contents/KotF/zzzz_kotf_commands_menu_patch.pk3"

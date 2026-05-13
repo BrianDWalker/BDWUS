@@ -29,227 +29,195 @@ def clamp(value: Decimal, min_value: Decimal, max_value: Decimal) -> Decimal:
     return max(min_value, min(value, max_value))
 
 
-def calculate_price(context: dict[str, Any], target_margin_pct: Decimal, manual_adjustment_pct: Decimal,
-                    competitor_price: Decimal | None, demand_index: Decimal | None,
-                    inventory_qty: int | None) -> PricingResult:
-    # Extract query/performance metrics
-    avg_duration = _as_decimal(context.get("avgDurationMinutes")) or Decimal("0")
-    avg_cpu = _as_decimal(context.get("avgCpuSeconds")) or Decimal("0")
-    avg_row_count = _as_decimal(context.get("avgRowCount")) or Decimal("0")
-    rows_inserted = _as_decimal(context.get("rowsInserted")) or Decimal("0")
-    rows_updated = _as_decimal(context.get("rowsUpdated")) or Decimal("0")
-    rows_deleted = _as_decimal(context.get("rowsDeleted")) or Decimal("0")
-    rows_merged = _as_decimal(context.get("rowsMerged")) or Decimal("0")
-    rows_queried = _as_decimal(context.get("rowsQueried")) or Decimal("0")
-    execution_count = _as_decimal(context.get("executionCount")) or Decimal("0")
-    
-    # Extract billing context signals
-    invoice_health_score = _as_decimal(context.get("invoiceHealthScore")) or Decimal("1.0")
-    payment_reliability_score = _as_decimal(context.get("paymentReliabilityScore")) or Decimal("1.0")
-    average_discount_pct = _as_decimal(context.get("averageDiscountPct")) or Decimal("0")
-    recent_usage_volume = _as_decimal(context.get("recentUsageVolume")) or Decimal("0")
-    usage_intensity = _as_decimal(context.get("usageIntensity")) or Decimal("0")
-    overdueInvoiceCount = context.get("overdueInvoiceCount") or 0
-    failedPaymentCount = context.get("failedPaymentCount") or 0
+def calculate_price(
+    context: dict[str, Any],
+    target_margin_pct: Decimal,
+    manual_adjustment_pct: Decimal,
+    competitor_price: Decimal | None,
+    demand_index: Decimal | None,
+    inventory_qty: int | None,
+    cost_per_unit: Decimal | None = None,
+    customer_type_input: str | None = None,
+    contract_term_months: int | None = None,
+) -> PricingResult:
+    def add_step(name: str, before: Decimal, after: Decimal, note: str, pct: Decimal | None = None):
+        breakdown.append(
+            {
+                "step": name,
+                "before": q(before),
+                "after": q(after),
+                "delta": q(after - before),
+                "adjustmentPct": q((pct or Decimal("0")) * Decimal("100"), "0.0001"),
+                "note": note,
+            }
+        )
 
-    workload_units = rows_queried + (rows_inserted * Decimal("1.15")) + (rows_updated * Decimal("1.10")) + (rows_deleted * Decimal("1.05")) + (rows_merged * Decimal("1.20"))
-    if workload_units == 0 and avg_row_count > 0:
-        workload_units = avg_row_count
+    def apply_pct_step(name: str, current_price: Decimal, pct: Decimal, note: str) -> Decimal:
+        updated_price = current_price * (ONE + pct)
+        add_step(name, current_price, updated_price, note, pct)
+        return updated_price
 
-    base_cost = (
-        avg_duration * Decimal("4.50")
-        + avg_cpu * Decimal("0.80")
-        + workload_units * Decimal("0.0025")
-        + execution_count * Decimal("0.03")
+    def fallback_cost_per_unit_from_context() -> Decimal:
+        base_list_price = _as_decimal(context.get("baseListPrice"))
+        if base_list_price and base_list_price > 0:
+            return base_list_price
+
+        avg_duration = _as_decimal(context.get("avgDurationMinutes")) or ZERO
+        avg_cpu = _as_decimal(context.get("avgCpuSeconds")) or ZERO
+        avg_row_count = _as_decimal(context.get("avgRowCount")) or ZERO
+        rows_queried = _as_decimal(context.get("rowsQueried")) or ZERO
+        rows_inserted = _as_decimal(context.get("rowsInserted")) or ZERO
+        rows_updated = _as_decimal(context.get("rowsUpdated")) or ZERO
+        rows_deleted = _as_decimal(context.get("rowsDeleted")) or ZERO
+        rows_merged = _as_decimal(context.get("rowsMerged")) or ZERO
+        execution_count = _as_decimal(context.get("executionCount")) or ZERO
+
+        workload_units = rows_queried + (rows_inserted * Decimal("1.15")) + (rows_updated * Decimal("1.10")) + (rows_deleted * Decimal("1.05")) + (rows_merged * Decimal("1.20"))
+        if workload_units == ZERO and avg_row_count > ZERO:
+            workload_units = avg_row_count
+
+        inferred_cost = (
+            avg_duration * Decimal("4.50")
+            + avg_cpu * Decimal("0.80")
+            + workload_units * Decimal("0.0025")
+            + execution_count * Decimal("0.03")
+        )
+        return inferred_cost if inferred_cost > ZERO else Decimal("1.00")
+
+    breakdown: list[dict[str, str | Decimal]] = []
+
+    qty = inventory_qty if inventory_qty is not None and inventory_qty >= 0 else int(context.get("subscriptionQuantity") or 1)
+    qty = max(1, qty)
+    target_margin = (_as_decimal(target_margin_pct) or Decimal("0.25")) / Decimal("100")
+    target_margin = clamp(target_margin, Decimal("0"), Decimal("0.95"))
+    manual_adj = (_as_decimal(manual_adjustment_pct) or ZERO) / Decimal("100")
+
+    normalized_demand = _as_decimal(demand_index) if demand_index is not None else None
+    if normalized_demand is not None:
+        normalized_demand = clamp(normalized_demand, Decimal("0"), Decimal("300"))
+
+    normalized_cost_per_unit = _as_decimal(cost_per_unit)
+    if normalized_cost_per_unit is None or normalized_cost_per_unit < ZERO:
+        normalized_cost_per_unit = fallback_cost_per_unit_from_context()
+
+    if contract_term_months is None:
+        fallback_term = context.get("contractTermMonths")
+        contract_term_months = int(fallback_term) if fallback_term else 1
+    contract_term_months = max(1, min(120, int(contract_term_months)))
+
+    effective_customer_type = (customer_type_input or context.get("customerType") or "").strip().lower()
+
+    cost_basis = normalized_cost_per_unit * Decimal(qty)
+    add_step(
+        "Cost Basis",
+        ZERO,
+        cost_basis,
+        f"Cost per unit {q(normalized_cost_per_unit)} × quantity {qty}",
+        None,
     )
 
-    duration_adj = Decimal("0")
-    if avg_duration >= Decimal("10"):
-        duration_adj += Decimal("0.10")
-    elif avg_duration >= Decimal("3"):
-        duration_adj += Decimal("0.04")
-    elif avg_duration <= Decimal("0.50"):
-        duration_adj -= Decimal("0.03")
+    if target_margin >= ONE:
+        target_margin = Decimal("0.95")
+    price = cost_basis / (ONE - target_margin)
+    add_step(
+        "Target Margin",
+        cost_basis,
+        price,
+        f"Applied target margin {q(target_margin * Decimal('100'), '0.0001')}%",
+        None,
+    )
 
-    demand_adj = Decimal("0")
-    if demand_index is not None:
-        demand_index = Decimal(str(demand_index))
-        if demand_index >= Decimal("120"):
-            demand_adj += Decimal("0.06")
-        elif demand_index >= Decimal("105"):
-            demand_adj += Decimal("0.03")
-        elif demand_index <= Decimal("80"):
-            demand_adj -= Decimal("0.05")
-        elif demand_index <= Decimal("95"):
-            demand_adj -= Decimal("0.02")
+    volume_adj = ZERO
+    if qty >= 500:
+        volume_adj = Decimal("-0.12")
+    elif qty >= 200:
+        volume_adj = Decimal("-0.08")
+    elif qty >= 100:
+        volume_adj = Decimal("-0.05")
+    elif qty >= 50:
+        volume_adj = Decimal("-0.03")
+    elif qty < 10:
+        volume_adj = Decimal("0.05")
+    price = apply_pct_step("Volume Tier", price, volume_adj, f"Quantity tier adjustment for {qty} units")
 
-    inventory_adj = Decimal("0")
-    if inventory_qty is not None:
-        if inventory_qty <= 10:
-            inventory_adj += Decimal("0.05")
-        elif inventory_qty <= 25:
-            inventory_adj += Decimal("0.02")
-        elif inventory_qty >= 250:
-            inventory_adj -= Decimal("0.03")
-        elif inventory_qty >= 100:
-            inventory_adj -= Decimal("0.01")
+    customer_adj = ZERO
+    if effective_customer_type in {"enterprise"}:
+        customer_adj = Decimal("-0.04")
+    elif effective_customer_type in {"mid-market", "midmarket"}:
+        customer_adj = Decimal("-0.02")
+    elif effective_customer_type in {"smb", "smallbusiness", "small business"}:
+        customer_adj = Decimal("0.02")
+    price = apply_pct_step("Customer Type", price, customer_adj, f"Customer type '{effective_customer_type or 'unknown'}'")
 
-    query_type_adj = Decimal("0")
-    query_type = (context.get("queryType") or "").upper()
-    if query_type in {"MERGE", "BULK INSERT"}:
-        query_type_adj += Decimal("0.06")
-    elif query_type in {"INSERT", "UPDATE", "DELETE"}:
-        query_type_adj += Decimal("0.03")
-    elif query_type == "SELECT":
-        query_type_adj -= Decimal("0.01")
+    contract_adj = ZERO
+    if contract_term_months >= 36:
+        contract_adj = Decimal("-0.06")
+    elif contract_term_months >= 24:
+        contract_adj = Decimal("-0.04")
+    elif contract_term_months >= 12:
+        contract_adj = Decimal("-0.02")
+    price = apply_pct_step("Contract Term", price, contract_adj, f"{contract_term_months} month commitment")
 
-    customer_adj = Decimal("0")
-    customer_status = (context.get("customerStatus") or "").lower()
-    if customer_status == "active":
-        credit_rating = Decimal(str(context.get("creditRating") or 0))
-        if credit_rating >= Decimal("750"):
-            customer_adj -= Decimal("0.05")
-        elif credit_rating >= Decimal("700"):
-            customer_adj -= Decimal("0.02")
-        elif credit_rating < Decimal("620"):
-            customer_adj += Decimal("0.06")
-    elif customer_status in {"suspended", "churned"}:
-        customer_adj += Decimal("0.12")
+    if competitor_price is not None and _as_decimal(competitor_price) and _as_decimal(competitor_price) > ZERO:
+        competitor = _as_decimal(competitor_price) or ZERO
+        before = price
+        high_band = competitor * Decimal("1.15")
+        low_band = competitor * Decimal("0.85")
+        if price > high_band:
+            price = high_band + ((price - high_band) * Decimal("0.40"))
+        elif price < low_band:
+            price = low_band - ((low_band - price) * Decimal("0.40"))
+        add_step("Competitor Reference", before, price, f"Soft alignment toward competitor price {q(competitor)}")
+    else:
+        add_step("Competitor Reference", price, price, "No competitor price provided")
 
-    customer_type = (context.get("customerType") or "").lower()
-    if customer_type == "enterprise":
-        customer_adj -= Decimal("0.02")
-    elif customer_type == "smallbusiness":
-        customer_adj += Decimal("0.01")
+    demand_adj = ZERO
+    if normalized_demand is not None:
+        demand_adj = (normalized_demand - Decimal("100")) / Decimal("500")
+        demand_adj = clamp(demand_adj, Decimal("-0.20"), Decimal("0.20"))
+    price = apply_pct_step(
+        "Demand Index",
+        price,
+        demand_adj,
+        f"Demand index {q(normalized_demand, '0.0001') if normalized_demand is not None else 'N/A'}",
+    )
 
-    service_adj = Decimal("0")
-    service_category = (context.get("serviceCategory") or "").lower()
-    if service_category in {"ai", "analytics", "dataops"}:
-        service_adj += Decimal("0.05")
-    elif service_category == "storage":
-        service_adj += Decimal("0.02")
+    price = apply_pct_step(
+        "Manual Adjustment",
+        price,
+        manual_adj,
+        f"Manual adjustment {q(manual_adj * Decimal('100'), '0.0001')}%",
+    )
 
-    plan_adj = Decimal("0")
-    plan_tier = (context.get("planTier") or "").lower()
-    if plan_tier in {"enterprise", "pro"}:
-        plan_adj += Decimal("0.06")
-    elif plan_tier == "standard":
-        plan_adj += Decimal("0.02")
-    elif plan_tier == "basic":
-        plan_adj -= Decimal("0.02")
-
-    discount_adj = Decimal("0")
-    if average_discount_pct >= Decimal("20"):
-        discount_adj += Decimal("0.08")
-    elif average_discount_pct >= Decimal("15"):
-        discount_adj += Decimal("0.05")
-    elif average_discount_pct >= Decimal("10"):
-        discount_adj += Decimal("0.03")
-    elif average_discount_pct <= Decimal("2"):
-        discount_adj -= Decimal("0.02")
-
-    payment_adj = Decimal("0")
-    if payment_reliability_score < Decimal("0.70"):
-        payment_adj += Decimal("0.08")
-    elif payment_reliability_score < Decimal("0.85"):
-        payment_adj += Decimal("0.04")
-    elif payment_reliability_score >= Decimal("0.95"):
-        payment_adj -= Decimal("0.02")
-    
-    # Risk adjustment based on overdue invoices
-    if overdueInvoiceCount > 2:
-        payment_adj += Decimal("0.05")
-    elif overdueInvoiceCount > 0:
-        payment_adj += Decimal("0.02")
-    
-    # Risk adjustment based on failed payments
-    if failedPaymentCount > 1:
-        payment_adj += Decimal("0.04")
-    elif failedPaymentCount > 0:
-        payment_adj += Decimal("0.02")
-
-    usage_adj = Decimal("0")
-    if recent_usage_volume >= Decimal("100000"):
-        usage_adj += Decimal("0.06")
-    elif recent_usage_volume >= Decimal("50000"):
-        usage_adj += Decimal("0.04")
-    elif recent_usage_volume >= Decimal("25000"):
-        usage_adj += Decimal("0.03")
-    elif recent_usage_volume <= Decimal("5000") and recent_usage_volume > 0:
-        usage_adj -= Decimal("0.02")
-    
-    # Intensity adjustment - higher intensity means higher compute demands
-    if usage_intensity >= Decimal("0.8"):
-        usage_adj += Decimal("0.04")
-    elif usage_intensity >= Decimal("0.5"):
-        usage_adj += Decimal("0.02")
-    
-    # Invoice health adjustment - reflects customer's billing payment consistency  
-    invoice_health_adj = Decimal("0")
-    if invoice_health_score < Decimal("0.60"):
-        invoice_health_adj += Decimal("0.06")
-    elif invoice_health_score < Decimal("0.80"):
-        invoice_health_adj += Decimal("0.03")
-    elif invoice_health_score == Decimal("1.0"):
-        invoice_health_adj -= Decimal("0.02")
-
-    manual_adj = (_as_decimal(manual_adjustment_pct) or Decimal("0")) / Decimal("100")
-    target_margin = _as_decimal(target_margin_pct) / Decimal("100")
-    if target_margin >= Decimal("0.99"):
-        target_margin = Decimal("0.99")
-
-    multiplier = ONE + duration_adj + demand_adj + inventory_adj + query_type_adj + customer_adj + service_adj + plan_adj + discount_adj + payment_adj + usage_adj + invoice_health_adj + manual_adj
-    estimated_cost = base_cost * multiplier
-    recommended_price = estimated_cost / (ONE - target_margin) if target_margin < ONE else estimated_cost
-
-    competitor_floor = ZERO
-    competitor_cap = Decimal("999999999.99")
-    if competitor_price is not None and Decimal(str(competitor_price)) > 0:
-        competitor = Decimal(str(competitor_price))
-        competitor_floor = competitor * Decimal("0.97")
-        competitor_cap = competitor * Decimal("1.03")
-        recommended_price = clamp(recommended_price, competitor_floor, competitor_cap)
-
-    price_floor = max(q(base_cost * Decimal("1.05")), q(Decimal("1.00")))
-    price_ceiling = q(max(recommended_price, price_floor) * Decimal("1.20"))
+    recommended_price = price
+    price_floor = q(max(cost_basis * Decimal("1.01"), Decimal("0.50")))
+    price_ceiling = q(max(recommended_price, price_floor) * Decimal("1.60"))
     final_price = clamp(recommended_price, price_floor, price_ceiling)
+    add_step("Price Guardrails", recommended_price, final_price, f"Applied floor {price_floor} and ceiling {price_ceiling}")
 
     expected_margin_pct = ZERO
-    if final_price > 0:
-        expected_margin_pct = ((final_price - base_cost) / final_price) * Decimal("100")
+    if final_price > ZERO:
+        expected_margin_pct = ((final_price - cost_basis) / final_price) * Decimal("100")
 
-    score = Decimal("0.68")
-    if expected_margin_pct >= Decimal(str(target_margin_pct)):
+    score = Decimal("0.70")
+    if expected_margin_pct >= (target_margin * Decimal("100")):
         score += Decimal("0.10")
-    if avg_duration > 0:
+    if customer_adj < ZERO:
         score += Decimal("0.03")
-    if execution_count > 0:
-        score += Decimal("0.03")
+    if contract_adj < ZERO:
+        score += Decimal("0.02")
+    if normalized_demand is not None:
+        score += Decimal("0.04")
     if competitor_price is not None:
-        score += Decimal("0.04")
-    if demand_index is not None:
-        score += Decimal("0.04")
-    if inventory_qty is not None:
         score += Decimal("0.03")
     if context.get("dbLookupUsed"):
         score += Decimal("0.03")
     score = clamp(score, ZERO, Decimal("0.99"))
 
     explanation = (
-        f"Calculated from billing customer context. "
-        f"Customer '{context.get('customerName')}', type '{context.get('customerType')}', "
-        f"industry '{context.get('industryType')}', region '{context.get('customerRegion')}', "
-        f"status '{context.get('customerStatus')}' (credit rating {context.get('creditRating')}). "
-        f"Service '{context.get('serviceName')}' category '{context.get('serviceCategory')}', "
-        f"plan '{context.get('planName')}' tier '{context.get('planTier')}'. "
-        f"Query type '{context.get('queryType')}' with {q(execution_count, '0.01')} executions, "
-        f"avg duration {q(avg_duration, '0.0001')} min, avg CPU {q(avg_cpu, '0.0001')} sec, "
-        f"rows queried {q(rows_queried, '0.01')}, inserted {q(rows_inserted, '0.01')}, "
-        f"updated {q(rows_updated, '0.01')}, deleted {q(rows_deleted, '0.01')}, merged {q(rows_merged, '0.01')}. "
-        f"Billing signals: Invoice health {q(invoice_health_score, '0.01')}, "
-        f"payment reliability {q(payment_reliability_score, '0.01')}, avg discount {q(average_discount_pct, '0.01')}%, "
-        f"recent usage {q(recent_usage_volume, '0.01')} units, usage intensity {q(usage_intensity, '0.01')}. "
-        f"Market signals: demand index {demand_index}, inventory {inventory_qty}."
+        f"Pricing starts from cost per unit ({q(normalized_cost_per_unit)}) and quantity ({qty}), "
+        f"then applies target margin, volume tier, customer type ({effective_customer_type or 'unknown'}), "
+        f"contract term ({contract_term_months} months), competitor reference, demand index, and manual adjustment in sequence."
     )
 
     return PricingResult(
@@ -259,8 +227,9 @@ def calculate_price(context: dict[str, Any], target_margin_pct: Decimal, manual_
         priceCeiling=q(price_ceiling),
         finalPrice=q(final_price),
         score=q(score, "0.0001"),
-        pricingMessage="Billing-based pricing recommendation generated successfully.",
+        pricingMessage="Business-driven pricing recommendation generated successfully.",
         pricingExplanation=explanation,
+        pricingBreakdown=breakdown,
         dbLookupUsed=bool(context.get("dbLookupUsed")),
         inputsSummary={
             "queryType": context.get("queryType"),
@@ -277,6 +246,9 @@ def calculate_price(context: dict[str, Any], target_margin_pct: Decimal, manual_
             "manualAdjustmentPctInput": str(manual_adjustment_pct),
             "competitorPriceInput": None if competitor_price is None else str(competitor_price),
             "demandIndexInput": None if demand_index is None else str(demand_index),
-            "inventoryQtyInput": inventory_qty,
+            "inventoryQtyInput": qty,
+            "costPerUnitInput": str(normalized_cost_per_unit),
+            "customerTypeInput": effective_customer_type or None,
+            "contractTermMonthsInput": contract_term_months,
         },
     )

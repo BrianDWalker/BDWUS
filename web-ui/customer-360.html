@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer 360 | Northstar Telecom</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body data-page="customer-360">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <strong>Northstar Telecom</strong>
+          <span>Service operations portal</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a data-nav href="./index.html">Dashboard <span>01</span></a>
+        <a data-nav href="./history.html">Pricing <span>02</span></a>
+        <a data-nav href="./new-quote.html">Products <span>03</span></a>
+        <a data-nav href="./opportunity.html">Network <span>04</span></a>
+        <a data-nav href="./reprice.html">Billing <span>05</span></a>
+        <a data-nav href="./reports.html">Reports <span>06</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="label">Account intelligence</div>
+        <div class="value">Unified customer profile</div>
+        <div class="footer-note">See account usage, health flags, and lifecycle actions within the same telecom portal.</div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1>Customer 360</h1>
+          <p>View account health, loyalty risk, service profile, and current commercial opportunities in a single customer-facing pane.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="button" type="button" data-action-toast="Customer profile refreshed">Refresh</button>
+          <button class="ghost-button" type="button" data-action-toast="Retention team notified">Notify team</button>
+          <a class="link-button" href="./index.html">Dashboard</a>
+        </div>
+      </header>
+
+      <section class="overview-grid">
+        <article class="metric-card">
+          <div class="label">Active accounts</div>
+          <div class="value">156</div>
+          <div class="delta">High-value and enterprise</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Revenue health</div>
+          <div class="value">$5.9M</div>
+          <div class="delta">Last 30 days</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Churn probability</div>
+          <div class="value">14%</div>
+          <div class="delta">At-risk accounts</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Support impact</div>
+          <div class="value">27 cases</div>
+          <div class="delta">Open and active</div>
+        </article>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Account snapshot</h2>
+              <p>Drill into an example customer profile and review their service health, support history, and conversion opportunities.</p>
+            </div>
+            <button class="link-button" type="button" data-action-toast="Journey timeline updated">Update timeline</button>
+          </div>
+          <div class="panel-body">
+            <div class="three-column">
+              <div class="feature-card">
+                <div class="panel-body">
+                  <div class="section-title">
+                    <h4>Service profile</h4>
+                  </div>
+                  <p class="small-muted">Fiber 1G, mobile plus plan, cloud voice, and SLA support.</p>
+                  <div class="progress" data-fill="88"></div>
+                  <div class="footer-note">Issue frequency low, but churn risk medium due to pricing.</div>
+                </div>
+              </div>
+              <div class="feature-card">
+                <div class="panel-body">
+                  <div class="section-title">
+                    <h4>Health score</h4>
+                  </div>
+                  <p class="small-muted">Current customer score based on usage, support, and billing health.</p>
+                  <div class="donut" style="--donut: conic-gradient(#16a34a 0 72%, #f59e0b 72% 88%, #ef4444 88% 100%);"></div>
+                  <div class="donut-inner"><strong>72</strong><span>Health</span></div>
+                </div>
+              </div>
+              <div class="feature-card">
+                <div class="panel-body">
+                  <div class="section-title">
+                    <h4>Retention actions</h4>
+                  </div>
+                  <p class="small-muted">Recommended delivery actions and targeted offers for this account.</p>
+                  <div class="progress" data-fill="54"></div>
+                  <div class="footer-note">Retention playbook active.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <div class="stack">
+          <article class="activity-card">
+            <div class="section-title">
+              <h3>Customer timeline</h3>
+            </div>
+            <div class="timeline">
+              <div class="timeline-item interactive-row" data-detail-title="Recent incident" data-detail-body="Managed service ticket resolved within 18 hours after a fiber fault.">
+                <span class="timeline-dot"></span>
+                <div>
+                  <strong>Support ticket closed</strong>
+                  <div class="small-muted">May 10 · Fiber fault recovery</div>
+                </div>
+                <span class="mini-tag success">Resolved</span>
+              </div>
+              <div class="timeline-item interactive-row" data-detail-title="Billing notice" data-detail-body="Invoice dispute for a data overage is under review.">
+                <span class="timeline-dot"></span>
+                <div>
+                  <strong>Billing inquiry</strong>
+                  <div class="small-muted">May 8 · Data charge review</div>
+                </div>
+                <span class="mini-tag warn">Review</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./assets/config.js"></script>
+  <script src="./assets/portal.js"></script>
+</body>
+</html>

@@ -29,6 +29,7 @@ class OpportunityPayload(BaseModel):
     planTier: Optional[str] = None
     planName: Optional[str] = None
     serviceName: Optional[str] = None
+    contractTermMonths: Optional[int] = Field(default=None, ge=1, le=120)
     subscriptionQuantity: Optional[int] = Field(default=None, ge=0)
 
 
@@ -51,6 +52,9 @@ class PricingInput(BaseModel):
     competitorPriceInput: Optional[Decimal] = Field(default=None, ge=0)
     demandIndexInput: Optional[Decimal] = Field(default=None, ge=0)
     inventoryQtyInput: Optional[int] = Field(default=None, ge=0)
+    costPerUnitInput: Optional[Decimal] = Field(default=None, ge=0)
+    customerTypeInput: Optional[str] = None
+    contractTermMonthsInput: Optional[int] = Field(default=None, ge=1, le=120)
 
 
 class QuoteCreateRequest(BaseModel):
@@ -83,9 +87,17 @@ class CustomerProfileResponse(BaseModel):
 
 
 class CustomerMetadataOptionsResponse(BaseModel):
+    customerTypes: list[str] = []
+    industryTypes: list[str] = []
     customerRegions: list[str] = []
     countryCodes: list[str] = []
     customerStatuses: list[str] = []
+    serviceCategories: list[str] = []
+    planTiers: list[str] = []
+    planNames: list[str] = []
+    serviceNames: list[str] = []
+    serviceCatalog: list[dict[str, str]] = []
+    contractTermOptions: list[int] = []
 
 
 class PricingResult(BaseModel):
@@ -97,6 +109,7 @@ class PricingResult(BaseModel):
     score: Decimal
     pricingMessage: str
     pricingExplanation: str
+    pricingBreakdown: list[dict[str, str | Decimal]]
     dbLookupUsed: bool
     inputsSummary: dict
 
@@ -146,6 +159,7 @@ class OpportunityLatestResponse(BaseModel):
     serviceCategory: Optional[str] = None
     planName: Optional[str] = None
     serviceName: Optional[str] = None
+    contractTermMonths: Optional[int] = None
     subscriptionQuantity: Optional[int] = None
 
 

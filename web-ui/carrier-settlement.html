@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Carrier Settlement | Northstar Telecom</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body data-page="carrier-settlement">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <strong>Northstar Telecom</strong>
+          <span>Service operations portal</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a data-nav href="./index.html">Dashboard <span>01</span></a>
+        <a data-nav href="./history.html">Pricing <span>02</span></a>
+        <a data-nav href="./new-quote.html">Products <span>03</span></a>
+        <a data-nav href="./opportunity.html">Network <span>04</span></a>
+        <a data-nav href="./reprice.html">Billing <span>05</span></a>
+        <a data-nav href="./reports.html">Reports <span>06</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="label">Partner finance</div>
+        <div class="value">Settlement and reconciliation</div>
+        <div class="footer-note">Track carrier invoices, interconnect costs, and settlement credits in one place.</div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1>Carrier settlement</h1>
+          <p>Review partner invoices, credit exposure, and interconnect claims with a telecom finance workflow built for settlement teams.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="button" type="button" data-action-toast="Partner invoice uploaded">Upload invoice</button>
+          <button class="ghost-button" type="button" data-action-toast="Settlement run started">Run settlement</button>
+          <a class="link-button" href="./index.html">Dashboard</a>
+        </div>
+      </header>
+
+      <section class="overview-grid">
+        <article class="metric-card">
+          <div class="label">Partner exposure</div>
+          <div class="value">$4.2M</div>
+          <div class="delta">Monthly net position</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Open claims</div>
+          <div class="value">17</div>
+          <div class="delta">Disputes and credits</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Interconnect settlements</div>
+          <div class="value">82%</div>
+          <div class="delta">Processed on time</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Late adjustments</div>
+          <div class="value">3</div>
+          <div class="delta">Pending finance review</div>
+        </article>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Settlement pipeline</h2>
+              <p>Monitor the current state of partner invoices, disputes, and credits that have moved into the financial reconciliation process.</p>
+            </div>
+            <button class="link-button" type="button" data-action-toast="Pending invoices refreshed">Refresh</button>
+          </div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Partner</th>
+                    <th>Invoice</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="interactive-row" data-detail-title="Roaming invoice review" data-detail-body="Roaming reconciliation needs updated rate mapping and credit validation.">
+                    <td>Global Carrier</td>
+                    <td>#INT-1845</td>
+                    <td>$418,500</td>
+                    <td><span class="mini-tag warn">Review</span></td>
+                    <td><button class="link-button" type="button" data-action-toast="Review opened">Review</button></td>
+                  </tr>
+                  <tr class="interactive-row" data-detail-title="Interconnect settlement" data-detail-body="Circuit usage settlement requires final approval for cross-border traffic.">
+                    <td>MetroLink</td>
+                    <td>#ICE-991</td>
+                    <td>$128,300</td>
+                    <td><span class="mini-tag blue">Pending</span></td>
+                    <td><button class="link-button" type="button" data-action-toast="Approval requested">Approve</button></td>
+                  </tr>
+                  <tr class="interactive-row" data-detail-title="Partner credit hold" data-detail-body="Service credit hold is scheduled while outage compensation is confirmed.">
+                    <td>Coastal Partners</td>
+                    <td>#CRD-442</td>
+                    <td>$18,200</td>
+                    <td><span class="mini-tag success">Active</span></td>
+                    <td><button class="link-button" type="button" data-action-toast="Credit noted">Note</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <div class="stack">
+          <article class="activity-card">
+            <div class="section-title">
+              <h3>Reconciliation status</h3>
+            </div>
+            <div class="list">
+              <div class="list-item">
+                <div>
+                  <div class="title">Late partner files</div>
+                  <div class="subtitle">2 carriers still submitting supporting detail.</div>
+                </div>
+                <span class="mini-tag warn">Late</span>
+              </div>
+              <div class="list-item">
+                <div>
+                  <div class="title">Credit backlog</div>
+                  <div class="subtitle">$68K in unprocessed credits.</div>
+                </div>
+                <span class="mini-tag blue">Queued</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./assets/config.js"></script>
+  <script src="./assets/portal.js"></script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports | Northstar Telecom</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body data-page="reports">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <strong>Northstar Telecom</strong>
+          <span>Service operations portal</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a data-nav href="./index.html">Dashboard <span>01</span></a>
+        <a data-nav href="./history.html">Pricing <span>02</span></a>
+        <a data-nav href="./new-quote.html">Products <span>03</span></a>
+        <a data-nav href="./opportunity.html">Network <span>04</span></a>
+        <a data-nav href="./reprice.html">Billing <span>05</span></a>
+        <a data-nav href="./reports.html" class="active">Reports <span>06</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="label">Report server</div>
+        <div class="value">Paginated reports and exports</div>
+        <div class="footer-note">Run operational, finance, network, sales, and service reports from embedded sample data.</div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1>Reports portal</h1>
+          <p>Run parameterized telecom reports, review paginated output, and export the result for Excel or downstream analysis.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="button" type="button" data-run-report>Run report</button>
+          <button class="ghost-button" type="button" data-export-report>Export .xlsx</button>
+          <a class="link-button" href="./index.html">Dashboard</a>
+        </div>
+      </header>
+
+      <section class="overview-grid">
+        <article class="metric-card">
+          <span class="module-icon blue"><svg viewBox="0 0 24 24"><path d="M4 19V5h16v14H4Zm4-4v-4m4 4V8m4 7v-6"/></svg></span>
+          <div class="label">Reports run today</div>
+          <div class="value">128</div>
+          <div class="delta">Finance, NOC, sales ops</div>
+        </article>
+        <article class="metric-card">
+          <span class="module-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6V3Zm3 5h6M9 12h6M9 16h3"/></svg></span>
+          <div class="label">Scheduled exports</div>
+          <div class="value">42</div>
+          <div class="delta">CSV and workbook delivery</div>
+        </article>
+        <article class="metric-card">
+          <span class="module-icon orange"><svg viewBox="0 0 24 24"><path d="M12 8v5l3 2m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg></span>
+          <div class="label">Data freshness</div>
+          <div class="value">5m</div>
+          <div class="delta">Operational mart refresh</div>
+        </article>
+        <article class="metric-card">
+          <span class="module-icon violet"><svg viewBox="0 0 24 24"><path d="M7 7h10M7 12h10M7 17h6M4 4h16v16H4V4Z"/></svg></span>
+          <div class="label">Open subscriptions</div>
+          <div class="value">19</div>
+          <div class="delta">Executive and regional packs</div>
+        </article>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="panel report-builder">
+          <div class="panel-header">
+            <div>
+              <h2>Report parameters</h2>
+              <p>Select a report and run it against the embedded demo data.</p>
+            </div>
+            <span class="chip">Paginated mode</span>
+          </div>
+          <div class="panel-body">
+            <div class="parameter-grid">
+              <label>Report
+                <select data-param-report data-state-key="reportType">
+                  <option>Executive scorecard</option>
+                  <option>Revenue by product</option>
+                  <option>Invoice aging detail</option>
+                  <option>Network outage SLA credits</option>
+                  <option>Quote conversion performance</option>
+                  <option>Customer churn risk</option>
+                  <option>Product margin analysis</option>
+                  <option>Revenue assurance exceptions</option>
+                  <option>Customer service ticket aging</option>
+                </select>
+              </label>
+              <label>Region
+                <select data-param-region data-state-key="reportRegion">
+                  <option>All regions</option>
+                  <option>Midwest</option>
+                  <option>Southeast</option>
+                  <option>Southwest</option>
+                  <option>West Coast</option>
+                </select>
+              </label>
+              <label>Period
+                <select data-param-period data-state-key="reportPeriod">
+                  <option>May 2024</option>
+                  <option>April 2024</option>
+                  <option>Q2 2024 to date</option>
+                  <option>Rolling 90 days</option>
+                </select>
+              </label>
+              <label>Customer segment
+                <select data-state-key="reportSegment">
+                  <option>All segments</option>
+                  <option>Consumer</option>
+                  <option>SMB</option>
+                  <option>Enterprise</option>
+                  <option>Wholesale</option>
+                </select>
+              </label>
+              <label>Output style
+                <select data-state-key="reportOutputStyle">
+                  <option>Paginated table</option>
+                  <option>Summary + detail</option>
+                  <option>Exception list</option>
+                  <option>Executive packet</option>
+                </select>
+              </label>
+              <label>Status
+                <select data-state-key="reportStatus">
+                  <option>All statuses</option>
+                  <option>Open</option>
+                  <option>Approved</option>
+                  <option>Priority</option>
+                  <option>Closed</option>
+                </select>
+              </label>
+            </div>
+            <div class="two-column" style="margin-top:16px">
+              <button class="button" type="button" data-run-report>Run report</button>
+              <button class="ghost-button" type="button" data-action-toast="Report subscription saved">Save subscription</button>
+            </div>
+          </div>
+        </article>
+
+        <div class="stack">
+          <article class="activity-card">
+            <div class="section-title">
+              <h3><span class="module-icon blue" style="width:34px;height:34px;display:inline-grid;margin-right:8px;vertical-align:middle"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg></span>Report library</h3>
+              <button class="link-button" type="button" data-action-toast="Report library refreshed">Refresh</button>
+            </div>
+            <div class="list">
+                  <button class="activity-row interactive-row" type="button" data-action-toast="Executive scorecard selected">
+                <div>
+                  <div class="title">Executive scorecard</div>
+                  <div class="meta">MRR, subscribers, gross margin, incidents, DSO</div>
+                </div>
+                <span class="mini-tag success">Pinned</span>
+              </button>
+              <button class="activity-row interactive-row" type="button" data-action-toast="Revenue by product selected">
+                <div>
+                  <div class="title">Revenue by product</div>
+                  <div class="meta">Product-level revenue and margin performance.</div>
+                </div>
+                <span class="mini-tag blue">Commercial</span>
+              </button>
+              <button class="activity-row interactive-row" type="button" data-action-toast="Invoice aging detail selected">
+                <div>
+                  <div class="title">Invoice aging detail</div>
+                  <div class="meta">Current, 31-60, 61-90, 90+ by account</div>
+                </div>
+                <span class="mini-tag warn">Finance</span>
+              </button>
+              <button class="activity-row interactive-row" type="button" data-action-toast="Network outage SLA credits selected">
+                <div>
+                  <div class="title">Network outage SLA credits</div>
+                  <div class="meta">Global outage credits and exposure by region.</div>
+                </div>
+                <span class="mini-tag warn">NOC</span>
+              </button>
+              <button class="activity-row interactive-row" type="button" data-action-toast="Customer churn risk selected">
+                <div>
+                  <div class="title">Customer churn risk</div>
+                  <div class="meta">Risk flagging for accounts with retention triggers.</div>
+                </div>
+                <span class="mini-tag blue">Retention</span>
+              </button>
+            </div>
+          </article>
+
+          <article class="activity-card">
+            <div class="section-title">
+              <h3><span class="module-icon orange" style="width:34px;height:34px;display:inline-grid;margin-right:8px;vertical-align:middle"><svg viewBox="0 0 24 24"><path d="M8 7V3m8 4V3M5 11h14M6 5h12a1 1 0 0 1 1 1v14H5V6a1 1 0 0 1 1-1Z"/></svg></span>Scheduled delivery</h3>
+              <span class="chip">19 active</span>
+            </div>
+            <div class="timeline">
+              <div class="timeline-item">
+                <span class="timeline-dot"></span>
+                <div>
+                  <strong>Daily revenue pack</strong>
+                  <div class="small-muted">06:00 to Finance Ops, Sales Ops</div>
+                </div>
+                <span class="mini-tag success">On</span>
+              </div>
+              <div class="timeline-item">
+                <span class="timeline-dot"></span>
+                <div>
+                  <strong>NOC SLA digest</strong>
+                  <div class="small-muted">Hourly during active incidents</div>
+                </div>
+                <span class="mini-tag blue">Live</span>
+              </div>
+              <div class="timeline-item">
+                <span class="timeline-dot"></span>
+                <div>
+                  <strong>Collections watchlist</strong>
+                  <div class="small-muted">Weekdays at 08:30</div>
+                </div>
+                <span class="mini-tag warn">Review</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel report-viewer" style="margin-top:16px">
+        <div class="report-toolbar">
+          <div>
+            <h2 data-report-title>Executive scorecard - All regions - May 2024</h2>
+            <p class="small-muted">Page 1 of 1 · Rendered from embedded Northstar sample data</p>
+          </div>
+          <div class="module-toolbar">
+            <button class="ghost-button" type="button" data-action-toast="Previous page">Previous</button>
+            <button class="ghost-button" type="button" data-action-toast="Next page">Next</button>
+            <button class="button" type="button" data-export-report>Export .xlsx</button>
+          </div>
+        </div>
+        <div class="panel-body" data-report-output></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./assets/config.js"></script>
+  <script src="./assets/portal.js"></script>
+</body>
+</html>

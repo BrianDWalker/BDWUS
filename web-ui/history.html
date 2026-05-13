@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pricing | Northstar Telecom</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body data-page="pricing">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <strong>Northstar Telecom</strong>
+          <span>Service operations portal</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a data-nav href="./index.html">Dashboard <span>01</span></a>
+        <a data-nav href="./history.html" class="active">Pricing <span>02</span></a>
+        <a data-nav href="./new-quote.html">Products <span>03</span></a>
+        <a data-nav href="./opportunity.html">Network <span>04</span></a>
+        <a data-nav href="./reprice.html">Billing <span>05</span></a>
+        <a data-nav href="./reports.html">Reports <span>06</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="label">Pricing desk</div>
+        <div class="value">Margins, approvals, and rate cards</div>
+        <div class="footer-note">Track scenarios by market, segment, and contract term before release.</div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1>Pricing intelligence</h1>
+          <p>Review recommended rates, compare variance against the market, and push the right tier into approval with confidence.</p>
+        </div>
+        <div class="topbar-actions">
+          <span class="chip">Scenario engine</span>
+          <a class="button" href="./index.html">Back to dashboard</a>
+        </div>
+      </header>
+
+      <section class="overview-grid">
+        <article class="metric-card">
+          <div class="label">Approved uplift</div>
+          <div class="value">+8.3%</div>
+          <div class="delta">Consumer and SMB releases</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Open approvals</div>
+          <div class="value">14</div>
+          <div class="delta">6 enterprise, 8 regional</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Competitive spread</div>
+          <div class="value">4.6%</div>
+          <div class="delta">Inside guardrails</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Margin floor</div>
+          <div class="value">26.0%</div>
+          <div class="delta">No offers below threshold</div>
+        </article>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="panel" data-tab-group>
+          <div class="panel-header">
+            <div>
+              <h2>Rate cards</h2>
+              <p>Current portfolio recommendations across consumer, business, and enterprise segments.</p>
+            </div>
+            <div class="segmented" role="tablist" aria-label="Rate card segment">
+              <button type="button" class="is-active" data-tab="consumer" aria-selected="true">Consumer</button>
+              <button type="button" data-tab="business" aria-selected="false">Business</button>
+              <button type="button" data-tab="enterprise" aria-selected="false">Enterprise</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="tab-panel is-active" data-panel="consumer">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Offer</th>
+                      <th>Market</th>
+                      <th>Recommended</th>
+                      <th>Margin</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="emphasis">Fiber 500</td>
+                      <td>$84</td>
+                      <td>$89</td>
+                      <td>29.4%</td>
+                      <td><span class="mini-tag success">Approved</span></td>
+                    </tr>
+                    <tr>
+                      <td class="emphasis">Fiber 1G</td>
+                      <td>$113</td>
+                      <td>$119</td>
+                      <td>27.1%</td>
+                      <td><span class="mini-tag warn">Pending review</span></td>
+                    </tr>
+                    <tr>
+                      <td class="emphasis">Mobile Plus</td>
+                      <td>$51</td>
+                      <td>$54</td>
+                      <td>33.8%</td>
+                      <td><span class="mini-tag success">Approved</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tab-panel" data-panel="business">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Offer</th>
+                      <th>Seats</th>
+                      <th>Recommended</th>
+                      <th>Margin</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="emphasis">Office Connect</td>
+                      <td>25</td>
+                      <td>$2,850</td>
+                      <td>31.2%</td>
+                      <td><span class="mini-tag success">Ready</span></td>
+                    </tr>
+                    <tr>
+                      <td class="emphasis">Voice + SD-WAN</td>
+                      <td>50</td>
+                      <td>$5,400</td>
+                      <td>28.6%</td>
+                      <td><span class="mini-tag warn">Needs discount cap</span></td>
+                    </tr>
+                    <tr>
+                      <td class="emphasis">Branch Backup</td>
+                      <td>12</td>
+                      <td>$1,180</td>
+                      <td>35.1%</td>
+                      <td><span class="mini-tag success">Ready</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tab-panel" data-panel="enterprise">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Account</th>
+                      <th>Proposal</th>
+                      <th>Target margin</th>
+                      <th>Term</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="emphasis">Apex Health</td>
+                      <td>$1.48M</td>
+                      <td>30.9%</td>
+                      <td>36 mo</td>
+                      <td><span class="mini-tag blue">Negotiation</span></td>
+                    </tr>
+                    <tr>
+                      <td class="emphasis">Metro Logistics</td>
+                      <td>$860k</td>
+                      <td>32.4%</td>
+                      <td>24 mo</td>
+                      <td><span class="mini-tag success">Approved</span></td>
+                    </tr>
+                    <tr>
+                      <td class="emphasis">Summit Finance</td>
+                      <td>$1.12M</td>
+                      <td>29.8%</td>
+                      <td>36 mo</td>
+                      <td><span class="mini-tag warn">Need signoff</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <div class="stack">
+          <article class="activity-card">
+            <div class="section-title">
+              <h3>Guardrails</h3>
+              <span class="chip">Policy active</span>
+            </div>
+            <div class="list">
+              <div class="list-item">
+                <div>
+                  <div class="title">Minimum floor</div>
+                  <div class="subtitle">Do not release any offer below 26% gross margin.</div>
+                </div>
+                <span class="mini-tag success">Locked</span>
+              </div>
+              <div class="list-item">
+                <div>
+                  <div class="title">Market variance</div>
+                  <div class="subtitle">Soft ceiling set at 6% above the closest competitor.</div>
+                </div>
+                <span class="mini-tag blue">Tracking</span>
+              </div>
+              <div class="list-item">
+                <div>
+                  <div class="title">Approval policy</div>
+                  <div class="subtitle">Anything above $250k requires finance and sales ops review.</div>
+                </div>
+                <span class="mini-tag warn">Required</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="activity-card">
+            <div class="section-title">
+              <h3>Approval queue</h3>
+              <a class="link-button" href="./reprice.html">Open billing view</a>
+            </div>
+            <div class="activity-row">
+              <div>
+                <div class="title">Summit Finance</div>
+                <div class="meta">36-month proposal and roaming add-on bundle</div>
+              </div>
+              <span class="mini-tag warn">Pending</span>
+            </div>
+            <div class="activity-row">
+              <div>
+                <div class="title">Great Lakes Retail</div>
+                <div class="meta">SMB bundle with volume discount cap</div>
+              </div>
+              <span class="mini-tag success">Approved</span>
+            </div>
+            <div class="activity-row">
+              <div>
+                <div class="title">Apex Health</div>
+                <div class="meta">Enterprise backhaul and voice proposal</div>
+              </div>
+              <span class="mini-tag blue">In review</span>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./assets/config.js"></script>
+  <script src="./assets/portal.js"></script>
+</body>
+</html>

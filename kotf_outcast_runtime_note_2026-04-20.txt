@@ -1,0 +1,40 @@
+Date: 2026-04-20
+Status: KOTF + Outcast campaign startup troubleshooting
+
+Observed fatal crash path when starting JO campaign:
+- ERROR: Cannot fall back to default model stormtrooper!
+- DROPPED (returns to menu)
+
+Cause isolated:
+- Any enabled aJK2_assets*.pk3 reintroduces player model animation-bone mismatch in KOTF runtime.
+
+Current stable workaround in copied install:
+- Disabled all five files by renaming to .disabled:
+  - aJK2_assets0.pk3.disabled
+  - aJK2_assets1.pk3.disabled
+  - aJK2_assets2.pk3.disabled
+  - aJK2_assets5.pk3.disabled
+  - aJK2_assets6.pk3.disabled
+
+Kept enabled:
+- jaooutcastv1.00a.pk3
+- outcaststringsv1.00a.pk3
+- r_outcastaddon.pk3
+- zzzz_kotf_outcast_menu_unlock.pk3
+
+Rollback of this workaround:
+- rename each .disabled back to .pk3
+
+Update (media-safe pass):
+- Added: /Users/brianwalker/Library/Application Support/Steam/steamapps/common/Jedi Academy/SWJKJA_KOTF_OUTCAST.app/Contents/KotF/aJK2_media_safe.pk3
+  Built from Jedi Outcast assets0/1/2 with media/content folders only.
+  Includes sound/music/video/textures/gfx/menu/scripts/shaders/effects/models/map_objects.
+  Excludes models/players to avoid stormtrooper/jan model crash.
+- Kept disabled:
+  aJK2_assets0.pk3.disabled
+  aJK2_assets1.pk3.disabled
+  aJK2_assets2.pk3.disabled
+  aJK2_assets5.pk3.disabled
+  aJK2_assets6.pk3.disabled
+- Validation:
+  devmap kejim_post starts without DROPPED.

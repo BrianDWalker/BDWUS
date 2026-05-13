@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Management | Northstar Telecom</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body data-page="order-management">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <strong>Northstar Telecom</strong>
+          <span>Service operations portal</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a data-nav href="./index.html">Dashboard <span>01</span></a>
+        <a data-nav href="./history.html">Pricing <span>02</span></a>
+        <a data-nav href="./new-quote.html">Products <span>03</span></a>
+        <a data-nav href="./opportunity.html">Network <span>04</span></a>
+        <a data-nav href="./reprice.html">Billing <span>05</span></a>
+        <a data-nav href="./reports.html">Reports <span>06</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="label">Order operations</div>
+        <div class="value">Fulfillment and delivery</div>
+        <div class="footer-note">Streamline the lifecycle of customer orders from acceptance through activation.</div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1>Order management</h1>
+          <p>Run order flows, monitor fulfillment gates, and keep installs moving across telecom products and services.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="button" type="button" data-action-toast="New order created">New order</button>
+          <button class="ghost-button" type="button" data-action-toast="Backlog filtered">Review backlog</button>
+          <a class="link-button" href="./index.html">Dashboard</a>
+        </div>
+      </header>
+
+      <section class="overview-grid">
+        <article class="metric-card">
+          <div class="label">Open orders</div>
+          <div class="value">62</div>
+          <div class="delta">Across fulfillment, staging, and dispatch</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Install readiness</div>
+          <div class="value">79%</div>
+          <div class="delta">Orders with field crew assigned</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Order aging</div>
+          <div class="value">27d</div>
+          <div class="delta">Max time for pending orders</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Order success</div>
+          <div class="value">88%</div>
+          <div class="delta">First pass completed</div>
+        </article>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="panel">
+          <div class="panel-header">
+            <div>
+              <h2>Active order queue</h2>
+              <p>Review open order items, assigned teams, and the current delivery window.</p>
+            </div>
+            <button class="link-button" type="button" data-action-toast="Order queue refreshed">Refresh</button>
+          </div>
+          <div class="panel-body">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Customer</th>
+                    <th>Status</th>
+                    <th>Due</th>
+                    <th>Owner</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="interactive-row" data-detail-title="Fiber install order" data-detail-body="Fiber order needs last-mile permit and truck roll scheduling.">
+                    <td class="emphasis">ORD-2048</td>
+                    <td>Apex Health</td>
+                    <td><span class="mini-tag warn">Staged</span></td>
+                    <td>May 16</td>
+                    <td>Provisioning ops</td>
+                  </tr>
+                  <tr class="interactive-row" data-detail-title="Mobile SIM order" data-detail-body="SIM order has pending inventory check and device activation.">
+                    <td class="emphasis">ORD-2067</td>
+                    <td>Summit Manufacturing</td>
+                    <td><span class="mini-tag blue">Assigned</span></td>
+                    <td>May 14</td>
+                    <td>Service desk</td>
+                  </tr>
+                  <tr class="interactive-row" data-detail-title="Voice bundle order" data-detail-body="Cloud voice deployment is awaiting firewall review.">
+                    <td class="emphasis">ORD-2012</td>
+                    <td>Metro Logistics</td>
+                    <td><span class="mini-tag success">Ready</span></td>
+                    <td>May 12</td>
+                    <td>Network ops</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+
+        <div class="stack">
+          <article class="activity-card">
+            <div class="section-title">
+              <h3>Delivery risk</h3>
+            </div>
+            <div class="list">
+              <div class="list-item">
+                <div>
+                  <div class="title">Truck roll delays</div>
+                  <div class="subtitle">Supplier crews delayed due to weather.</div>
+                </div>
+                <span class="mini-tag warn">High</span>
+              </div>
+              <div class="list-item">
+                <div>
+                  <div class="title">Inventory gaps</div>
+                  <div class="subtitle">SIM stock low in three metro regions.</div>
+                </div>
+                <span class="mini-tag blue">Monitor</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./assets/config.js"></script>
+  <script src="./assets/portal.js"></script>
+</body>
+</html>

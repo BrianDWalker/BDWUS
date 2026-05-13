@@ -36,6 +36,17 @@ def _get_opportunity_table_columns(conn) -> set[str]:
     return {str(row.COLUMN_NAME) for row in rows}
 
 
+def _get_quote_history_table_columns(conn) -> set[str]:
+    rows = conn.cursor().execute(
+        """
+        SELECT COLUMN_NAME
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = 'ms' AND TABLE_NAME = 'QuoteHistory'
+        """
+    ).fetchall()
+    return {str(row.COLUMN_NAME) for row in rows}
+
+
 def _first_non_empty(*values):
     for value in values:
         if value is None:
@@ -75,11 +86,109 @@ def _build_opportunity_insert_data(request: QuoteCreateRequest, quote_id: UUID) 
         "PlanName": _first_non_empty(request.opportunity.planName),
         "ServiceName": _first_non_empty(request.opportunity.serviceName),
         "ServiceCategory": _first_non_empty(request.opportunity.serviceCategory),
+        "ContractTermMonths": _first_non_empty(
+            request.opportunity.contractTermMonths,
+            request.pricingInput.contractTermMonthsInput,
+        ),
         "SubscriptionQuantity": _first_non_empty(
             request.opportunity.subscriptionQuantity,
             request.pricingInput.inventoryQtyInput,
         ),
     }
+
+
+def _build_quote_history_insert_data(
+    quote_id: UUID,
+    opportunity_id: UUID,
+    change_type: str,
+    context: dict,
+    request: QuoteCreateRequest | QuoteReviseRequest,
+    pricing,
+    changed_by: str | None,
+) -> dict[str, object]:
+    return {
+        "QuoteId": str(quote_id),
+        "OpportunityId": str(opportunity_id),
+        "VersionNo": 1,
+        "ChangeType": change_type,
+        "IsCurrentVersion": 1,
+        "ExecutionCount": context.get("executionCount"),
+        "AvgDurationMinutes": context.get("avgDurationMinutes"),
+        "AvgCpuSeconds": context.get("avgCpuSeconds"),
+        "AvgRowCount": context.get("avgRowCount"),
+        "RowsQueried": context.get("rowsQueried"),
+        "RowsInserted": context.get("rowsInserted"),
+        "RowsUpdated": context.get("rowsUpdated"),
+        "RowsDeleted": context.get("rowsDeleted"),
+        "RowsMerged": context.get("rowsMerged"),
+        "TargetMarginPctInput": request.pricingInput.targetMarginPctInput,
+        "ManualAdjustmentPctInput": request.pricingInput.manualAdjustmentPctInput,
+        "CompetitorPriceInput": request.pricingInput.competitorPriceInput,
+        "DemandIndexInput": request.pricingInput.demandIndexInput,
+        "InventoryQtyInput": request.pricingInput.inventoryQtyInput,
+        "CostPerUnitInput": request.pricingInput.costPerUnitInput,
+        "CustomerTypeInput": request.pricingInput.customerTypeInput,
+        "ContractTermMonthsInput": request.pricingInput.contractTermMonthsInput,
+        "RecommendedPrice": pricing.recommendedPrice,
+        "ExpectedMarginPct": pricing.expectedMarginPct,
+        "PriceFloor": pricing.priceFloor,
+        "PriceCeiling": pricing.priceCeiling,
+        "FinalPrice": pricing.finalPrice,
+        "Score": pricing.score,
+        "PricingMessage": pricing.pricingMessage,
+        "PricingExplanation": pricing.pricingExplanation,
+        "ChangedBy": changed_by,
+    }
+
+
+def _insert_quote_history_row(conn, payload: dict[str, object]):
+    available_columns = _get_quote_history_table_columns(conn)
+    preferred_columns = [
+        "QuoteId",
+        "OpportunityId",
+        "VersionNo",
+        "ChangeType",
+        "IsCurrentVersion",
+        "ExecutionCount",
+        "AvgDurationMinutes",
+        "AvgCpuSeconds",
+        "AvgRowCount",
+        "RowsQueried",
+        "RowsInserted",
+        "RowsUpdated",
+        "RowsDeleted",
+        "RowsMerged",
+        "TargetMarginPctInput",
+        "ManualAdjustmentPctInput",
+        "CompetitorPriceInput",
+        "DemandIndexInput",
+        "InventoryQtyInput",
+        "CostPerUnitInput",
+        "CustomerTypeInput",
+        "ContractTermMonthsInput",
+        "RecommendedPrice",
+        "ExpectedMarginPct",
+        "PriceFloor",
+        "PriceCeiling",
+        "FinalPrice",
+        "Score",
+        "PricingMessage",
+        "PricingExplanation",
+        "ChangedBy",
+    ]
+    selected_columns = [column for column in preferred_columns if column in available_columns]
+    values = [payload.get(column) for column in selected_columns]
+
+    conn.cursor().execute(
+        f"""
+        INSERT INTO ms.QuoteHistory
+        (
+            {", ".join(selected_columns)}
+        )
+        VALUES ({", ".join(["?"] * len(selected_columns))})
+        """,
+        *values,
+    )
 
 
 # Connection Management Notes:
@@ -105,6 +214,9 @@ def create_quote(request: QuoteCreateRequest) -> QuoteCreateResponse:
         competitor_price=request.pricingInput.competitorPriceInput,
         demand_index=request.pricingInput.demandIndexInput,
         inventory_qty=request.pricingInput.inventoryQtyInput,
+        cost_per_unit=request.pricingInput.costPerUnitInput,
+        customer_type_input=request.opportunity.customerType,
+        contract_term_months=request.pricingInput.contractTermMonthsInput,
     )
 
     conn = get_sql_connection()
@@ -140,6 +252,7 @@ def create_quote(request: QuoteCreateRequest) -> QuoteCreateResponse:
             "PlanName",
             "ServiceName",
             "ServiceCategory",
+            "ContractTermMonths",
             "SubscriptionQuantity",
         ]
         columns_to_write = [column for column in requested_columns if column in available_columns]
@@ -179,53 +292,17 @@ def create_quote(request: QuoteCreateRequest) -> QuoteCreateResponse:
             request.opportunity.changedBy,
         )
 
-        cursor.execute(
-            """
-            INSERT INTO ms.QuoteHistory
-            (
-                QuoteId, OpportunityId, VersionNo, ChangeType, IsCurrentVersion,
-                ExecutionCount, AvgDurationMinutes, AvgCpuSeconds, AvgRowCount,
-                RowsQueried, RowsInserted, RowsUpdated, RowsDeleted, RowsMerged,
-                TargetMarginPctInput, ManualAdjustmentPctInput, CompetitorPriceInput,
-                DemandIndexInput, InventoryQtyInput,
-                RecommendedPrice, ExpectedMarginPct, PriceFloor, PriceCeiling, FinalPrice,
-                Score, PricingMessage, PricingExplanation, ChangedBy
-            )
-            VALUES
-            (
-                ?, ?, 1, 'Created', 1,
-                ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?
-            )
-            """,
-            str(quote_id),
-            str(opportunity_id),
-            context.get("executionCount"),
-            context.get("avgDurationMinutes"),
-            context.get("avgCpuSeconds"),
-            context.get("avgRowCount"),
-            context.get("rowsQueried"),
-            context.get("rowsInserted"),
-            context.get("rowsUpdated"),
-            context.get("rowsDeleted"),
-            context.get("rowsMerged"),
-            request.pricingInput.targetMarginPctInput,
-            request.pricingInput.manualAdjustmentPctInput,
-            request.pricingInput.competitorPriceInput,
-            request.pricingInput.demandIndexInput,
-            request.pricingInput.inventoryQtyInput,
-            pricing.recommendedPrice,
-            pricing.expectedMarginPct,
-            pricing.priceFloor,
-            pricing.priceCeiling,
-            pricing.finalPrice,
-            pricing.score,
-            pricing.pricingMessage,
-            pricing.pricingExplanation,
-            request.opportunity.changedBy,
+        _insert_quote_history_row(
+            conn,
+            _build_quote_history_insert_data(
+                quote_id=quote_id,
+                opportunity_id=opportunity_id,
+                change_type="Created",
+                context=context,
+                request=request,
+                pricing=pricing,
+                changed_by=request.opportunity.changedBy,
+            ),
         )
 
         conn.commit()
@@ -276,6 +353,9 @@ def revise_quote(quote_id: UUID, request: QuoteReviseRequest) -> QuoteCreateResp
         competitor_price=request.pricingInput.competitorPriceInput,
         demand_index=request.pricingInput.demandIndexInput,
         inventory_qty=request.pricingInput.inventoryQtyInput,
+        cost_per_unit=request.pricingInput.costPerUnitInput,
+        customer_type_input=context.get("customerType"),
+        contract_term_months=request.pricingInput.contractTermMonthsInput,
     )
 
     conn = get_sql_connection()
@@ -317,72 +397,41 @@ def revise_quote(quote_id: UUID, request: QuoteReviseRequest) -> QuoteCreateResp
             request.changedBy,
         )
 
-        cursor.execute(
-            """
-            INSERT INTO ms.QuoteHistory
-            (
-                QuoteId, OpportunityId, VersionNo, ChangeType, IsCurrentVersion,
-                ExecutionCount, AvgDurationMinutes, AvgCpuSeconds, AvgRowCount,
-                RowsQueried, RowsInserted, RowsUpdated, RowsDeleted, RowsMerged,
-                TargetMarginPctInput, ManualAdjustmentPctInput, CompetitorPriceInput,
-                DemandIndexInput, InventoryQtyInput,
-                RecommendedPrice, ExpectedMarginPct, PriceFloor, PriceCeiling, FinalPrice,
-                Score, PricingMessage, PricingExplanation, ChangedBy
-            )
-            VALUES
-            (
-                ?, ?, 1, ?, 1,
-                ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?,
-                ?, ?, ?, ?
-            )
-            """,
-            str(new_quote_id),
-            str(opportunity_id),
-            request.changeType,
-            context.get("executionCount"),
-            context.get("avgDurationMinutes"),
-            context.get("avgCpuSeconds"),
-            context.get("avgRowCount"),
-            context.get("rowsQueried"),
-            context.get("rowsInserted"),
-            context.get("rowsUpdated"),
-            context.get("rowsDeleted"),
-            context.get("rowsMerged"),
-            request.pricingInput.targetMarginPctInput,
-            request.pricingInput.manualAdjustmentPctInput,
-            request.pricingInput.competitorPriceInput,
-            request.pricingInput.demandIndexInput,
-            request.pricingInput.inventoryQtyInput,
-            pricing.recommendedPrice,
-            pricing.expectedMarginPct,
-            pricing.priceFloor,
-            pricing.priceCeiling,
-            pricing.finalPrice,
-            pricing.score,
-            pricing.pricingMessage,
-            pricing.pricingExplanation,
-            request.changedBy,
+        _insert_quote_history_row(
+            conn,
+            _build_quote_history_insert_data(
+                quote_id=new_quote_id,
+                opportunity_id=opportunity_id,
+                change_type=request.changeType,
+                context=context,
+                request=request,
+                pricing=pricing,
+                changed_by=request.changedBy,
+            ),
         )
 
-        cursor.execute(
-            """
+        available_columns = _get_opportunity_table_columns(conn)
+        update_sql = """
             UPDATE ms.Opportunity
             SET CurrentQuoteId = ?, CurrentQuoteVersionNo = ?, LatestPriceAmount = ?,
                 LatestMarginPct = ?, LatestScore = ?, LastPricedAtUtc = SYSUTCDATETIME(),
                 ModifiedBy = ?, ModifiedAtUtc = SYSUTCDATETIME()
-            WHERE OpportunityId = ?
-            """,
+        """
+        params = [
             str(new_quote_id),
             1,
             str(pricing.finalPrice),
             str(pricing.expectedMarginPct),
             str(pricing.score),
             request.changedBy,
-            str(opportunity_id),
-        )
+        ]
+        if "ContractTermMonths" in available_columns:
+            update_sql += ", ContractTermMonths = ?"
+            params.append(request.pricingInput.contractTermMonthsInput)
+
+        update_sql += " WHERE OpportunityId = ?"
+        params.append(str(opportunity_id))
+        cursor.execute(update_sql, *params)
 
         conn.commit()
         return QuoteCreateResponse(
@@ -492,6 +541,7 @@ def get_opportunity_latest(opportunity_id: UUID, conn=None) -> OpportunityLatest
                 {_select_or_null("PlanName", "NVARCHAR(200)")},
                 {_select_or_null("ServiceName", "NVARCHAR(200)")},
                 {_select_or_null("ServiceCategory", "NVARCHAR(100)")},
+                {_select_or_null("ContractTermMonths", "INT")},
                 {_select_or_null("SubscriptionQuantity", "INT")}
             FROM ms.vOpportunityLatestPrice AS p
             JOIN ms.Opportunity AS o
@@ -526,6 +576,7 @@ def get_opportunity_latest(opportunity_id: UUID, conn=None) -> OpportunityLatest
             planName=row.PlanName,
             serviceName=row.ServiceName,
             serviceCategory=row.ServiceCategory,
+            contractTermMonths=int(row.ContractTermMonths) if row.ContractTermMonths is not None else None,
             subscriptionQuantity=int(row.SubscriptionQuantity) if row.SubscriptionQuantity is not None else None,
         )
     finally:

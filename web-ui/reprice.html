@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Billing | Northstar Telecom</title>
+  <link rel="stylesheet" href="./assets/styles.css" />
+</head>
+<body data-page="billing">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div class="brand-copy">
+          <strong>Northstar Telecom</strong>
+          <span>Service operations portal</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a data-nav href="./index.html">Dashboard <span>01</span></a>
+        <a data-nav href="./history.html">Pricing <span>02</span></a>
+        <a data-nav href="./new-quote.html">Products <span>03</span></a>
+        <a data-nav href="./opportunity.html">Network <span>04</span></a>
+        <a data-nav href="./reprice.html" class="active">Billing <span>05</span></a>
+        <a data-nav href="./reports.html">Reports <span>06</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="label">Revenue command</div>
+        <div class="value">Billing, collections, assurance</div>
+        <div class="footer-note">One queue for invoices, usage rating, disputes, credits, and payment reconciliation.</div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1>Billing command center</h1>
+          <p>Manage the full telecom revenue cycle: usage rating, invoice runs, payment matching, disputes, credits, and collections risk.</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="button" type="button" data-action-toast="Invoice run queued">Run invoice cycle</button>
+          <button class="ghost-button" type="button" data-action-toast="Revenue assurance report exported">Export report</button>
+          <a class="link-button" href="./index.html">Dashboard</a>
+        </div>
+      </header>
+
+      <section class="overview-grid">
+        <article class="metric-card">
+          <div class="label">Billable usage rated</div>
+          <div class="value">99.2%</div>
+          <div class="delta">4.8B events processed</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Invoice batch value</div>
+          <div class="value">$26.7M</div>
+          <div class="delta">128,542 invoices staged</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Collections exposure</div>
+          <div class="value">$1.02M</div>
+          <div class="delta">13.4% in 61-90 days</div>
+        </article>
+        <article class="metric-card">
+          <div class="label">Open disputes</div>
+          <div class="value">38</div>
+          <div class="delta">21 service-credit reviews</div>
+        </article>
+      </section>
+
+      <section class="workspace-grid">
+        <article class="panel hero-panel" data-tab-group>
+          <div class="panel-header">
+            <div>
+              <h2>Revenue operations cockpit</h2>
+              <p>Daily billing health with staged invoices, rating exceptions, and cash application status.</p>
+            </div>
+            <div class="segmented" role="tablist" aria-label="Billing operations view">
+              <button type="button" class="is-active" data-tab="cycle" aria-selected="true">Cycle</button>
+              <button type="button" data-tab="rating" aria-selected="false">Rating</button>
+              <button type="button" data-tab="cash" aria-selected="false">Cash</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="tab-panel is-active" data-panel="cycle">
+              <div class="four-column">
+                <div class="data-card">
+                  <div class="small-muted">Ready to post</div>
+                  <strong style="font-size:26px">$24.31M</strong>
+                  <div class="footer-note">113,204 customer invoices</div>
+                </div>
+                <div class="data-card">
+                  <div class="small-muted">Held for QA</div>
+                  <strong style="font-size:26px">$1.84M</strong>
+                  <div class="footer-note">Usage variance over threshold</div>
+                </div>
+                <div class="data-card">
+                  <div class="small-muted">Credits pending</div>
+                  <strong style="font-size:26px">$312K</strong>
+                  <div class="footer-note">Service credits and goodwill</div>
+                </div>
+                <div class="data-card">
+                  <div class="small-muted">Cycle close</div>
+                  <strong style="font-size:26px">18:00</strong>
+                  <div class="footer-note">Central operations window</div>
+                </div>
+              </div>
+              <div class="three-column" style="margin-top:14px">
+                <div class="data-card">
+                  <div class="small-muted">Usage exceptions</div>
+                  <strong style="font-size:26px">12,869</strong>
+                  <div class="footer-note">Roaming, zero-rated, duplicate CDR</div>
+                </div>
+                <div class="data-card">
+                  <div class="small-muted">Autopay success</div>
+                  <strong style="font-size:26px">94.8%</strong>
+                  <div class="footer-note">ACH and card combined</div>
+                </div>
+                <div class="data-card">
+                  <div class="small-muted">Ledger variance</div>
+                  <strong style="font-size:26px">$7.4K</strong>
+                  <div class="footer-note">Below review threshold</div>
+                </div>
+              </div>
+            </div>
+            <div class="tab-panel" data-panel="rating">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Usage source</th>
+                      <th>Events</th>
+                      <th>Rated</th>
+                      <th>Exceptions</th>
+                      <th>Owner</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="interactive-row" data-detail-title="Mobile CDR rating" data-detail-body="3.1B mobile call and data records rated. 1,204 events remain in roaming exception review.">
+                      <td class="emphasis">Mobile CDR</td>
+                      <td>3.1B</td>
+                      <td>99.8%</td>
+                      <td>1,204</td>
+                      <td>Rating ops</td>
+                    </tr>
+                    <tr class="interactive-row" data-detail-title="Fiber usage rating" data-detail-body="917M fiber usage records rated. Heavy-usage enterprise accounts are being sampled for assurance.">
+                      <td class="emphasis">Fiber usage</td>
+                      <td>917M</td>
+                      <td>98.9%</td>
+                      <td>8,451</td>
+                      <td>Assurance</td>
+                    </tr>
+                    <tr class="interactive-row" data-detail-title="Voice minutes rating" data-detail-body="698M voice minutes rated with elevated international destination checks.">
+                      <td class="emphasis">Voice minutes</td>
+                      <td>698M</td>
+                      <td>99.1%</td>
+                      <td>3,214</td>
+                      <td>Carrier desk</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tab-panel" data-panel="cash">
+              <div class="two-column">
+                <div class="chart-band">
+                  <div class="section-title">
+                    <h4>Cash application</h4>
+                    <span class="mini-tag success">98% matched</span>
+                  </div>
+                  <div class="progress" data-fill="98"></div>
+                  <div class="footer-note">Wire, ACH, card, and lockbox payments auto-matched to invoice records.</div>
+                </div>
+                <div class="chart-band">
+                  <div class="section-title">
+                    <h4>Manual exceptions</h4>
+                    <span class="mini-tag warn">8 items</span>
+                  </div>
+                  <div class="progress" data-fill="22"></div>
+                  <div class="footer-note">Missing remittance detail, split payment, and duplicate references.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <div class="stack">
+          <article class="activity-card">
+            <div class="section-title">
+              <h3>Collections priority</h3>
+              <button class="link-button" type="button" data-action-toast="Collections queue refreshed">Refresh</button>
+            </div>
+            <div class="activity-row interactive-row" data-detail-title="Brightstar Retail" data-detail-body="$125,430 past due for 68 days. Executive reminder scheduled and service hold is not recommended.">
+              <div>
+                <div class="title">Brightstar Retail</div>
+                <div class="meta">$125,430 past due, 68 days</div>
+              </div>
+              <span class="mini-tag warn">Priority</span>
+            </div>
+            <div class="activity-row interactive-row" data-detail-title="Summit Manufacturing" data-detail-body="$98,210 past due for 45 days. Promise-to-pay is active with a partial ACH expected Friday.">
+              <div>
+                <div class="title">Summit Manufacturing</div>
+                <div class="meta">$98,210 past due, 45 days</div>
+              </div>
+              <span class="mini-tag blue">Promise</span>
+            </div>
+            <div class="activity-row interactive-row" data-detail-title="Coastal Health Partners" data-detail-body="$56,300 past due for 93 days. Dispute is linked to outage credit on two circuits.">
+              <div>
+                <div class="title">Coastal Health Partners</div>
+                <div class="meta">$56,300 past due, 93 days</div>
+              </div>
+              <span class="mini-tag warn">Dispute</span>
+            </div>
+          </article>
+
+          <article class="activity-card">
+            <div class="section-title">
+              <h3>Revenue assurance</h3>
+              <span class="chip">Leakage watch</span>
+            </div>
+            <div class="list">
+              <div class="list-item interactive-row" data-detail-title="Zero-rated roaming" data-detail-body="82 roaming sessions have no partner rate attached. Rating ops is mapping carrier codes.">
+                <div>
+                  <div class="title">Zero-rated roaming</div>
+                  <div class="subtitle">82 events missing partner rate table mapping.</div>
+                </div>
+                <span class="mini-tag warn">$18K</span>
+              </div>
+              <div class="list-item interactive-row" data-detail-title="Enterprise discount drift" data-detail-body="Three enterprise contracts exceed the approved discount guardrail. Sales ops review is required.">
+                <div>
+                  <div class="title">Discount drift</div>
+                  <div class="subtitle">3 contracts exceed approved guardrails.</div>
+                </div>
+                <span class="mini-tag blue">$42K</span>
+              </div>
+              <div class="list-item interactive-row" data-detail-title="Unbilled IoT SIMs" data-detail-body="417 IoT SIMs are active but missing from the billing subscription feed.">
+                <div>
+                  <div class="title">Unbilled IoT SIMs</div>
+                  <div class="subtitle">417 active SIMs missing subscription sync.</div>
+                </div>
+                <span class="mini-tag warn">$9K</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="workspace-grid" style="margin-top:16px">
+        <article class="panel" data-tab-group>
+          <div class="panel-header">
+            <div>
+              <h2>Invoice and dispute workbench</h2>
+              <p>Resolve billing exceptions with the account, service, and network context visible together.</p>
+            </div>
+            <div class="segmented" role="tablist" aria-label="Billing workbench tabs">
+              <button type="button" class="is-active" data-tab="invoices" aria-selected="true">Invoices</button>
+              <button type="button" data-tab="disputes" aria-selected="false">Disputes</button>
+              <button type="button" data-tab="credits" aria-selected="false">Credits</button>
+            </div>
+          </div>
+          <div class="panel-body">
+            <div class="tab-panel is-active" data-panel="invoices">
+              <div class="table-wrap">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Invoice</th>
+                      <th>Account</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="interactive-row" data-detail-title="INV-2024-056789" data-detail-body="Brightstar Retail invoice includes fiber access, pooled mobile data, and support add-ons. Payment terms: Net 30.">
+                      <td class="emphasis">INV-2024-056789</td>
+                      <td>Brightstar Retail</td>
+                      <td>$125,430</td>
+                      <td><span class="mini-tag warn">Past due</span></td>
+                      <td><button class="link-button" type="button" data-action-toast="Reminder queued">Remind</button></td>
+                    </tr>
+                    <tr class="interactive-row" data-detail-title="INV-2024-056812" data-detail-body="Metro Logistics payment is due in 3 days and has a confirmed promise-to-pay note.">
+                      <td class="emphasis">INV-2024-056812</td>
+                      <td>Metro Logistics</td>
+                      <td>$88,410</td>
+                      <td><span class="mini-tag success">Current</span></td>
+                      <td><button class="link-button" type="button" data-action-toast="Account note opened">Note</button></td>
+                    </tr>
+                    <tr class="interactive-row" data-detail-title="INV-2024-056841" data-detail-body="Coastal Health Partners invoice is held because two outage credits need approval.">
+                      <td class="emphasis">INV-2024-056841</td>
+                      <td>Coastal Health Partners</td>
+                      <td>$56,300</td>
+                      <td><span class="mini-tag blue">Held</span></td>
+                      <td><button class="link-button" type="button" data-action-toast="Credit review opened">Review</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="tab-panel" data-panel="disputes">
+              <div class="timeline">
+                <div class="timeline-item interactive-row" data-detail-title="SLA outage credit" data-detail-body="Atlanta outage credit is awaiting NOC confirmation before finance approval.">
+                  <span class="timeline-dot"></span>
+                  <div>
+                    <strong>SLA outage credit</strong>
+                    <div class="small-muted">Coastal Health Partners, $18,200, NOC confirmation required</div>
+                  </div>
+                  <span class="mini-tag warn">Open</span>
+                </div>
+                <div class="timeline-item interactive-row" data-detail-title="Install fee dispute" data-detail-body="Install charge was waived by sales ops and is ready for credit memo creation.">
+                  <span class="timeline-dot"></span>
+                  <div>
+                    <strong>Install fee dispute</strong>
+                    <div class="small-muted">Twin Lakes Communities, $4,700, ready for memo</div>
+                  </div>
+                  <span class="mini-tag blue">Ready</span>
+                </div>
+                <div class="timeline-item interactive-row" data-detail-title="Roaming charge dispute" data-detail-body="Roaming overage aligns with the contract, but account team requested goodwill review.">
+                  <span class="timeline-dot"></span>
+                  <div>
+                    <strong>Roaming charge dispute</strong>
+                    <div class="small-muted">Apex Health, $9,830, account-team review</div>
+                  </div>
+                  <span class="mini-tag">Review</span>
+                </div>
+              </div>
+            </div>
+            <div class="tab-panel" data-panel="credits">
+              <div class="three-column">
+                <div class="data-card">
+                  <div class="small-muted">Pending approval</div>
+                  <strong style="font-size:26px">$91K</strong>
+                  <div class="footer-note">Finance queue</div>
+                </div>
+                <div class="data-card">
+                  <div class="small-muted">Auto-approved</div>
+                  <strong style="font-size:26px">$38K</strong>
+                  <div class="footer-note">Within policy</div>
+                </div>
+                <div class="data-card">
+                  <div class="small-muted">Blocked</div>
+                  <strong style="font-size:26px">$12K</strong>
+                  <div class="footer-note">Missing NOC evidence</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="./assets/config.js"></script>
+  <script src="./assets/portal.js"></script>
+</body>
+</html>
