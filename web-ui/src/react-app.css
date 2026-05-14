@@ -1041,6 +1041,184 @@ button:disabled {
   gap: 16px;
 }
 
+.breadcrumb {
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.record-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+  padding: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-soft);
+}
+
+.record-title-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.record-title-line h2 {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 28px;
+  letter-spacing: 0;
+}
+
+.record-header p {
+  margin: 8px 0 0;
+  color: var(--muted);
+}
+
+.record-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.summary-strip {
+  position: sticky;
+  top: 10px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.summary-strip .mini-stat {
+  min-height: 86px;
+}
+
+.summary-strip .mini-stat strong {
+  font-size: 19px;
+}
+
+.record-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  margin-bottom: 14px;
+  padding: 6px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.record-tabs button {
+  min-height: 34px;
+  padding: 8px 11px;
+  border-radius: 6px;
+  color: rgba(15, 23, 42, 0.72);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.record-tabs button.active {
+  color: #0f172a;
+  background: #ffffff;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
+.filter-ribbon {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.filter-ribbon label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filter-ribbon select {
+  min-height: 36px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--text);
+  padding: 0 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.pipeline-kanban {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(190px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.kanban-stage {
+  min-height: 230px;
+  padding: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.kanban-stage > strong {
+  display: block;
+  margin-bottom: 10px;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.kanban-stage .pipeline-card {
+  width: 100%;
+  text-align: left;
+}
+
+.record-main-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 16px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.field-grid.invoice-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.field-grid.compact-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.side-stack {
+  display: grid;
+  gap: 16px;
+}
+
 .parameter-ribbon {
   position: sticky;
   top: 12px;
@@ -1064,7 +1242,9 @@ button:disabled {
   .ops-split,
   .customer360-layout,
   .report-studio,
-  .detail-layout {
+  .detail-layout,
+  .record-main-layout,
+  .filter-ribbon {
     grid-template-columns: 1fr;
   }
 
@@ -1105,7 +1285,8 @@ button:disabled {
 
   .profile-hero,
   .report-page-header,
-  .detail-hero-panel {
+  .detail-hero-panel,
+  .record-header {
     flex-direction: column;
   }
 

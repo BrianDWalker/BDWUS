@@ -39,7 +39,7 @@ export function DataTable({ columns, rows, onRowClick }) {
               key={row.id || index}
               onClick={() => onRowClick?.(row)}
             >
-              {columns.map(column => <td key={column.key}>{column.render ? column.render(row) : row[column.key]}</td>)}
+              {columns.map(column => <td key={column.key}>{column.render ? column.render(row, index) : row[column.key]}</td>)}
             </tr>
           ))}
         </tbody>
