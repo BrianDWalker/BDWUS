@@ -907,22 +907,139 @@ function OrdersModule({ setRoute, showToast }) {
   );
 }
 
-function makePdfBlob(lines) {
-  const clean = lines.map(line => String(line).replace(/[()\\]/g, ""));
-  const header = "0.08 0.13 0.24 rg 36 722 540 42 re f\n1 1 1 rg BT /F1 18 Tf 54 738 Td (NORTHSTAR TELECOM) Tj ET";
-  const content = clean.map((line, index) => {
-    const y = 700 - index * 18;
-    const size = line.startsWith("##") ? 13 : 10;
-    const value = line.replace(/^##\s*/, "");
-    return `0 0 0 rg BT /F1 ${size} Tf 54 ${y} Td (${value}) Tj ET`;
-  }).join("\n");
-  const text = `${header}\n0.82 0.86 0.9 RG 36 120 540 600 re S\n${content}\n0.45 0.5 0.56 rg BT /F1 9 Tf 54 54 Td (Support: billing@northstar.example | 1-800-555-0199 | Page 1) Tj ET`;
+function pdfEscape(value) {
+  return String(value ?? "").replace(/[()\\]/g, "");
+}
+
+function makeInvoicePdfBlob(invoice) {
+  const invoiceNumber = displayInvoiceNumber(invoice);
+  const previousBalance = Math.round(invoice.amount * 0.42);
+  const currentCharges = invoice.recurring + invoice.usageAmount + invoice.oneTime;
+  const commands = [];
+  const text = (value, x, y, size = 9, font = "F1", color = "0.06 0.09 0.16") => {
+    commands.push(`${color} rg BT /${font} ${size} Tf ${x} ${y} Td (${pdfEscape(value)}) Tj ET`);
+  };
+  const line = (x1, y1, x2, y2, color = "0.82 0.86 0.9", width = 0.75) => {
+    commands.push(`${color} RG ${width} w ${x1} ${y1} m ${x2} ${y2} l S`);
+  };
+  const rect = (x, y, w, h, color = "1 1 1", mode = "f") => {
+    commands.push(`${color} rg ${x} ${y} ${w} ${h} re ${mode}`);
+  };
+  const strokedRect = (x, y, w, h, color = "0.82 0.86 0.9", width = 0.75) => {
+    commands.push(`${color} RG ${width} w ${x} ${y} ${w} ${h} re S`);
+  };
+  const labelValue = (label, value, x, y, valueColor = "0.06 0.09 0.16") => {
+    text(label.toUpperCase(), x, y + 14, 7, "F2", "0.42 0.48 0.57");
+    text(value, x, y, 10, "F2", valueColor);
+  };
+  const sectionTitle = (title, x, y) => {
+    text(title, x, y, 11, "F2");
+    line(x, y - 6, x + 510, y - 6, "0.08 0.45 0.42", 1.2);
+  };
+  const table = (headers, rows, x, y, widths) => {
+    const rowHeight = 22;
+    rect(x, y - rowHeight + 5, widths.reduce((a, b) => a + b, 0), rowHeight, "0.95 0.97 0.98");
+    let left = x;
+    headers.forEach((header, index) => {
+      text(header.toUpperCase(), left + 5, y - 10, 6.5, "F2", "0.34 0.39 0.47");
+      line(left, y + 5, left, y - rowHeight + 5);
+      left += widths[index];
+    });
+    line(x, y + 5, x + widths.reduce((a, b) => a + b, 0), y + 5);
+    line(x, y - rowHeight + 5, x + widths.reduce((a, b) => a + b, 0), y - rowHeight + 5);
+    rows.forEach((row, rowIndex) => {
+      const rowTop = y - rowHeight * (rowIndex + 1) + 5;
+      let cellX = x;
+      row.forEach((cell, index) => {
+        text(cell, cellX + 5, rowTop - 15, 7.5, index === row.length - 1 ? "F2" : "F1");
+        line(cellX, rowTop, cellX, rowTop - rowHeight);
+        cellX += widths[index];
+      });
+      line(x, rowTop - rowHeight, x + widths.reduce((a, b) => a + b, 0), rowTop - rowHeight);
+    });
+    line(x + widths.reduce((a, b) => a + b, 0), y + 5, x + widths.reduce((a, b) => a + b, 0), y - rowHeight * (rows.length + 1) + 5);
+  };
+
+  rect(0, 0, 612, 792, "1 1 1");
+  rect(36, 716, 540, 48, "0.04 0.09 0.18");
+  text("NORTHSTAR TELECOM", 54, 744, 17, "F2", "1 1 1");
+  text("Telecom Services Invoice", 54, 728, 8, "F1", "0.77 0.84 0.92");
+  text(invoiceNumber, 420, 744, 14, "F2", "1 1 1");
+  text(invoice.status, 420, 728, 8, "F2", invoice.status === "Past Due" ? "0.95 0.35 0.30" : "0.20 0.78 0.56");
+  rect(36, 676, 540, 28, "0.95 0.98 0.98");
+  labelValue("Invoice Date", invoice.invoiceDate, 54, 684);
+  labelValue("Due Date", invoice.due, 150, 684);
+  labelValue("Billing Account", invoice.billingAccount, 246, 684);
+  labelValue("Customer Account", invoice.accountNumber, 366, 684);
+  labelValue("Balance Due", formatMoney(invoice.balance), 486, 684, invoice.balance > 0 ? "0.86 0.15 0.15" : "0.02 0.48 0.34");
+  strokedRect(36, 676, 540, 28);
+
+  sectionTitle("Bill To", 54, 648);
+  text(invoice.customer, 54, 628, 11, "F2");
+  invoice.billingAddress.split("\n").forEach((part, index) => text(part, 54, 614 - index * 12, 8));
+  text(`Contact: ${invoice.contact}`, 54, 578, 8);
+
+  sectionTitle("Account Summary", 306, 648);
+  labelValue("Previous Balance", formatMoney(previousBalance), 306, 625);
+  labelValue("Payments Received", formatMoney(invoice.paid), 430, 625, "0.02 0.48 0.34");
+  labelValue("Adjustments", formatMoney(invoice.discounts), 306, 590, "0.02 0.48 0.34");
+  labelValue("Total Amount Due", formatMoney(invoice.balance), 430, 590, invoice.balance > 0 ? "0.86 0.15 0.15" : "0.02 0.48 0.34");
+
+  sectionTitle("Charge Summary", 54, 542);
+  const chargeRows = [
+    ["Recurring services", formatMoney(invoice.recurring), "Usage charges", formatMoney(invoice.usageAmount)],
+    ["One-time charges", formatMoney(invoice.oneTime), "Discounts", formatMoney(invoice.discounts)],
+    ["Taxes and regulatory fees", formatMoney(invoice.taxes), "Current charges", formatMoney(currentCharges)]
+  ];
+  chargeRows.forEach((row, index) => {
+    const y = 517 - index * 24;
+    text(row[0], 54, y, 8);
+    text(row[1], 202, y, 8, "F2");
+    text(row[2], 306, y, 8);
+    text(row[3], 488, y, 8, "F2", row[2] === "Discounts" ? "0.02 0.48 0.34" : "0.06 0.09 0.16");
+    line(54, y - 8, 558, y - 8);
+  });
+
+  sectionTitle("Service Detail", 54, 448);
+  table(
+    ["Service ID", "Product", "Period", "MRC", "NRC", "Usage", "Taxes", "Total"],
+    invoice.serviceRows.map(row => [row.serviceId, row.product.slice(0, 18), row.period.replace(", 2026", ""), formatMoney(row.mrc), formatMoney(row.nrc), formatMoney(row.usage), formatMoney(row.taxes), formatMoney(row.total)]),
+    54,
+    426,
+    [70, 92, 78, 58, 56, 58, 58, 64]
+  );
+
+  sectionTitle("Taxes and Surcharges", 54, 306);
+  table(
+    ["Category", "Basis", "Amount"],
+    [
+      ["Telecom regulatory fees", "Recurring + usage", formatMoney(Math.round(invoice.taxes * 0.48))],
+      ["State and local taxes", "Service location", formatMoney(Math.round(invoice.taxes * 0.37))],
+      ["911 / recovery surcharge", "Voice and access lines", formatMoney(invoice.taxes - Math.round(invoice.taxes * 0.48) - Math.round(invoice.taxes * 0.37))]
+    ],
+    54,
+    284,
+    [190, 190, 154]
+  );
+
+  sectionTitle("Payment Instructions", 54, 166);
+  text("Remit To: Northstar Telecom, PO Box 12545, Dallas, TX 75201", 54, 144, 8);
+  text("Payment Terms: Net 30    Online payment: billing.northstar.example", 54, 130, 8);
+  text("Include invoice number and billing account on all remittances.", 54, 116, 8);
+
+  rect(36, 52, 540, 34, "0.96 0.97 0.98");
+  text("Support: billing@northstar.example | 1-800-555-0199", 54, 72, 7.5, "F2", "0.28 0.33 0.40");
+  text("Disputes must be submitted within 30 days with invoice number, service ID, and adjustment reason. Page 1", 54, 60, 7, "F1", "0.40 0.45 0.52");
+  strokedRect(36, 52, 540, 34);
+
+  const stream = commands.join("\n");
   const objects = [
     "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
     "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj",
-    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj",
-    `4 0 obj << /Length ${text.length} >> stream\n${text}\nendstream endobj`,
-    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj"
+    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >> endobj",
+    `4 0 obj << /Length ${stream.length} >> stream\n${stream}\nendstream endobj`,
+    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj",
+    "6 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj"
   ];
   let pdf = "%PDF-1.4\n";
   const offsets = [0];
@@ -1079,29 +1196,6 @@ function usageRowsForInvoice(invoice) {
   }));
 }
 
-function invoicePdfLines(invoice) {
-  const invoiceNumber = displayInvoiceNumber(invoice);
-  return [
-    `Invoice: ${invoiceNumber} | Status: ${invoice.status} | Invoice Date: ${invoice.invoiceDate} | Due Date: ${invoice.due}`,
-    `Billing Account: ${invoice.billingAccount} | Customer Account: ${invoice.accountNumber} | Balance Due: ${formatMoney(invoice.balance)}`,
-    "## Bill To",
-    `${invoice.customer} | ${invoice.billingAddress.replaceAll("\n", ", ")} | Contact: ${invoice.contact}`,
-    "## Account Summary",
-    `Previous Balance: ${formatMoney(Math.round(invoice.amount * 0.42))} | Payments Received: ${formatMoney(invoice.paid)} | Adjustments: ${formatMoney(invoice.discounts)}`,
-    `Current Charges: ${formatMoney(invoice.recurring + invoice.usageAmount + invoice.oneTime)} | Taxes/Surcharges: ${formatMoney(invoice.taxes)} | Total Amount Due: ${formatMoney(invoice.balance)}`,
-    "## Charge Summary",
-    `Recurring Services: ${formatMoney(invoice.recurring)} | Usage Charges: ${formatMoney(invoice.usageAmount)} | One-Time Charges: ${formatMoney(invoice.oneTime)} | Discounts: ${formatMoney(invoice.discounts)}`,
-    "## Service Detail",
-    ...invoice.serviceRows.map(row => `${row.line}. ${row.serviceId} | ${row.product} | ${row.period} | MRC ${formatMoney(row.mrc)} | NRC ${formatMoney(row.nrc)} | Usage ${formatMoney(row.usage)} | Total ${formatMoney(row.total)}`),
-    "## Taxes and Surcharges",
-    `Telecom taxes and regulatory fees: ${formatMoney(invoice.taxes)}`,
-    "## Payment Instructions",
-    "Remit To: Northstar Telecom, PO Box 12545, Dallas, TX 75201 | Terms: Net 30 | Pay online at billing.northstar.example",
-    "## Footer",
-    "Support: billing@northstar.example | 1-800-555-0199 | Disputes must include invoice number, service ID, and adjustment reason."
-  ];
-}
-
 function InvoicePdfPreview({ invoice }) {
   const invoiceNumber = displayInvoiceNumber(invoice);
   return (
@@ -1178,7 +1272,7 @@ function InvoiceDetail({ id, setRoute, showToast }) {
   const adjustmentRows = adjustments.filter(item => item.customerId === invoice.customerId);
   const agingRows = invoiceAgingRows(invoice);
   function exportInvoicePdf() {
-    downloadBlob(makePdfBlob(invoicePdfLines(invoice)), `${invoiceNumber}.pdf`);
+    downloadBlob(makeInvoicePdfBlob(invoice), `${invoiceNumber}.pdf`);
     showToast("Invoice PDF exported");
   }
   return (
