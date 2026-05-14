@@ -1391,6 +1391,496 @@ button:disabled {
   background: #f8fafc;
 }
 
+/* Enterprise telecom CRM polish layer */
+body,
+body[data-page="index"],
+body[data-page="pricing"],
+body[data-page="products"],
+body[data-page="network"],
+body[data-page="billing"],
+body[data-page="reports"] {
+  background: #f5f7fa;
+}
+
+:root {
+  --bg: #f5f7fa;
+  --panel: #ffffff;
+  --panel-strong: #ffffff;
+  --panel-dark: #071b34;
+  --sidebar: #071b34;
+  --sidebar-2: #08182d;
+  --border: rgba(15, 23, 42, 0.1);
+  --text: #111827;
+  --muted: #667085;
+  --accent: #1f5f99;
+  --accent-2: #0f6f86;
+  --accent-3: #b7791f;
+  --signal: #2563a8;
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  --radius-xl: 8px;
+  --radius-lg: 7px;
+  --radius-md: 5px;
+}
+
+.content {
+  padding: 18px 22px 24px;
+}
+
+body[data-page="index"] .content {
+  padding-top: 18px;
+}
+
+.topbar,
+body[data-page="index"] .topbar {
+  position: relative;
+  align-items: center;
+  min-height: 74px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 7px;
+  background: linear-gradient(180deg, #0b2342 0%, #071b34 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+  color: #f8fafc;
+}
+
+.topbar::after {
+  display: none;
+}
+
+.topbar-title {
+  gap: 5px;
+}
+
+.topbar-title h1,
+body[data-page="index"] .topbar-title h1 {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-size: clamp(24px, 2vw, 32px);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.topbar-title p,
+body[data-page="index"] .topbar-title p {
+  max-width: 760px;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.topbar-actions {
+  gap: 8px;
+}
+
+.topbar-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: min(320px, 28vw);
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(203, 213, 225, 0.16);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.topbar-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f8fafc;
+  font-size: 12px;
+}
+
+.topbar-search input::placeholder {
+  color: rgba(226, 232, 240, 0.58);
+}
+
+.topbar-icon-button,
+.topbar-user {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(203, 213, 225, 0.16);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e5edf7;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.topbar-icon-button:hover,
+.topbar-user:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.button,
+.ghost-button,
+.toggle-button,
+.link-button {
+  min-height: 34px;
+  border-radius: 5px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: none;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.button:hover,
+.ghost-button:hover,
+.toggle-button:hover,
+.link-button:hover {
+  transform: none;
+}
+
+.button {
+  background: #1f5f99;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.button:hover {
+  background: #174a78;
+}
+
+.ghost-button,
+.toggle-button,
+.link-button,
+.tiny-button,
+.module-link-button {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: #ffffff;
+  color: #344054;
+}
+
+.ghost-button:hover,
+.toggle-button:hover,
+.link-button:hover,
+.tiny-button:hover,
+.module-link-button:hover {
+  border-color: rgba(31, 95, 153, 0.38);
+  color: #1f5f99;
+  background: #f8fafc;
+}
+
+.metric-card,
+.panel,
+.feature-card,
+.activity-card,
+.ops-node,
+.pipeline-card,
+.product-card,
+.coefficient-card,
+.outage-card,
+.compact-card,
+.report-item,
+.account-chip,
+.profile-surface,
+.report-catalog,
+.report-page,
+.record-header,
+.invoice-pdf-preview {
+  border-color: rgba(15, 23, 42, 0.1);
+  border-radius: 7px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  backdrop-filter: none;
+}
+
+.metric-card::before,
+.panel::before {
+  height: 2px;
+  background: #1f5f99;
+  opacity: 0.72;
+}
+
+.metric-card {
+  padding: 13px 14px;
+}
+
+.metric-card .label,
+.mini-stat span,
+.command-strip span,
+.report-summary-card span {
+  color: #667085;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.metric-card .value {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #101828;
+  margin-bottom: 6px;
+}
+
+.metric-card .delta {
+  font-size: 12px;
+  color: #475467;
+}
+
+.panel-header {
+  padding: 14px 14px 0;
+  gap: 10px;
+}
+
+.panel-header h2 {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.panel-header h3 {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.panel-header p {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.panel-body {
+  padding: 14px;
+}
+
+.table-wrap {
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.table th,
+.table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: #475467;
+  background: #f2f4f7;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.table td {
+  color: #1f2937;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.table tbody tr:hover,
+.interactive-row:hover {
+  background: #f8fafc;
+  transform: none;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table-row-actions {
+  gap: 5px;
+}
+
+.compact-action {
+  min-height: 26px;
+  padding: 5px 8px;
+  font-size: 11px;
+}
+
+.mini-tag {
+  min-height: 22px;
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mini-tag.success {
+  color: #047857;
+  background: #ecfdf3;
+  border-color: #abefc6;
+}
+
+.mini-tag.warn {
+  color: #b54708;
+  background: #fffaeb;
+  border-color: #fedf89;
+}
+
+.mini-tag.blue {
+  color: #175cd3;
+  background: #eff8ff;
+  border-color: #b2ddff;
+}
+
+.breadcrumb {
+  margin-bottom: 7px;
+  color: #667085;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.record-header {
+  margin-bottom: 13px;
+  padding: 14px 16px;
+}
+
+.record-title-line h2 {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.record-header p {
+  color: #667085;
+  font-size: 13px;
+}
+
+.summary-strip {
+  top: 8px;
+  gap: 8px;
+  margin-bottom: 13px;
+}
+
+.summary-strip .mini-stat,
+.mini-stat {
+  min-height: 72px;
+  padding: 11px 12px;
+  border-color: rgba(15, 23, 42, 0.09);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.summary-strip .mini-stat strong,
+.mini-stat strong {
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  margin-top: 5px;
+  font-size: 17px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.mini-stat small {
+  margin-top: 4px;
+  color: #667085;
+  font-size: 12px;
+}
+
+.record-tabs {
+  gap: 0;
+  margin-bottom: 13px;
+  padding: 0 10px;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.record-tabs button {
+  min-height: 36px;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  padding: 9px 12px 7px;
+  color: #475467;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.record-tabs button.active {
+  color: #1f5f99;
+  background: transparent;
+  box-shadow: none;
+  border-bottom-color: #1f5f99;
+}
+
+.filter-ribbon,
+.parameter-ribbon,
+.billing-search,
+.order-filter-grid,
+.modal-form input,
+.modal-form select,
+.modal-form textarea,
+.order-form select,
+.parameter-ribbon select,
+.billing-search select,
+.filter-ribbon select,
+.inline-search {
+  border-color: rgba(15, 23, 42, 0.1);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.filter-ribbon {
+  padding: 10px;
+}
+
+.filter-ribbon label,
+.order-filter-grid label,
+.modal-form label,
+.parameter-ribbon label {
+  color: #667085;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.inline-search {
+  min-height: 34px;
+}
+
+.ops-node,
+.pipeline-card,
+.product-card,
+.coefficient-card,
+.outage-card,
+.compact-card,
+.report-item,
+.account-chip,
+.customer-row,
+.deal-strip,
+.outage-card,
+.service-instance-card {
+  box-shadow: none;
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+.pipeline-card {
+  padding: 11px;
+}
+
+.pipeline-card > span {
+  color: #1f5f99;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+.focus-card {
+  border-left-color: #1f5f99;
+}
+
+.home-hero,
+.profile-hero,
+.invoice-template-preview {
+  border-radius: 7px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
 .parameter-ribbon {
   position: sticky;
   top: 12px;
