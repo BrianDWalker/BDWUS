@@ -1219,6 +1219,178 @@ button:disabled {
   gap: 16px;
 }
 
+.invoice-summary-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.58fr) minmax(260px, 0.58fr);
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.invoice-summary-layout .panel,
+.invoice-pdf-preview {
+  background: #ffffff;
+  backdrop-filter: none;
+}
+
+.invoice-kv-list {
+  display: grid;
+  gap: 0;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.invoice-kv-list span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 8px 10px;
+  color: rgba(15, 23, 42, 0.68);
+  font-size: 13px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+}
+
+.invoice-kv-list span:last-child {
+  border-bottom: 0;
+}
+
+.invoice-kv-list b {
+  color: #0f172a;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.invoice-kv-list b.due,
+.invoice-pdf-preview .due {
+  color: #dc2626;
+}
+
+.invoice-kv-list b.credit,
+.invoice-pdf-preview .credit {
+  color: #047857;
+}
+
+.invoice-pdf-preview {
+  margin-top: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.07);
+}
+
+.pdf-brand-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  background: #0b1730;
+  color: #ffffff;
+}
+
+.pdf-brand-bar strong {
+  display: block;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 20px;
+}
+
+.pdf-brand-bar span,
+.pdf-meta span {
+  display: block;
+  color: rgba(226, 232, 240, 0.74);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pdf-meta {
+  text-align: right;
+}
+
+.pdf-meta strong {
+  margin-top: 4px;
+  font-size: 16px;
+}
+
+.pdf-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.pdf-section-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pdf-section-grid > div {
+  padding: 14px 16px;
+  border-right: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+.pdf-section-grid > div:last-child {
+  border-right: 0;
+}
+
+.invoice-pdf-preview h4,
+.pdf-table-block h4 {
+  margin: 0 0 8px;
+  color: #0f172a;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 14px;
+}
+
+.invoice-pdf-preview p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0;
+  color: rgba(15, 23, 42, 0.72);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.invoice-pdf-preview p b {
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.pdf-table-block {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.pdf-table-block table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.pdf-table-block th,
+.pdf-table-block td {
+  padding: 7px 8px;
+  text-align: left;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+.pdf-table-block th {
+  color: rgba(15, 23, 42, 0.7);
+  background: #f8fafc;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pdf-footer {
+  padding: 10px 16px;
+  color: rgba(15, 23, 42, 0.68);
+  font-size: 11px;
+  background: #f8fafc;
+}
+
 .parameter-ribbon {
   position: sticky;
   top: 12px;
@@ -1244,8 +1416,23 @@ button:disabled {
   .report-studio,
   .detail-layout,
   .record-main-layout,
+  .invoice-summary-layout,
   .filter-ribbon {
     grid-template-columns: 1fr;
+  }
+
+  .pdf-section-grid,
+  .pdf-section-grid.three {
+    grid-template-columns: 1fr;
+  }
+
+  .pdf-section-grid > div {
+    border-right: 0;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+  }
+
+  .pdf-section-grid > div:last-child {
+    border-bottom: 0;
   }
 
   .billing-detail-grid {

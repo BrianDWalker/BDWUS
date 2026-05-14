@@ -242,7 +242,7 @@ function invoiceStatus(invoice) {
   if (invoice.status === "Priority" || invoice.aging > 60) return "Past Due";
   if (invoice.status === "Review") return "Disputed";
   if (invoice.status === "Approved") return "Open";
-  if (invoice.status === "Current") return "Partially Paid";
+  if (invoice.status === "Current") return "Open";
   return invoice.status;
 }
 
@@ -1044,50 +1044,197 @@ function ProductDetail({ id, setRoute, showToast }) {
   );
 }
 
-function invoicePdfLines(invoice) {
+function displayInvoiceNumber(invoice) {
+  const numeric = String(invoice.id).replace(/\D/g, "").padStart(6, "0");
+  return `INV-2025-${numeric}`;
+}
+
+function invoiceAgingRows(invoice) {
   return [
-    `Invoice Number: ${invoice.id} | Invoice Date: ${invoice.invoiceDate} | Due Date: ${invoice.due}`,
-    `Billing Account: ${invoice.billingAccount} | Customer Account: ${invoice.accountNumber} | Status: ${invoice.status}`,
+    { id: "0-30", bucket: "0-30", amount: invoice.aging <= 30 ? invoice.balance : 0 },
+    { id: "31-60", bucket: "31-60", amount: invoice.aging > 30 && invoice.aging <= 60 ? invoice.balance : 0 },
+    { id: "61-90", bucket: "61-90", amount: invoice.aging > 60 && invoice.aging <= 90 ? invoice.balance : 0 },
+    { id: "90+", bucket: "90+", amount: invoice.aging > 90 ? invoice.balance : 0 }
+  ];
+}
+
+function paymentRowsFor(invoice) {
+  return invoice.paid > 0 ? [
+    { id: `PMT-${invoice.id.slice(-4)}-01`, date: "2026-05-14", method: "ACH", amount: invoice.paid, status: "Posted", reference: `ACH-${invoice.billingAccount.slice(-4)}-0514` }
+  ] : [
+    { id: `PMT-${invoice.id.slice(-4)}-01`, date: "Pending", method: "ACH", amount: 0, status: "Not received", reference: "None" }
+  ];
+}
+
+function usageRowsForInvoice(invoice) {
+  return invoice.serviceRows.map((row, index) => ({
+    id: `USG-${row.id}`,
+    usageType: index % 2 ? "Voice minutes" : "Data transfer",
+    serviceId: row.serviceId,
+    location: `${100 + index * 22} Network Plaza, ${invoice.customer}`,
+    dateRange: "May 1-31, 2026",
+    quantity: index % 2 ? 4820 : 32.4,
+    unit: index % 2 ? "Minutes" : "TB",
+    rated: row.usage
+  }));
+}
+
+function invoicePdfLines(invoice) {
+  const invoiceNumber = displayInvoiceNumber(invoice);
+  return [
+    `Invoice: ${invoiceNumber} | Status: ${invoice.status} | Invoice Date: ${invoice.invoiceDate} | Due Date: ${invoice.due}`,
+    `Billing Account: ${invoice.billingAccount} | Customer Account: ${invoice.accountNumber} | Balance Due: ${formatMoney(invoice.balance)}`,
     "## Bill To",
     `${invoice.customer} | ${invoice.billingAddress.replaceAll("\n", ", ")} | Contact: ${invoice.contact}`,
     "## Account Summary",
     `Previous Balance: ${formatMoney(Math.round(invoice.amount * 0.42))} | Payments Received: ${formatMoney(invoice.paid)} | Adjustments: ${formatMoney(invoice.discounts)}`,
     `Current Charges: ${formatMoney(invoice.recurring + invoice.usageAmount + invoice.oneTime)} | Taxes/Surcharges: ${formatMoney(invoice.taxes)} | Total Amount Due: ${formatMoney(invoice.balance)}`,
     "## Charge Summary",
-    `Recurring Services: ${formatMoney(invoice.recurring)} | Usage Charges: ${formatMoney(invoice.usageAmount)} | One-Time Charges: ${formatMoney(invoice.oneTime)} | Equipment: ${formatMoney(Math.round(invoice.oneTime * 0.4))}`,
-    `Discounts: ${formatMoney(invoice.discounts)} | Taxes and Regulatory Fees: ${formatMoney(invoice.taxes)}`,
+    `Recurring Services: ${formatMoney(invoice.recurring)} | Usage Charges: ${formatMoney(invoice.usageAmount)} | One-Time Charges: ${formatMoney(invoice.oneTime)} | Discounts: ${formatMoney(invoice.discounts)}`,
     "## Service Detail",
-    ...invoice.serviceRows.map(row => `${row.serviceId} | ${row.product} | ${row.period} | MRC ${formatMoney(row.mrc)} | NRC ${formatMoney(row.nrc)} | Usage ${formatMoney(row.usage)} | Taxes ${formatMoney(row.taxes)} | Total ${formatMoney(row.total)}`),
+    ...invoice.serviceRows.map(row => `${row.line}. ${row.serviceId} | ${row.product} | ${row.period} | MRC ${formatMoney(row.mrc)} | NRC ${formatMoney(row.nrc)} | Usage ${formatMoney(row.usage)} | Total ${formatMoney(row.total)}`),
+    "## Taxes and Surcharges",
+    `Telecom taxes and regulatory fees: ${formatMoney(invoice.taxes)}`,
     "## Payment Instructions",
     "Remit To: Northstar Telecom, PO Box 12545, Dallas, TX 75201 | Terms: Net 30 | Pay online at billing.northstar.example",
     "## Footer",
-    "Disputes must be submitted within 30 days with invoice number, service ID, and adjustment reason."
+    "Support: billing@northstar.example | 1-800-555-0199 | Disputes must include invoice number, service ID, and adjustment reason."
   ];
+}
+
+function InvoicePdfPreview({ invoice }) {
+  const invoiceNumber = displayInvoiceNumber(invoice);
+  return (
+    <section className="invoice-pdf-preview" aria-label="Printable invoice preview">
+      <div className="pdf-brand-bar">
+        <div>
+          <strong>Northstar Telecom</strong>
+          <span>Telecom services invoice</span>
+        </div>
+        <div className="pdf-meta">
+          <span>Invoice #</span>
+          <strong>{invoiceNumber}</strong>
+        </div>
+      </div>
+      <div className="pdf-section-grid">
+        <div>
+          <h4>Invoice Metadata</h4>
+          <p>Invoice Date: {invoice.invoiceDate}</p>
+          <p>Due Date: {invoice.due}</p>
+          <p>Billing Account: {invoice.billingAccount}</p>
+          <p>Customer Account: {invoice.accountNumber}</p>
+          <p>Status: {invoice.status}</p>
+        </div>
+        <div>
+          <h4>Bill To</h4>
+          <p>{invoice.customer}</p>
+          <p>{invoice.billingAddress.split("\n").join(", ")}</p>
+          <p>Contact: {invoice.contact}</p>
+        </div>
+      </div>
+      <div className="pdf-section-grid three">
+        <div>
+          <h4>Account Summary</h4>
+          <p>Previous Balance <b>{formatMoney(Math.round(invoice.amount * 0.42))}</b></p>
+          <p>Payments Received <b className="credit">{formatMoney(invoice.paid)}</b></p>
+          <p>Adjustments <b className="credit">{formatMoney(invoice.discounts)}</b></p>
+          <p>Total Amount Due <b className={invoice.balance > 0 ? "due" : "credit"}>{formatMoney(invoice.balance)}</b></p>
+        </div>
+        <div>
+          <h4>Charge Summary</h4>
+          <p>Recurring Services <b>{formatMoney(invoice.recurring)}</b></p>
+          <p>Usage Charges <b>{formatMoney(invoice.usageAmount)}</b></p>
+          <p>One-Time Charges <b>{formatMoney(invoice.oneTime)}</b></p>
+          <p>Taxes and Fees <b>{formatMoney(invoice.taxes)}</b></p>
+        </div>
+        <div>
+          <h4>Payment Instructions</h4>
+          <p>Terms: Net 30</p>
+          <p>Remit To: Northstar Telecom</p>
+          <p>PO Box 12545, Dallas, TX 75201</p>
+          <p>Pay online at billing.northstar.example</p>
+        </div>
+      </div>
+      <div className="pdf-table-block">
+        <h4>Service Detail</h4>
+        <table>
+          <thead><tr><th>Service ID</th><th>Product</th><th>Billing Period</th><th>MRC</th><th>NRC</th><th>Usage</th><th>Taxes</th><th>Total</th></tr></thead>
+          <tbody>
+            {invoice.serviceRows.map(row => (
+              <tr key={row.id}><td>{row.serviceId}</td><td>{row.product}</td><td>{row.period}</td><td>{formatMoney(row.mrc)}</td><td>{formatMoney(row.nrc)}</td><td>{formatMoney(row.usage)}</td><td>{formatMoney(row.taxes)}</td><td>{formatMoney(row.total)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="pdf-footer">Support: billing@northstar.example / 1-800-555-0199. Disputes must be submitted within 30 days with invoice number, service ID, and reason.</div>
+    </section>
+  );
 }
 
 function InvoiceDetail({ id, setRoute, showToast }) {
   const invoice = enrichedInvoice(invoices.find(item => item.id === id) || invoices[0]);
+  const invoiceNumber = displayInvoiceNumber(invoice);
   const [tab, setTab] = useState("Summary");
   const adjustmentRows = adjustments.filter(item => item.customerId === invoice.customerId);
+  const agingRows = invoiceAgingRows(invoice);
   function exportInvoicePdf() {
-    downloadBlob(makePdfBlob(invoicePdfLines(invoice)), `${invoice.id}.pdf`);
+    downloadBlob(makePdfBlob(invoicePdfLines(invoice)), `${invoiceNumber}.pdf`);
     showToast("Invoice PDF exported");
   }
   return (
     <>
       <RecordHeader
-        breadcrumb={["Billing", "Invoices", invoice.id]}
-        title={`Invoice ${invoice.id}`}
+        breadcrumb={["Billing", "Invoices", invoiceNumber]}
+        title={`Invoice ${invoiceNumber}`}
         status={invoice.status}
-        subtitle={`${invoice.customer} · ${invoice.billingAccount} · Invoice Date ${invoice.invoiceDate} · Due ${invoice.due} · Balance Due ${formatMoney(invoice.balance)}`}
-        actions={<><ActionButton icon="workflow" onClick={() => showToast("Invoice sent")}>Send</ActionButton><ActionButton icon="reports" variant="button" onClick={exportInvoicePdf}>Export PDF</ActionButton><ActionButton icon="billing" onClick={() => showToast("Payment recorded")}>Record Payment</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Credit memo created")}>Create Credit</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Dispute opened")}>Dispute</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Adjustment workflow opened")}>Adjust</ActionButton></>}
+        subtitle={`${invoice.customer} · ${invoice.billingAccount}`}
+        actions={<><ActionButton icon="workflow" onClick={() => showToast("Invoice sent")}>Send</ActionButton><ActionButton icon="reports" variant="button" onClick={exportInvoicePdf}>Export PDF</ActionButton><ActionButton icon="billing" onClick={() => showToast("Payment entry opened")}>Record Payment</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Adjustment workflow opened")}>Create Adjustment</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Dispute opened")}>Dispute</ActionButton></>}
       />
+      <SummaryStrip items={[
+        { label: "Customer", value: invoice.customer, note: invoice.accountNumber },
+        { label: "Billing Account", value: invoice.billingAccount, note: "Consolidated bill" },
+        { label: "Invoice Date", value: invoice.invoiceDate, note: invoiceNumber },
+        { label: "Due Date", value: invoice.due, note: "Net 30" },
+        { label: "Total Amount", value: formatMoney(invoice.amount), note: "Invoice total" },
+        { label: "Balance Due", value: formatMoney(invoice.balance), note: invoice.status },
+        { label: "Aging Bucket", value: agingBucket(invoice), note: `${invoice.aging} days` }
+      ]} />
       <Tabs tabs={["Summary", "Line Items", "Usage Detail", "Payments", "Adjustments", "Notes", "Documents"]} active={tab} onChange={setTab} />
-      {tab === "Summary" && <section className="record-main-layout"><Panel title="Invoice Summary" description="Charge components, amount paid, and balance due."><div className="field-grid invoice-summary-grid"><MiniStat label="Recurring Charges" value={formatMoney(invoice.recurring)} /><MiniStat label="Usage Charges" value={formatMoney(invoice.usageAmount)} /><MiniStat label="One-Time Charges" value={formatMoney(invoice.oneTime)} /><MiniStat label="Discounts" value={formatMoney(invoice.discounts)} /><MiniStat label="Taxes/Surcharges" value={formatMoney(invoice.taxes)} /><MiniStat label="Total Amount" value={formatMoney(invoice.amount)} /><MiniStat label="Amount Paid" value={formatMoney(invoice.paid)} /><MiniStat label="Balance Due" value={formatMoney(invoice.balance)} note={invoice.status} /></div></Panel><div className="side-stack"><Panel title="Aging" description="Invoice aging buckets."><DataTable columns={[{ key: "bucket", label: "Bucket" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount) }]} rows={[{ id: "0", bucket: "0-30", amount: invoice.aging <= 30 ? invoice.balance : 0 }, { id: "31", bucket: "31-60", amount: invoice.aging > 30 && invoice.aging <= 60 ? invoice.balance : 0 }, { id: "61", bucket: "61-90", amount: invoice.aging > 60 && invoice.aging <= 90 ? invoice.balance : 0 }, { id: "90", bucket: "90+", amount: invoice.aging > 90 ? invoice.balance : 0 }]} /></Panel><Panel title="Payment" description="Payment method and remit-to."><div className="field-grid compact-fields"><MiniStat label="Payment Terms" value="Net 30" /><MiniStat label="Payment Method" value="ACH" /><MiniStat label="Remit To" value="Northstar Telecom" note="PO Box 12545, Dallas, TX" /><MiniStat label="AutoPay" value="No" /></div></Panel></div></section>}
-      {tab === "Line Items" && <Panel title="Line Items" description="Service-level charge detail."><DataTable columns={[{ key: "line", label: "Line #" }, { key: "serviceId", label: "Service ID" }, { key: "product", label: "Product" }, { key: "description", label: "Description" }, { key: "period", label: "Billing Period" }, { key: "quantity", label: "Quantity" }, { key: "rate", label: "Rate", render: row => formatMoney(row.rate) }, { key: "mrc", label: "MRC", render: row => formatMoney(row.mrc) }, { key: "nrc", label: "NRC", render: row => formatMoney(row.nrc) }, { key: "usage", label: "Usage", render: row => formatMoney(row.usage) }, { key: "discount", label: "Discount", render: row => formatMoney(row.discount) }, { key: "taxes", label: "Taxes/Surcharges", render: row => formatMoney(row.taxes) }, { key: "total", label: "Total", render: row => formatMoney(row.total) }]} rows={invoice.serviceRows} /></Panel>}
-      {tab === "Usage Detail" && <Panel title="Usage Detail" description="Rated usage by service and location."><DataTable columns={[{ key: "usageType", label: "Usage Type" }, { key: "dateRange", label: "Date Range" }, { key: "quantity", label: "Quantity" }, { key: "unit", label: "Unit" }, { key: "rated", label: "Rated Amount", render: row => formatMoney(row.rated) }, { key: "serviceId", label: "Service ID" }, { key: "location", label: "Location" }]} rows={invoice.serviceRows.map((row, index) => ({ id: `USG-${row.id}`, usageType: index % 2 ? "Voice minutes" : "Data transfer", dateRange: "May 1-31, 2026", quantity: index % 2 ? 4820 : 32.4, unit: index % 2 ? "Minutes" : "TB", rated: row.usage, serviceId: row.serviceId, location: `${100 + index * 22} Network Plaza` }))} /></Panel>}
-      {tab === "Adjustments" && <Panel title="Adjustments" description="Invoice credits, disputes, approvals, and adjustment reasons."><DataTable columns={[{ key: "id", label: "Adjustment ID" }, { key: "type", label: "Type" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount) }, { key: "reason", label: "Reason", render: row => row.type }, { key: "status", label: "Status" }, { key: "createdBy", label: "Created By", render: () => "Billing Ops" }, { key: "approvedBy", label: "Approved By", render: row => row.status === "Posted" ? "Finance" : "Pending" }, { key: "date", label: "Date", render: () => "2026-05-13" }]} rows={adjustmentRows} /></Panel>}
-      {!["Summary", "Line Items", "Usage Detail", "Adjustments"].includes(tab) && <Panel title={tab} description={`${tab} connected to ${invoice.id}.`}><DataTable columns={[{ key: "id", label: "Record" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }]} rows={[{ id: `${tab}-1`, name: `${invoice.id} ${tab}`, status: "Active" }]} /></Panel>}
+      {tab === "Summary" && (
+        <>
+          <section className="invoice-summary-layout">
+            <Panel title="Invoice Summary" description="Charge components, amount paid, and balance due.">
+              <div className="invoice-kv-list">
+                <span>Recurring Charges <b>{formatMoney(invoice.recurring)}</b></span>
+                <span>Usage Charges <b>{formatMoney(invoice.usageAmount)}</b></span>
+                <span>One-Time Charges <b>{formatMoney(invoice.oneTime)}</b></span>
+                <span>Discounts <b className="credit">{formatMoney(invoice.discounts)}</b></span>
+                <span>Taxes/Surcharges <b>{formatMoney(invoice.taxes)}</b></span>
+                <span>Total <b>{formatMoney(invoice.amount)}</b></span>
+                <span>Amount Paid <b className="credit">{formatMoney(invoice.paid)}</b></span>
+                <span>Balance Due <b className={invoice.balance > 0 ? "due" : "credit"}>{formatMoney(invoice.balance)}</b></span>
+              </div>
+            </Panel>
+            <Panel title="Aging" description="Receivables by aging bucket.">
+              <DataTable columns={[{ key: "bucket", label: "Bucket" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount) }]} rows={agingRows} />
+            </Panel>
+            <Panel title="Payment Info" description="Terms, method, remit-to, and AutoPay profile.">
+              <div className="invoice-kv-list">
+                <span>Payment Terms <b>Net 30</b></span>
+                <span>Payment Method <b>ACH</b></span>
+                <span>Remit To <b>Northstar Telecom</b></span>
+                <span>AutoPay <b>No</b></span>
+              </div>
+            </Panel>
+          </section>
+          <InvoicePdfPreview invoice={invoice} />
+        </>
+      )}
+      {tab === "Line Items" && <Panel title="Line Items" description="Service-level charge detail."><DataTable columns={[{ key: "line", label: "Line #" }, { key: "serviceId", label: "Service ID" }, { key: "product", label: "Product" }, { key: "description", label: "Description" }, { key: "period", label: "Billing Period" }, { key: "quantity", label: "Qty" }, { key: "rate", label: "Rate", render: row => formatMoney(row.rate) }, { key: "mrc", label: "MRC", render: row => formatMoney(row.mrc) }, { key: "nrc", label: "NRC", render: row => formatMoney(row.nrc) }, { key: "usage", label: "Usage", render: row => formatMoney(row.usage) }, { key: "discount", label: "Discount", render: row => formatMoney(row.discount) }, { key: "taxes", label: "Taxes/Surcharges", render: row => formatMoney(row.taxes) }, { key: "total", label: "Total", render: row => formatMoney(row.total) }]} rows={invoice.serviceRows} /></Panel>}
+      {tab === "Usage Detail" && <Panel title="Usage Detail" description="Rated usage by service and location."><DataTable columns={[{ key: "usageType", label: "Usage Type" }, { key: "serviceId", label: "Service ID" }, { key: "location", label: "Location" }, { key: "dateRange", label: "Date Range" }, { key: "quantity", label: "Quantity" }, { key: "unit", label: "Unit" }, { key: "rated", label: "Rated Amount", render: row => formatMoney(row.rated) }]} rows={usageRowsForInvoice(invoice)} /></Panel>}
+      {tab === "Payments" && <Panel title="Payments" description="Payment records posted or pending against this invoice."><DataTable columns={[{ key: "id", label: "Payment ID" }, { key: "date", label: "Date" }, { key: "method", label: "Method" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount) }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Posted" ? "success" : "warn"}>{row.status}</StatusTag> }, { key: "reference", label: "Reference #" }]} rows={paymentRowsFor(invoice)} /></Panel>}
+      {tab === "Adjustments" && <Panel title="Adjustments" description="Invoice credits, disputes, approvals, and adjustment reasons."><DataTable columns={[{ key: "id", label: "Adjustment ID" }, { key: "type", label: "Type" }, { key: "reason", label: "Reason", render: row => row.type }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount) }, { key: "status", label: "Status" }, { key: "createdBy", label: "Created By", render: () => "Billing Ops" }, { key: "approvedBy", label: "Approved By", render: row => row.status === "Posted" ? "Finance" : "Pending" }, { key: "date", label: "Date", render: () => "2026-05-13" }]} rows={adjustmentRows} /></Panel>}
+      {["Notes", "Documents"].includes(tab) && <Panel title={tab} description={`${tab} connected to ${invoiceNumber}.`}><DataTable columns={[{ key: "id", label: "Record" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }]} rows={[{ id: `${tab}-1`, name: `${invoiceNumber} ${tab}`, status: "Active" }]} /></Panel>}
     </>
   );
 }
