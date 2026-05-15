@@ -42,198 +42,65 @@ export const topNavSections = [
   {
     id: "dashboard",
     label: "Home",
-    description: "Operational brief, alerts, and workstream snapshot.",
     icon: "dashboard",
-    routes: ["dashboard"],
-    groups: [
-      {
-        title: "Overview",
-        links: [
-          { label: "Daily Brief", description: "Cross-domain operating summary", route: "dashboard", icon: "dashboard" },
-          { label: "Workstream Pulse", description: "Sales, care, billing, and network activity", route: "dashboard", icon: "activity" }
-        ]
-      }
-    ]
+    route: "dashboard",
+    routes: ["dashboard"]
   },
   {
     id: "sales",
     label: "Sales",
-    description: "Pipeline, quote desk, and approval flow.",
     icon: "sales",
-    routes: ["sales", "details/opportunity", "details/lead", "details/quote"],
-    groups: [
-      {
-        title: "Commercial",
-        links: [
-          { label: "Opportunities", description: "Manage enterprise pipeline records", route: "sales", icon: "opportunities" },
-          { label: "Quote Desk", description: "Review custom pricing and quotes", route: "sales", icon: "pricing" },
-          { label: "Approvals", description: "Pending reviews and finance sign-off", route: "sales", icon: "workflow" }
-        ]
-      },
-      {
-        title: "Execution",
-        links: [
-          { label: "Activities", description: "Meetings, follow-ups, and notes", route: "sales", icon: "activity" },
-          { label: "Contracts", description: "Agreement and term context", route: "sales", icon: "account" }
-        ]
-      }
-    ]
+    route: "sales",
+    routes: ["sales", "details/opportunity", "details/lead", "details/quote"]
   },
   {
     id: "customer-360",
     label: "Customer 360",
-    description: "Account workspace, care, services, orders, and billing.",
     icon: "customerSearch",
-    routes: ["customer-360", "customer-service", "details/billing-account", "details/invoice", "details/service"],
-    groups: [
-      {
-        title: "Accounts",
-        links: [
-          { label: "Account Workspace", description: "Search and manage customer accounts", route: "customer-360", icon: "customers" },
-          { label: "Customer Service", description: "Tickets and support queue", route: "customer-service", icon: "serviceDesk" },
-          { label: "Documents", description: "Contacts, agreements, and records", route: "customer-360", icon: "layers" }
-        ]
-      },
-      {
-        title: "Billing & Service",
-        links: [
-          { label: "Billing Accounts", description: "Balances, payments, and aging", route: "billing", icon: "billing" },
-          { label: "Invoices", description: "Customer invoice records", route: "billing", icon: "settlement" },
-          { label: "Services", description: "Active services and circuit context", route: "customer-360", icon: "service" }
-        ]
-      }
-    ]
+    route: "customer-360",
+    routes: ["customer-360", "customer-service", "details/billing-account", "details/invoice", "details/service"]
   },
   {
     id: "orders",
     label: "Orders",
-    description: "Provisioning orchestration and delivery tracking.",
     icon: "orders",
-    routes: ["orders", "details/order"],
-    groups: [
-      {
-        title: "Delivery",
-        links: [
-          { label: "Work Queue", description: "Operational order queue", route: "orders", icon: "orders" },
-          { label: "Provisioning", description: "Activation and turn-up flow", route: "orders", icon: "provisioning" },
-          { label: "Audit History", description: "Assignment and status trail", route: "details/order/ORD-2001", icon: "activity" }
-        ]
-      }
-    ]
+    route: "orders",
+    routes: ["orders", "details/order"]
   },
   {
     id: "product-pricing",
     label: "Product & Pricing",
-    description: "Catalog, billing elements, promos, offers, and governance.",
     icon: "pricing",
-    routes: ["product-pricing", "details/product", "details/product-pricing"],
-    groups: [
-      {
-        title: "Catalog",
-        links: [
-          { label: "Product Catalog", description: "Lifecycle and ownership", route: "product-pricing", icon: "products" },
-          { label: "Billing Elements", description: "Charge codes and billing hierarchy", route: "product-pricing", icon: "billing" },
-          { label: "Promos", description: "Promotion lifecycle and eligibility", route: "product-pricing", icon: "strategic" }
-        ]
-      },
-      {
-        title: "Pricing Control",
-        links: [
-          { label: "Offers", description: "Bundles and attach rates", route: "product-pricing", icon: "layers" },
-          { label: "Coefficients", description: "Rules and overrides", route: "product-pricing", icon: "coefficients" },
-          { label: "Performance", description: "Revenue and win/loss trends", route: "product-pricing", icon: "reports" }
-        ]
-      }
-    ]
+    route: "product-pricing",
+    routes: ["product-pricing", "details/product", "details/product-pricing"]
   },
   {
     id: "network",
     label: "Network & Service",
-    description: "Events, provisioning, service catalog, and settlement.",
     icon: "network",
-    routes: ["network", "service-management", "provisioning", "carrier-settlement"],
-    groups: [
-      {
-        title: "Operations",
-        links: [
-          { label: "Network Events", description: "Impact and SLA exposure", route: "network", icon: "network" },
-          { label: "Service Management", description: "Service catalog and work queue", route: "service-management", icon: "service" },
-          { label: "Provisioning", description: "Activation jobs and inventory exceptions", route: "provisioning", icon: "provisioning" }
-        ]
-      },
-      {
-        title: "Partner Finance",
-        links: [
-          { label: "Carrier Settlement", description: "Partner invoice reconciliation", route: "carrier-settlement", icon: "finance" }
-        ]
-      }
-    ]
+    route: "network",
+    routes: ["network", "service-management", "provisioning", "carrier-settlement"]
   },
   {
     id: "billing",
     label: "Billing",
-    description: "Accounts, invoices, payments, disputes, and reports.",
     icon: "billing",
-    routes: ["billing", "details/invoice", "details/billing-account"],
-    groups: [
-      {
-        title: "Receivables",
-        links: [
-          { label: "Billing Accounts", description: "Balances and aging", route: "billing", icon: "billing" },
-          { label: "Invoices", description: "Open, paid, disputed invoices", route: "billing", icon: "receiptText" },
-          { label: "Payments", description: "Posted and pending payments", route: "billing", icon: "finance" }
-        ]
-      },
-      {
-        title: "Controls",
-        links: [
-          { label: "Adjustments", description: "Credits, true-ups, and disputes", route: "billing", icon: "workflow" },
-          { label: "Usage", description: "Rated usage and charge detail", route: "billing", icon: "activity" },
-          { label: "Reports", description: "Aging and receivables exports", route: "reports", icon: "reports" }
-        ]
-      }
-    ]
+    route: "billing",
+    routes: ["billing", "details/invoice", "details/billing-account"]
   },
   {
     id: "reports",
     label: "Reports",
-    description: "Operational reporting, parameters, and exports.",
     icon: "reports",
-    routes: ["reports"],
-    groups: [
-      {
-        title: "Reporting",
-        links: [
-          { label: "Report Catalog", description: "Available operational reports", route: "reports", icon: "reports" },
-          { label: "Parameters", description: "Filter by period, region, and segment", route: "reports", icon: "coefficients" },
-          { label: "Exports", description: "Excel and CSV downloads", route: "reports", icon: "export" }
-        ]
-      }
-    ]
+    route: "reports",
+    routes: ["reports"]
   },
   {
     id: "administration",
     label: "Administration",
-    description: "Users, roles, integrations, and platform controls.",
     icon: "settings",
-    routes: ["administration"],
-    groups: [
-      {
-        title: "Platform",
-        links: [
-          { label: "Users", description: "Access and user management", route: "administration", icon: "customers" },
-          { label: "Roles", description: "Permission sets and scopes", route: "administration", icon: "checks" },
-          { label: "Integrations", description: "API and system connections", route: "administration", icon: "workflow" }
-        ]
-      },
-      {
-        title: "Governance",
-        links: [
-          { label: "Audit", description: "Platform change history", route: "administration", icon: "activity" },
-          { label: "Settings", description: "Application defaults", route: "administration", icon: "settings" }
-        ]
-      }
-    ]
+    route: "administration",
+    routes: ["administration"]
   }
 ];
 

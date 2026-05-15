@@ -24,62 +24,17 @@ function navigate(setRoute, route) {
   setRoute(route);
 }
 
-function TopNavButton({ section, active, open, onOpen }) {
+function TopNavButton({ section, active, onNavigate }) {
   return (
     <button
-      className={active || open ? "topnav-nav-button active" : "topnav-nav-button"}
+      className={active ? "topnav-nav-button active" : "topnav-nav-button"}
       type="button"
-      onClick={() => onOpen(section.id)}
-      onMouseEnter={() => onOpen(section.id)}
-      onFocus={() => onOpen(section.id)}
-      aria-expanded={open}
-      aria-haspopup="menu"
+      onClick={() => onNavigate(section.route || section.id)}
+      aria-current={active ? "page" : undefined}
     >
       <Icon name={section.icon} className="button-icon" />
       <span>{section.label}</span>
-      <Icon name="chevronDown" className="button-icon" />
     </button>
-  );
-}
-
-function MenuLink({ item, onClick }) {
-  return (
-    <button className="nav-menu-link" type="button" onClick={onClick}>
-      <div className="nav-menu-link-copy">
-        <strong>{item.label}</strong>
-        <span>{item.description}</span>
-      </div>
-      <Icon name={item.icon || "chevronRight"} className="button-icon" />
-    </button>
-  );
-}
-
-function DesktopMenu({ section, onNavigate, onClose }) {
-  if (!section) return null;
-  return (
-    <div className="topnav-mega-panel" role="menu" aria-label={section.label}>
-      <div className="topnav-mega-head">
-        <div>
-          <strong>{section.label}</strong>
-          <span>{section.description}</span>
-        </div>
-        <button className="topnav-mega-close" type="button" onClick={onClose} aria-label="Close menu">
-          <Icon name="close" className="button-icon" />
-        </button>
-      </div>
-      <div className="topnav-mega-grid">
-        {section.groups.map(group => (
-          <div className="topnav-mega-group" key={group.title}>
-            <div className="topnav-mega-group-title">{group.title}</div>
-            <div className="topnav-mega-links">
-              {group.links.map(item => (
-                <MenuLink key={item.label} item={item} onClick={() => onNavigate(item.route)} />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -111,14 +66,21 @@ function UtilityPopover({ utility, onClose, onNavigate }) {
   return (
     <div className="topnav-utility-panel" role="menu" aria-label={utility}>
       {items.map(item => (
-        <MenuLink
+        <button
           key={item.label}
-          item={item}
+          className="nav-menu-link"
+          type="button"
           onClick={() => {
             onNavigate(item.route);
             onClose();
           }}
-        />
+        >
+          <div className="nav-menu-link-copy">
+            <strong>{item.label}</strong>
+            <span>{item.description}</span>
+          </div>
+          <Icon name="chevronRight" className="button-icon" />
+        </button>
       ))}
     </div>
   );
@@ -138,7 +100,13 @@ function SearchPopover({ query, results, onChange, onNavigate, onClose, mobile =
       </label>
       <div className="topnav-search-results">
         {results.length ? results.map(item => (
-          <MenuLink key={`${item.route}-${item.label}`} item={item} onClick={() => onNavigate(item.route)} />
+          <button key={`${item.route}-${item.label}`} className="nav-menu-link" type="button" onClick={() => onNavigate(item.route)}>
+            <div className="nav-menu-link-copy">
+              <strong>{item.label}</strong>
+              <span>{item.description}</span>
+            </div>
+            <Icon name="chevronRight" className="button-icon" />
+          </button>
         )) : (
           <div className="topnav-empty-search">No matches found.</div>
         )}
@@ -152,7 +120,7 @@ function SearchPopover({ query, results, onChange, onNavigate, onClose, mobile =
   );
 }
 
-function MobileDrawer({ activeRoute, onNavigate, openSection, setOpenSection, onClose }) {
+function MobileDrawer({ activeRoute, onNavigate, onClose }) {
   return (
     <div className="topnav-drawer" role="dialog" aria-label="Primary navigation">
       <div className="topnav-drawer-header">
@@ -161,39 +129,22 @@ function MobileDrawer({ activeRoute, onNavigate, openSection, setOpenSection, on
           <Icon name="close" className="button-icon" />
         </button>
       </div>
-      <div className="topnav-drawer-sections">
+      <div className="topnav-drawer-flat">
         {topNavSections.map(section => {
-          const open = openSection === section.id;
           const active = routeMatches(section, activeRoute);
           return (
-            <div className={active ? "topnav-drawer-section active" : "topnav-drawer-section"} key={section.id}>
-              <button className="topnav-drawer-toggle" type="button" onClick={() => setOpenSection(open ? null : section.id)}>
-                <div>
-                  <strong>{section.label}</strong>
-                  <span>{section.description}</span>
-                </div>
-                <Icon name={open ? "chevronDown" : "chevronRight"} className="button-icon" />
-              </button>
-              {open && (
-                <div className="topnav-drawer-links">
-                  {section.groups.map(group => (
-                    <div className="topnav-drawer-group" key={group.title}>
-                      <div className="topnav-mega-group-title">{group.title}</div>
-                      {group.links.map(item => (
-                        <MenuLink
-                          key={item.label}
-                          item={item}
-                          onClick={() => {
-                            onNavigate(item.route);
-                            onClose();
-                          }}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <button
+              key={section.id}
+              className={active ? "topnav-drawer-item active" : "topnav-drawer-item"}
+              type="button"
+              onClick={() => {
+                onNavigate(section.route || section.id);
+                onClose();
+              }}
+            >
+              <Icon name={section.icon} className="button-icon" />
+              <span>{section.label}</span>
+            </button>
           );
         })}
       </div>
@@ -202,23 +153,15 @@ function MobileDrawer({ activeRoute, onNavigate, openSection, setOpenSection, on
 }
 
 export function Shell({ activeRoute, setRoute, children }) {
-  const isMobile = useMediaQuery("(max-width: 1100px)");
+  const isMobile = useMediaQuery("(max-width: 760px)");
   const shellRef = useRef(null);
-  const [openSection, setOpenSection] = useState(null);
   const [utility, setUtility] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const searchIndex = useMemo(() => {
-    const items = [];
-    topNavSections.forEach(section => {
-      items.push({ label: section.label, description: section.description, route: section.routes?.[0] || "dashboard", icon: section.icon });
-      section.groups.forEach(group => {
-        group.links.forEach(link => items.push(link));
-      });
-    });
-    return items;
+    return topNavSections.map(section => ({ label: section.label, description: section.label, route: section.route || section.id, icon: section.icon }));
   }, []);
 
   const searchResults = useMemo(() => {
@@ -230,10 +173,7 @@ export function Shell({ activeRoute, setRoute, children }) {
     return scored.slice(0, 8);
   }, [searchIndex, searchQuery]);
 
-  const activeSection = topNavSections.find(section => routeMatches(section, activeRoute)) || topNavSections[0];
-
   useEffect(() => {
-    setOpenSection(null);
     setUtility(null);
     setSearchOpen(false);
     setDrawerOpen(false);
@@ -246,7 +186,6 @@ export function Shell({ activeRoute, setRoute, children }) {
   useEffect(() => {
     function handlePointerDown(event) {
       if (!shellRef.current?.contains(event.target)) {
-        setOpenSection(null);
         setUtility(null);
         setSearchOpen(false);
         setDrawerOpen(false);
@@ -258,7 +197,6 @@ export function Shell({ activeRoute, setRoute, children }) {
 
   function go(route) {
     navigate(setRoute, route);
-    setOpenSection(null);
     setUtility(null);
     setSearchOpen(false);
     setDrawerOpen(false);
@@ -271,7 +209,6 @@ export function Shell({ activeRoute, setRoute, children }) {
         <div className="topnav-left">
           {isMobile && (
             <button className="topnav-icon-button" type="button" aria-label="Open navigation" onClick={() => {
-              setOpenSection(null);
               setUtility(null);
               setSearchOpen(false);
               setDrawerOpen(open => !open);
@@ -295,12 +232,11 @@ export function Shell({ activeRoute, setRoute, children }) {
                 <TopNavButton
                   section={section}
                   active={routeMatches(section, activeRoute)}
-                  open={openSection === section.id}
-                  onOpen={sectionId => {
+                  onNavigate={route => {
                     setUtility(null);
                     setSearchOpen(false);
                     setDrawerOpen(false);
-                    setOpenSection(sectionId);
+                    go(route);
                   }}
                 />
               </div>
@@ -316,13 +252,11 @@ export function Shell({ activeRoute, setRoute, children }) {
                 <input
                   value={searchQuery}
                   onFocus={() => {
-                    setOpenSection(null);
                     setUtility(null);
                     setDrawerOpen(false);
                     setSearchOpen(true);
                   }}
                   onChange={event => {
-                    setOpenSection(null);
                     setUtility(null);
                     setDrawerOpen(false);
                     setSearchQuery(event.target.value);
@@ -343,7 +277,6 @@ export function Shell({ activeRoute, setRoute, children }) {
             </div>
           ) : (
             <button className="topnav-icon-button" type="button" aria-label="Search" onClick={() => {
-              setOpenSection(null);
               setUtility(null);
               setDrawerOpen(false);
               setSearchOpen(open => !open);
@@ -352,7 +285,6 @@ export function Shell({ activeRoute, setRoute, children }) {
             </button>
           )}
           <button className="topnav-icon-button" type="button" aria-label="Notifications" onClick={() => {
-            setOpenSection(null);
             setSearchOpen(false);
             setDrawerOpen(false);
             setUtility(current => current === "notifications" ? null : "notifications");
@@ -360,7 +292,6 @@ export function Shell({ activeRoute, setRoute, children }) {
             <Icon name="bell" className="button-icon" />
           </button>
           <button className="topnav-icon-button" type="button" aria-label="Help" onClick={() => {
-            setOpenSection(null);
             setSearchOpen(false);
             setDrawerOpen(false);
             setUtility(current => current === "help" ? null : "help");
@@ -368,7 +299,6 @@ export function Shell({ activeRoute, setRoute, children }) {
             <Icon name="help" className="button-icon" />
           </button>
           <button className="topnav-icon-button" type="button" aria-label="Settings" onClick={() => {
-            setOpenSection(null);
             setSearchOpen(false);
             setDrawerOpen(false);
             setUtility(current => current === "settings" ? null : "settings");
@@ -376,20 +306,12 @@ export function Shell({ activeRoute, setRoute, children }) {
             <Icon name="settings" className="button-icon" />
           </button>
           <button className="topnav-avatar" type="button" aria-label="Profile" onClick={() => {
-            setOpenSection(null);
             setSearchOpen(false);
             setDrawerOpen(false);
             setUtility(current => current === "profile" ? null : "profile");
           }}>BW</button>
         </div>
 
-        {!isMobile && openSection && (
-          <DesktopMenu
-            section={topNavSections.find(section => section.id === openSection)}
-            onNavigate={go}
-            onClose={() => setOpenSection(null)}
-          />
-        )}
         {utility && (
           <UtilityPopover
             utility={utility}
@@ -411,8 +333,6 @@ export function Shell({ activeRoute, setRoute, children }) {
           <MobileDrawer
             activeRoute={activeRoute}
             onNavigate={go}
-            openSection={openSection}
-            setOpenSection={setOpenSection}
             onClose={() => setDrawerOpen(false)}
           />
         )}
