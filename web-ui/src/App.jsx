@@ -702,6 +702,7 @@ function SalesModule({ setRoute, showToast }) {
 function ProductPricingModule({ setRoute, showToast }) {
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState(false);
+  const [moreFiltersModal, setMoreFiltersModal] = useState(false);
   const [filters, setFilters] = useState({
     category: "All categories",
     lifecycle: "All lifecycles",
@@ -753,7 +754,7 @@ function ProductPricingModule({ setRoute, showToast }) {
       <Panel
         title="Product catalog"
         description="Operational telecom catalog records with lifecycle, billing codes, ownership, and pricing governance context."
-        action={<div className="module-toolbar"><SearchBox value={query} onChange={setQuery} placeholder="Search products, billing codes, promos, offers" /><button className="tiny-button" type="button" onClick={() => showToast("More filters opened")}>More Filters</button></div>}
+        action={<div className="module-toolbar"><SearchBox value={query} onChange={setQuery} placeholder="Search products, billing codes, promos, offers" /><button className="tiny-button" type="button" onClick={() => setMoreFiltersModal(true)}>More Filters</button></div>}
       >
         <DataTable
           columns={[
@@ -1246,6 +1247,20 @@ function ProductPricingDetail({ id, setRoute, showToast }) {
             { label: "Costs", description: "Inspect cost and vendor impact", onClick: () => setTab("Costs") },
             { label: "History", description: "Open audit and version trail", onClick: () => setTab("History") },
             { label: "Export Record", description: "Create a structured product export", onClick: () => showToast("Product export prepared") }
+          ]}
+        />
+      )}
+      {moreFiltersModal && (
+        <MenuModal
+          title="Product filters"
+          description="Additional catalog filters for telecom lifecycle work."
+          onClose={() => setMoreFiltersModal(false)}
+          items={[
+            { label: "Billing Codes", description: "Filter by charge mapping families", onClick: () => showToast("Billing code filters opened") },
+            { label: "Promos", description: "Filter by promo status and stackability", onClick: () => showToast("Promo filters opened") },
+            { label: "Offers", description: "Filter by bundle and attach rate", onClick: () => showToast("Offer filters opened") },
+            { label: "Health Watch", description: "Show at-risk product records", onClick: () => setFilters(current => ({ ...current, health: "At Risk" })) },
+            { label: "Clear Filters", description: "Reset catalog filters", onClick: () => setFilters({ category: "All categories", lifecycle: "All lifecycles", health: "All health", status: "All statuses", owner: "All owners" }) }
           ]}
         />
       )}
@@ -1759,6 +1774,7 @@ function BillingAccountDetail({ id, setRoute, showToast }) {
   const usageRows = usageRowsFor(customer);
   const customerAdjustments = adjustments.filter(adjustment => adjustment.customerId === customer.id);
   const [tab, setTab] = useState("Summary");
+  const [actionsModal, setActionsModal] = useState(false);
   const balance = accountBalance(customer);
   const overdue = pastDue(customer);
   return (
@@ -1768,7 +1784,7 @@ function BillingAccountDetail({ id, setRoute, showToast }) {
         title={`${billingAccountNumber(customer)} / ${customer.name}`}
         status={overdue > 0 ? "Past Due" : "Active"}
         subtitle={`${customer.id} · ${customer.billingProfile} · Balance ${formatMoney(balance)}`}
-        actions={<><ActionButton icon="billing" variant="button" onClick={() => showToast("Payment recorded against billing account")}>Record Payment</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Adjustment request created")}>Create Adjustment</ActionButton><ActionButton icon="billing" onClick={() => setTab("Invoices")}>View Invoices</ActionButton><ActionButton icon="reports" onClick={() => showToast("Statement export prepared")}>Export Statement</ActionButton><ActionButton icon="workflow" onClick={() => setRoute("billing")}>Back</ActionButton></>}
+        actions={<><ActionButton icon="workflow" variant="button" onClick={() => setActionsModal(true)}>Actions</ActionButton><ActionButton icon="workflow" onClick={() => setRoute("billing")}>Back</ActionButton></>}
       />
       <SummaryStrip items={[
         { label: "Account Balance", value: formatMoney(balance), note: "Total AR" },
@@ -1785,6 +1801,20 @@ function BillingAccountDetail({ id, setRoute, showToast }) {
       {tab === "Usage" && <Panel title="Usage" description="Rated usage records tied to invoice periods."><DataTable columns={[{ key: "id", label: "Usage" }, { key: "invoiceId", label: "Invoice" }, { key: "period", label: "Period" }, { key: "usage", label: "Usage" }, { key: "ratedAmount", label: "Rated", render: row => formatMoney(row.ratedAmount) }]} rows={usageRows} /></Panel>}
       {tab === "Adjustments" && <Panel title="Adjustments" description="Credits, disputes, true-ups, and billing corrections."><DataTable columns={[{ key: "id", label: "Adjustment ID" }, { key: "type", label: "Type" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount) }, { key: "status", label: "Status" }, { key: "created", label: "Created By", render: () => "Billing Ops" }, { key: "approved", label: "Approved By", render: row => row.status === "Posted" ? "Finance" : "Pending" }]} rows={customerAdjustments} /></Panel>}
       {!["Summary", "Invoices", "Services", "Usage", "Adjustments"].includes(tab) && <Panel title={tab} description={`${tab} records connected to the billing account.`}><DataTable columns={[{ key: "id", label: "Record" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }]} rows={[{ id: `${tab}-1`, name: `${customer.name} ${tab}`, status: "Active" }]} /></Panel>}
+      {actionsModal && (
+        <MenuModal
+          title="Billing account actions"
+          description="Ledger and cash management workflows for the selected account."
+          onClose={() => setActionsModal(false)}
+          items={[
+            { label: "Record Payment", description: "Open payment entry for this account", onClick: () => showToast("Payment recorded against billing account") },
+            { label: "Create Adjustment", description: "Open an adjustment request", onClick: () => setTab("Adjustments") },
+            { label: "View Invoices", description: "Jump to invoice records", onClick: () => setTab("Invoices") },
+            { label: "View Usage", description: "Inspect billed usage records", onClick: () => setTab("Usage") },
+            { label: "Export Statement", description: "Prepare a customer statement export", onClick: () => showToast("Statement export prepared") }
+          ]}
+        />
+      )}
     </>
   );
 }
@@ -2157,14 +2187,42 @@ function OpportunityDetail({ id, setRoute, showToast }) {
   const opportunity = opportunityMeta(opportunities.find(item => item.id === id) || opportunities[0]);
   const relatedQuotes = quotes.filter(quote => quote.opportunityId === opportunity.id).map(quoteMeta);
   const [tab, setTab] = useState("Summary");
+  const [actionsModal, setActionsModal] = useState(false);
+  const [closeModal, setCloseModal] = useState(false);
   return (
     <>
-      <RecordHeader breadcrumb={["Sales", "Opportunities", opportunity.id]} title={opportunity.name} status={opportunity.status} subtitle={`${opportunity.account} · ${opportunity.stage} · ${opportunity.probability}% · ${formatMoney(opportunity.amount)} · ${opportunity.owner} · Close ${opportunity.closeDate}`} actions={<><ActionButton icon="pricing" variant="button" onClick={() => setRoute(`details/quote/${relatedQuotes[0]?.id || quotes[0].id}`)}>Create Quote</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Activity added to opportunity")}>Add Activity</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Opportunity submitted for approval")}>Submit Approval</ActionButton><ActionButton icon="opportunities" onClick={() => showToast("Close won/lost menu opened")}>Close Won/Lost</ActionButton></>} />
+      <RecordHeader breadcrumb={["Sales", "Opportunities", opportunity.id]} title={opportunity.name} status={opportunity.status} subtitle={`${opportunity.account} · ${opportunity.stage} · ${opportunity.probability}% · ${formatMoney(opportunity.amount)} · ${opportunity.owner} · Close ${opportunity.closeDate}`} actions={<><ActionButton icon="workflow" variant="button" onClick={() => setActionsModal(true)}>Actions</ActionButton><ActionButton icon="opportunities" onClick={() => setCloseModal(true)}>Close Won/Lost</ActionButton></>} />
       <SummaryStrip items={[{ label: "Account", value: opportunity.account, note: opportunity.accountNumber }, { label: "Stage", value: opportunity.stage, note: `${opportunity.probability}% probability` }, { label: "Estimated MRC", value: formatMoney(opportunity.estimatedMrc), note: `NRC ${formatMoney(opportunity.estimatedNrc)}` }, { label: "Owner", value: opportunity.owner, note: opportunity.nextStep }]} />
       <Tabs tabs={["Summary", "Products", "Quotes", "Activities", "Contacts", "Locations", "Documents"]} active={tab} onChange={setTab} />
       {tab === "Summary" && <section className="record-main-layout"><Panel title="Opportunity Summary" description="Account, market, segment, source, and opportunity type."><div className="field-grid"><MiniStat label="Account" value={opportunity.account} note={opportunity.billingAccount} /><MiniStat label="Market" value={opportunity.market} note={opportunity.segment} /><MiniStat label="Opportunity Type" value={opportunity.type} note={opportunity.source} /><MiniStat label="Product Interest" value={opportunity.productInterest} note="Telecom services" /></div><p className="small-muted">{opportunity.description}</p></Panel><Panel title="Activity Timeline" description="Commercial motion and approval history."><TimelineList items={[{ date: "May 1, 2026", title: "Discovery call", body: "Completed by Sarah Johnson", status: "Done", tone: "success" }, { date: "May 8, 2026", title: "Pricing review", body: "Custom margin review requested", status: "Pricing" }, { date: "May 13, 2026", title: "Quote sent", body: "Customer package shared", status: "Sent" }, { date: "May 20, 2026", title: "Customer follow-up", body: "Expected close date review", status: "Next" }]} /></Panel></section>}
       {tab === "Quotes" && <Panel title="Related Quotes" description="Quote versions and approval status connected to this opportunity."><DataTable columns={[{ key: "id", label: "Quote ID" }, { key: "version", label: "Version", render: (row, index) => index + 1 }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Approval" ? "warn" : "blue"}>{row.status}</StatusTag> }, { key: "mrc", label: "Total MRC", render: row => formatMoney(row.mrc) }, { key: "nrc", label: "Total NRC", render: row => formatMoney(row.nrc) }, { key: "expiration", label: "Expiration" }, { key: "details", label: "", render: row => <DetailButton type="quote" id={row.id} setRoute={setRoute} /> }]} rows={relatedQuotes} /></Panel>}
       {tab !== "Summary" && tab !== "Quotes" && <Panel title={tab} description={`${tab} records for ${opportunity.name}.`}><DataTable columns={[{ key: "id", label: "ID" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }]} rows={[{ id: `${tab}-1`, name: `${opportunity.account} ${tab}`, status: "Active" }]} /></Panel>}
+      {actionsModal && (
+        <MenuModal
+          title="Opportunity actions"
+          description="Sales workflow controls for the selected opportunity."
+          onClose={() => setActionsModal(false)}
+          items={[
+            { label: "Create Quote", description: "Open quote generation", onClick: () => setRoute(`details/quote/${relatedQuotes[0]?.id || quotes[0].id}`) },
+            { label: "Add Activity", description: "Log a follow-up task", onClick: () => showToast("Activity added to opportunity") },
+            { label: "Submit Approval", description: "Send to pricing or finance", onClick: () => showToast("Opportunity submitted for approval") },
+            { label: "View Quote Versions", description: "Open the related quote history", onClick: () => setTab("Quotes") },
+            { label: "Open Account", description: "Jump to customer workspace", onClick: () => setRoute(`details/customer/${opportunity.customerId}`) }
+          ]}
+        />
+      )}
+      {closeModal && (
+        <MenuModal
+          title="Close opportunity"
+          description="Choose the close path for this sales record."
+          onClose={() => setCloseModal(false)}
+          items={[
+            { label: "Close Won", description: "Move the deal to won and open order creation", onClick: () => setRoute("orders") },
+            { label: "Close Lost", description: "Mark the opportunity as lost", onClick: () => showToast("Opportunity marked lost") },
+            { label: "Cancel", description: "Leave the opportunity open", onClick: () => {}, keepOpen: false }
+          ]}
+        />
+      )}
     </>
   );
 }
@@ -2172,16 +2230,31 @@ function OpportunityDetail({ id, setRoute, showToast }) {
 function QuoteDetail({ id, setRoute, showToast }) {
   const quote = quoteMeta(quotes.find(item => item.id === id) || quotes[0]);
   const [tab, setTab] = useState("Quote Lines");
+  const [actionsModal, setActionsModal] = useState(false);
   const lines = ["Internet Access 1Gbps", "MPLS Network", "SD-WAN Appliance"].map((name, index) => ({ id: `${quote.id}-${index + 1}`, line: index + 1, service: name, type: index === 2 ? "Equipment" : "Service", billing: index === 2 ? "One-time" : "Monthly", qty: index === 2 ? 3 : 1, unit: index === 0 ? 1000 : index === 1 ? 2500 : 1200, mrc: index === 2 ? 0 : index === 0 ? quote.mrc : Math.round(quote.mrc * 0.45), nrc: index === 2 ? quote.nrc : 0, discount: `${quote.discount}%`, taxes: Math.round(quote.taxes / 3), total: index === 2 ? quote.nrc : Math.round(quote.mrc * (index === 0 ? 1 : 0.45)) }));
   return (
     <>
-      <RecordHeader breadcrumb={["Sales", "Custom Pricing", quote.id]} title={`Quote: ${quote.id}`} status={quote.status === "Approval" ? "Approval Required" : quote.status} subtitle={`${quote.account} · ${quote.opportunityName} · Quote Date ${quote.quoteDate} · Expiration ${quote.expiration} · TCV ${formatMoney(quote.tcv)}`} actions={<><ActionButton icon="pricing" onClick={() => showToast("Quote cloned")}>Clone</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Quote sent")}>Send</ActionButton><ActionButton icon="workflow" variant="button" onClick={() => showToast("Quote submitted for approval")}>Submit Approval</ActionButton><ActionButton icon="reports" onClick={() => showToast("Quote PDF exported")}>Export PDF</ActionButton><ActionButton icon="orders" onClick={() => setRoute("orders")}>Convert to Order</ActionButton></>} />
+      <RecordHeader breadcrumb={["Sales", "Custom Pricing", quote.id]} title={`Quote: ${quote.id}`} status={quote.status === "Approval" ? "Approval Required" : quote.status} subtitle={`${quote.account} · ${quote.opportunityName} · Quote Date ${quote.quoteDate} · Expiration ${quote.expiration} · TCV ${formatMoney(quote.tcv)}`} actions={<><ActionButton icon="workflow" variant="button" onClick={() => setActionsModal(true)}>Actions</ActionButton><ActionButton icon="orders" onClick={() => setRoute("orders")}>Convert to Order</ActionButton></>} />
       <SummaryStrip items={[{ label: "Account", value: quote.account, note: quote.billingAccount }, { label: "Term", value: `${quote.term} mo`, note: quote.productPackage }, { label: "Total MRC", value: formatMoney(quote.mrc), note: `NRC ${formatMoney(quote.nrc)}` }, { label: "Margin", value: `${quote.margin}%`, note: quote.approvalRequired ? "Approval required" : "Within guardrail" }]} />
       <Tabs tabs={["Quote Lines", "Pricing Summary", "Discounts", "Cost Inputs", "Approval", "Notes", "Documents"]} active={tab} onChange={setTab} />
       {tab === "Quote Lines" && <Panel title="Quote Lines" description="Service, equipment, recurring, one-time, discount, tax, and total line detail."><DataTable columns={[{ key: "line", label: "Line #" }, { key: "service", label: "Product/Service" }, { key: "type", label: "Type" }, { key: "billing", label: "Billing Type" }, { key: "qty", label: "Quantity" }, { key: "unit", label: "Unit Price", render: row => formatMoney(row.unit) }, { key: "mrc", label: "MRC", render: row => formatMoney(row.mrc) }, { key: "nrc", label: "NRC", render: row => formatMoney(row.nrc) }, { key: "discount", label: "Discount" }, { key: "taxes", label: "Taxes/Fees", render: row => formatMoney(row.taxes) }, { key: "total", label: "Total", render: row => formatMoney(row.total) }]} rows={lines} /></Panel>}
       {tab === "Pricing Summary" && <section className="record-main-layout"><Panel title="Pricing Summary" description="Charges, taxes, margin, floor, recommended price, and approval gate."><div className="field-grid"><MiniStat label="Monthly Recurring Charges" value={formatMoney(quote.mrc)} /><MiniStat label="Non-Recurring Charges" value={formatMoney(quote.nrc)} /><MiniStat label="Discounts" value={`${quote.discount}%`} /><MiniStat label="Taxes/Surcharges" value={formatMoney(quote.taxes)} /><MiniStat label="Estimated Margin" value={`${quote.margin}%`} /><MiniStat label="Floor Price" value={formatMoney(Math.round(quote.mrc * 0.86))} /><MiniStat label="Recommended Price" value={formatMoney(Math.round(quote.mrc * 1.04))} /><MiniStat label="Approval Required" value={quote.approvalRequired ? "Yes" : "No"} /></div></Panel><Panel title="Quote Versions" description="Version history and difference summary."><DataTable columns={[{ key: "version", label: "Version" }, { key: "status", label: "Status" }, { key: "difference", label: "Difference Summary" }]} rows={[{ id: "v1", version: "Version 1", status: "Draft", difference: "Initial package with standard MRC" }, { id: "v2", version: "Version 2", status: "Pricing Review", difference: "Added NRC waiver and 12% discount" }, { id: "v3", version: "Version 3", status: quote.status, difference: "Finance margin exception added" }]} /></Panel></section>}
       {tab === "Approval" && <Panel title="Approval" description="Approval workflow steps."><DataTable columns={[{ key: "step", label: "Step" }, { key: "owner", label: "Owner" }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Approved" ? "success" : row.status === "Pending" ? "warn" : "blue"}>{row.status}</StatusTag> }]} rows={["Draft", "Pricing Review", "Sales Manager", "Finance", "Approved"].map((step, index) => ({ id: step, step, owner: ["Sales", "Pricing Desk", "Sales Manager", "Finance", "System"][index], status: index < 2 ? "Approved" : index === 2 ? "Pending" : "Open" }))} /></Panel>}
       {!["Quote Lines", "Pricing Summary", "Approval"].includes(tab) && <Panel title={tab} description={`${tab} connected to ${quote.id}.`}><DataTable columns={[{ key: "id", label: "ID" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }]} rows={[{ id: `${tab}-1`, name: `${quote.id} ${tab}`, status: "Active" }]} /></Panel>}
+      {actionsModal && (
+        <MenuModal
+          title="Quote actions"
+          description="Pricing and sales workflows for this quote."
+          onClose={() => setActionsModal(false)}
+          items={[
+            { label: "Clone Quote", description: "Duplicate this quote for a new version", onClick: () => showToast("Quote cloned") },
+            { label: "Send Quote", description: "Open customer send workflow", onClick: () => showToast("Quote sent") },
+            { label: "Submit Approval", description: "Route for commercial approval", onClick: () => showToast("Quote submitted for approval") },
+            { label: "Export PDF", description: "Generate quote PDF output", onClick: () => showToast("Quote PDF exported") },
+            { label: "Convert to Order", description: "Jump into order creation", onClick: () => setRoute("orders") }
+          ]}
+        />
+      )}
     </>
   );
 }
@@ -2298,6 +2371,7 @@ function InvoiceDetail({ id, setRoute, showToast }) {
   const invoice = enrichedInvoice(invoices.find(item => item.id === id) || invoices[0]);
   const invoiceNumber = displayInvoiceNumber(invoice);
   const [tab, setTab] = useState("Summary");
+  const [actionsModal, setActionsModal] = useState(false);
   const adjustmentRows = adjustments.filter(item => item.customerId === invoice.customerId);
   const agingRows = invoiceAgingRows(invoice);
   function exportInvoicePdf() {
@@ -2311,7 +2385,7 @@ function InvoiceDetail({ id, setRoute, showToast }) {
         title={`Invoice ${invoiceNumber}`}
         status={invoice.status}
         subtitle={`${invoice.customer} · ${invoice.billingAccount}`}
-        actions={<><ActionButton icon="workflow" onClick={() => showToast("Invoice sent")}>Send</ActionButton><ActionButton icon="reports" variant="button" onClick={exportInvoicePdf}>Export PDF</ActionButton><ActionButton icon="billing" onClick={() => showToast("Payment entry opened")}>Record Payment</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Adjustment workflow opened")}>Create Adjustment</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Dispute opened")}>Dispute</ActionButton></>}
+        actions={<><ActionButton icon="workflow" variant="button" onClick={() => setActionsModal(true)}>Actions</ActionButton><ActionButton icon="reports" onClick={exportInvoicePdf}>Export PDF</ActionButton></>}
       />
       <SummaryStrip items={[
         { label: "Customer", value: invoice.customer, note: invoice.accountNumber },
@@ -2358,6 +2432,20 @@ function InvoiceDetail({ id, setRoute, showToast }) {
       {tab === "Payments" && <Panel title="Payments" description="Payment records posted or pending against this invoice."><DataTable columns={[{ key: "id", label: "Payment ID" }, { key: "date", label: "Date" }, { key: "method", label: "Method" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount) }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Posted" ? "success" : "warn"}>{row.status}</StatusTag> }, { key: "reference", label: "Reference #" }]} rows={paymentRowsFor(invoice)} /></Panel>}
       {tab === "Adjustments" && <Panel title="Adjustments" description="Invoice credits, disputes, approvals, and adjustment reasons."><DataTable columns={[{ key: "id", label: "Adjustment ID" }, { key: "type", label: "Type" }, { key: "reason", label: "Reason", render: row => row.type }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount) }, { key: "status", label: "Status" }, { key: "createdBy", label: "Created By", render: () => "Billing Ops" }, { key: "approvedBy", label: "Approved By", render: row => row.status === "Posted" ? "Finance" : "Pending" }, { key: "date", label: "Date", render: () => "2026-05-13" }]} rows={adjustmentRows} /></Panel>}
       {["Notes", "Documents"].includes(tab) && <Panel title={tab} description={`${tab} connected to ${invoiceNumber}.`}><DataTable columns={[{ key: "id", label: "Record" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }]} rows={[{ id: `${tab}-1`, name: `${invoiceNumber} ${tab}`, status: "Active" }]} /></Panel>}
+      {actionsModal && (
+        <MenuModal
+          title="Invoice actions"
+          description="Customer billing workflows for the selected invoice."
+          onClose={() => setActionsModal(false)}
+          items={[
+            { label: "Send Invoice", description: "Open invoice delivery workflow", onClick: () => showToast("Invoice sent") },
+            { label: "Record Payment", description: "Open payment entry", onClick: () => showToast("Payment entry opened") },
+            { label: "Create Adjustment", description: "Open adjustment request", onClick: () => showToast("Adjustment workflow opened") },
+            { label: "Open Dispute", description: "Start a dispute workflow", onClick: () => showToast("Dispute opened") },
+            { label: "Export PDF", description: "Generate the printable invoice", onClick: exportInvoicePdf }
+          ]}
+        />
+      )}
     </>
   );
 }
@@ -2464,6 +2552,7 @@ function ServiceOpsModule({ route }) {
 function ReportsModule({ showToast }) {
   const [params, setParams] = useState({ reportId: "executive-scorecard", region: "All regions", period: "Q2 2026 to date", segment: "All segments", status: "All statuses" });
   const [page, setPage] = useState(1);
+  const [runStamp, setRunStamp] = useState("Not run");
   const pageSize = 6;
   const definition = reportDefinitions.find(report => report.id === params.reportId) || reportDefinitions[0];
   const filteredRows = useMemo(() => reportRows.filter(row => row.reportId === params.reportId && (params.region === "All regions" || row.region === params.region) && (params.segment === "All segments" || row.segment === params.segment) && (params.status === "All statuses" || row.status === params.status)), [params]);
@@ -2482,6 +2571,11 @@ function ReportsModule({ showToast }) {
     downloadBlob(new Blob([csv], { type: "text/csv" }), `${definition.id}-${params.period.toLowerCase().replaceAll(" ", "-")}.csv`);
     showToast("CSV report exported");
   }
+  function runReport() {
+    setPage(1);
+    setRunStamp(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+    showToast("Report refreshed");
+  }
   return (
     <>
       <PageHeader className="compact-page-header" title="Reports" description="Dashboard, paginated operational reports, input parameters, live result set, and exports." />
@@ -2496,13 +2590,14 @@ function ReportsModule({ showToast }) {
             <label>Period<select value={params.period} onChange={event => updateParam("period", event.target.value)}>{["May 2026", "April 2026", "Q2 2026 to date", "Rolling 90 days"].map(value => <option key={value}>{value}</option>)}</select></label>
             <label>Segment<select value={params.segment} onChange={event => updateParam("segment", event.target.value)}>{["All segments", "SMB", "Enterprise", "Wholesale"].map(value => <option key={value}>{value}</option>)}</select></label>
             <label>Status<select value={params.status} onChange={event => updateParam("status", event.target.value)}>{["All statuses", "Approved", "Open", "Priority", "Review", "Active", "Staged"].map(value => <option key={value}>{value}</option>)}</select></label>
-            <ToolbarButton icon="reports" variant="button" onClick={() => showToast("Report refreshed")}>Run</ToolbarButton>
+            <ToolbarButton icon="reports" variant="button" onClick={runReport}>Run</ToolbarButton>
           </div>
           <section className="report-page">
             <div className="report-page-header">
               <div>
                 <h2>{definition.name}</h2>
                 <p>{definition.description}</p>
+                <p className="small-muted">Last run: {runStamp}</p>
               </div>
               <div className="report-page-actions">
                 <div className="module-toolbar report-page-pagination">

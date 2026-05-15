@@ -160,7 +160,7 @@ button:disabled {
 }
 
 .topbar {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .topbar::after {
