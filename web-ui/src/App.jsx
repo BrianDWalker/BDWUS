@@ -1292,26 +1292,32 @@ function Customer360Module({ setRoute, showToast }) {
   const accountServices = serviceInstancesFor(customer);
   return (
     <>
-      <PageHeader title="Customer 360" description="Account workspace for CRM, service, location, order, ticket, invoice, quote, and activity records." />
-      <section className="customer360-stack">
-        <Panel title="Account Search" description="Search by Account Name, Account Number, Billing Account, Service ID, Circuit ID, or Address." action={<SearchBox value={query} onChange={setQuery} placeholder="Account, billing account, service ID, circuit ID, address" />}>
-          <div className="account-picker">
-            {filteredCustomers.map(item => (
-              <button className={item.id === customer.id ? "account-chip active" : "account-chip"} type="button" key={item.id} onClick={() => setSelectedId(item.id)}>
-                <strong>{item.name}</strong>
-                <span>{item.segment} · {item.region} · MRR {formatMoney(item.mrr)} · Health {item.health} · Balance {formatMoney(accountBalance(item))} · Open Tickets {tickets.filter(ticket => ticket.customerId === item.id).length}</span>
-              </button>
-            ))}
-          </div>
-        </Panel>
-        <RecordHeader
-          breadcrumb={["Customer 360", "Accounts", customer.name]}
-          title={customer.name}
-          status="Active"
-          subtitle={`${customer.id} · ${customer.segment} · ${customer.region} · Health Score ${customer.health}`}
-        actions={<><ActionButton icon="opportunities" variant="button" onClick={() => setRoute("sales")}>New Opportunity</ActionButton><ActionButton icon="pricing" onClick={() => setRoute("sales")}>Create Quote</ActionButton><ActionButton icon="orders" onClick={() => setRoute("orders")}>Create Order</ActionButton><ActionButton icon="serviceDesk" onClick={() => showToast("Ticket workflow opened")}>Create Ticket</ActionButton><ActionButton icon="billing" onClick={() => setRoute(`details/billing-account/${customer.id}`)}>View Billing</ActionButton></>}
-        />
-        <SummaryStrip items={[
+      <PageHeader className="compact-page-header" title="Customer 360" description="Account workspace for CRM, service, location, order, ticket, invoice, quote, and activity records." />
+      <section className="customer360-stack customer360-compact">
+        <div className="customer360-landing-grid">
+          <Panel
+            title="Account Search"
+            description="Search by Account Name, Account Number, Billing Account, Service ID, Circuit ID, or Address."
+            action={<SearchBox value={query} onChange={setQuery} placeholder="Account, billing account, service ID, circuit ID, address" />}
+          >
+            <div className="account-picker">
+              {filteredCustomers.map(item => (
+                <button className={item.id === customer.id ? "account-chip active" : "account-chip"} type="button" key={item.id} onClick={() => setSelectedId(item.id)}>
+                  <strong>{item.name}</strong>
+                  <span>{item.segment} · {item.region} · MRR {formatMoney(item.mrr)} · Health {item.health} · Balance {formatMoney(accountBalance(item))} · Open Tickets {tickets.filter(ticket => ticket.customerId === item.id).length}</span>
+                </button>
+              ))}
+            </div>
+          </Panel>
+          <div className="customer360-workspace">
+            <RecordHeader
+              breadcrumb={["Customer 360", "Accounts", customer.name]}
+              title={customer.name}
+              status="Active"
+              subtitle={`${customer.id} · ${customer.segment} · ${customer.region} · Health Score ${customer.health}`}
+              actions={<div className="module-toolbar"><ActionButton icon="workflow" onClick={() => showToast("Account actions opened")}>Actions</ActionButton><ActionButton icon="orders" variant="button" onClick={() => setRoute("orders")}>Create Order</ActionButton></div>}
+            />
+            <SummaryStrip items={[
           { label: "MRR", value: formatMoney(customer.mrr), note: customer.churnRisk },
           { label: "Current Balance", value: formatMoney(accountBalance(customer)), note: billingAccountNumber(customer) },
           { label: "Past Due", value: formatMoney(pastDue(customer)), note: "Collections exposure" },
@@ -1319,7 +1325,25 @@ function Customer360Module({ setRoute, showToast }) {
           { label: "Open Tickets", value: customerTickets.length, note: "Care workload" },
           { label: "Open Orders", value: customerOrders.length, note: "Fulfillment" },
           { label: "Active Opportunities", value: customerOpps.length, note: "Commercial pipeline" }
-        ]} />
+            ]} />
+            <Panel title="Account pulse" description="Recent activity, open tickets, and execution signals for the selected account.">
+              <div className="customer360-pulse-grid">
+                <div className="customer360-pulse-card">
+                  <span>Recent activity</span>
+                  <strong>Invoice posted, payment received, order completed.</strong>
+                </div>
+                <div className="customer360-pulse-card">
+                  <span>Open tickets</span>
+                  <strong>{customerTickets.length}</strong>
+                </div>
+                <div className="customer360-pulse-card">
+                  <span>Open orders</span>
+                  <strong>{customerOrders.length}</strong>
+                </div>
+              </div>
+            </Panel>
+          </div>
+        </div>
         <Tabs tabs={["Overview", "Contacts", "Services", "Locations", "Orders", "Tickets", "Invoices", "Quotes", "Opportunities", "Activity", "Documents"]} active={tab} onChange={setTab} />
         {tab === "Overview" && <section className="record-main-layout"><Panel title="Account Information" description="Account, parent, owner, balance, and payment context."><div className="field-grid"><MiniStat label="Billing Account" value={billingAccountNumber(customer)} note={customer.billingProfile} /><MiniStat label="Parent Account" value={customer.segment === "Enterprise" ? "Northstar Enterprise Parent" : "None"} note="Account hierarchy" /><MiniStat label="Payment Terms" value={customer.billingProfile.split(",")[0]} note="Billing profile" /><MiniStat label="Sales Owner" value={owners[0]} note="Commercial owner" /><MiniStat label="Account Manager" value={customer.contact} note="Primary contact" /><MiniStat label="Account Balance" value={formatMoney(accountBalance(customer))} note={`Past due ${formatMoney(pastDue(customer))}`} /></div></Panel><Panel title="Recent Activity" description="CRM timeline for account events."><TimelineList items={[{ date: "May 12, 2026", title: "Invoice generated", body: `${customerInvoices[0]?.id || "INV-0000"} posted to billing account`, status: "Billing" }, { date: "May 10, 2026", title: "Payment received", body: `${formatMoney(25000)} ACH payment posted`, status: "Posted", tone: "success" }, { date: "May 8, 2026", title: "Order completed", body: `${customerOrders[0]?.id || "ORD-0000"} service workflow updated`, status: "Order" }, { date: "May 5, 2026", title: "New service activated", body: `${accountServices[0]?.service} at primary location`, status: "Active", tone: "success" }]} /></Panel></section>}
         {tab === "Services" && <Panel title="Active Services" description="Billing charges connect back to active service and circuit records."><DataTable columns={[{ key: "id", label: "Service ID" }, { key: "service", label: "Product" }, { key: "location", label: "Location" }, { key: "circuitId", label: "Circuit ID" }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Active" ? "success" : "warn"}>{row.status}</StatusTag> }, { key: "price", label: "MRC", render: row => formatMoney(row.price) }, { key: "install", label: "Install Date", render: () => "2026-04-15" }, { key: "details", label: "", render: row => <DetailButton type="service" id={row.id} setRoute={setRoute} /> }]} rows={accountServices} /></Panel>}
@@ -1458,6 +1482,7 @@ function OrdersModule({ setRoute, showToast }) {
   return (
     <>
       <PageHeader
+        className="compact-page-header"
         title="Orders"
         description="Telecom service delivery work queue for installs, modifies, disconnects, provisioning, and field coordination."
         actions={<ActionButton icon="orders" variant="button" onClick={() => showToast("New order workflow opened")}>New Order</ActionButton>}
@@ -1470,7 +1495,7 @@ function OrdersModule({ setRoute, showToast }) {
         { label: "Completed (7 days)", value: completedOrders, note: "Recent completions" },
         { label: "SLA Breached", value: breachedOrders, note: "Escalate immediately" }
       ]} />
-      <section className="orders-stack">
+      <section className="orders-stack orders-compact">
         <Panel
           title="Order filters"
           description="Search orders, circuits, services, and accounts. Save the current view once the queue is narrowed."
@@ -1801,23 +1826,19 @@ function OrderDetail({ id, setRoute, showToast }) {
 
   return (
     <>
-      <RecordHeader
-        breadcrumb={["Orders", "Work Queue", order.id]}
-        title={`Order ${order.id}`}
-        status={order.overallStatus}
-        subtitle={`${order.account} · ${order.serviceCategory} · ${order.service} · SLA ${order.slaStatus} · Due ${order.due}`}
-        meta={<div className="record-meta-chips"><StatusTag tone={orderStatusTone(order.overallStatus)}>{order.overallStatus}</StatusTag><StatusTag tone={orderSlaTone(order.slaStatus)}>{order.slaStatus}</StatusTag><StatusTag tone="blue">{order.serviceCategory}</StatusTag><StatusTag tone="blue">{order.owner}</StatusTag></div>}
-        actions={<div className="orders-detail-actions">
-          <div className="module-toolbar">
-            <ActionButton icon="workflow" variant="button" onClick={() => showToast("Action menu opened")}>Actions</ActionButton>
-            <ActionButton icon="workflow" onClick={() => showToast("Assignment updated")}>Assign</ActionButton>
-          </div>
-          <div className="module-toolbar">
-            <ActionButton icon="workflow" onClick={() => showToast("Escalation sent")}>Escalate</ActionButton>
+      <section className="orders-detail-shell">
+        <RecordHeader
+          breadcrumb={["Orders", "Work Queue", order.id]}
+          title={`Order ${order.id}`}
+          status={order.overallStatus}
+          subtitle={`${order.account} · ${order.serviceCategory} · ${order.service} · SLA ${order.slaStatus} · Due ${order.due}`}
+          meta={<div className="record-meta-chips"><StatusTag tone={orderStatusTone(order.overallStatus)}>{order.overallStatus}</StatusTag><StatusTag tone={orderSlaTone(order.slaStatus)}>{order.slaStatus}</StatusTag><StatusTag tone="blue">{order.serviceCategory}</StatusTag><StatusTag tone="blue">{order.owner}</StatusTag></div>}
+          actions={<div className="orders-detail-actions">
+            <ActionButton icon="workflow" onClick={() => showToast("Actions menu opened")}>Actions</ActionButton>
             <ActionButton icon="orders" variant="button" onClick={() => showToast("Order completed")}>Complete Order</ActionButton>
-          </div>
-        </div>}
-      />
+          </div>}
+        />
+      </section>
       <SummaryStrip items={[
         { label: "Service Type", value: order.serviceCategory, note: order.service },
         { label: "Service Address", value: order.location, note: order.circuitId },
@@ -2450,8 +2471,8 @@ function ReportsModule({ showToast }) {
   }
   return (
     <>
-      <PageHeader title="Reports" description="Dashboard, paginated operational reports, input parameters, live result set, and exports." />
-      <section className="report-studio">
+      <PageHeader className="compact-page-header" title="Reports" description="Dashboard, paginated operational reports, input parameters, live result set, and exports." />
+      <section className="report-studio reports-compact">
         <aside className="report-catalog">
           <div className="report-catalog-header"><Icon name="reports" className="button-icon" /><strong>Report catalog</strong></div>
           {reportDefinitions.map(report => <button className={report.id === params.reportId ? "report-item active" : "report-item"} type="button" key={report.id} onClick={() => updateParam("reportId", report.id)}><strong>{report.name}</strong><span>{report.area}</span></button>)}

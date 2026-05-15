@@ -869,6 +869,13 @@ button:disabled {
   gap: 16px;
 }
 
+.customer360-stack,
+.orders-stack,
+.reports-compact {
+  width: min(100%, 1360px);
+  margin-inline: auto;
+}
+
 .module-link-button.active {
   background: rgba(15, 118, 110, 0.12);
   border-color: rgba(15, 118, 110, 0.32);
@@ -1455,6 +1462,293 @@ button:disabled {
   margin-bottom: 12px;
 }
 
+.orders-compact {
+  gap: 12px;
+}
+
+.orders-compact,
+.customer360-compact,
+.reports-compact {
+  align-self: stretch;
+}
+
+.orders-compact .record-header,
+.customer360-compact .record-header,
+.reports-compact .report-page,
+.reports-compact .parameter-ribbon {
+  padding: 12px 14px;
+}
+
+.orders-compact .record-header,
+.customer360-compact .record-header {
+  margin-bottom: 10px;
+}
+
+.orders-compact .record-title-line h2,
+.customer360-compact .record-title-line h2 {
+  font-size: 22px;
+}
+
+.orders-compact .record-header p,
+.customer360-compact .record-header p,
+.reports-compact .report-page-header p {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.orders-compact .summary-strip,
+.customer360-compact .summary-strip {
+  top: 8px;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.orders-compact .summary-strip .mini-stat,
+.customer360-compact .summary-strip .mini-stat {
+  min-height: 74px;
+}
+
+.orders-compact .summary-strip .mini-stat strong,
+.customer360-compact .summary-strip .mini-stat strong {
+  font-size: 18px;
+}
+
+.orders-compact .record-tabs,
+.customer360-compact .record-tabs,
+.reports-compact .record-tabs {
+  margin-bottom: 10px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.orders-compact .record-tabs button,
+.customer360-compact .record-tabs button,
+.reports-compact .record-tabs button {
+  min-height: 30px;
+  padding: 7px 10px 6px;
+  font-size: 11px;
+}
+
+.orders-compact .panel-header,
+.customer360-compact .panel-header,
+.reports-compact .panel-header {
+  padding: 12px 12px 0;
+}
+
+.orders-compact .panel-body,
+.customer360-compact .panel-body,
+.reports-compact .panel-body {
+  padding: 12px;
+}
+
+.orders-compact .mini-stat,
+.customer360-compact .mini-stat {
+  padding: 12px;
+}
+
+.orders-compact .mini-stat strong,
+.customer360-compact .mini-stat strong {
+  font-size: 20px;
+}
+
+.orders-compact .table th,
+.orders-compact .table td,
+.customer360-compact .table th,
+.customer360-compact .table td,
+.reports-compact .table th,
+.reports-compact .table td {
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+.orders-compact .table th,
+.customer360-compact .table th,
+.reports-compact .table th {
+  font-size: 9px;
+}
+
+.orders-compact .order-filter-grid,
+.customer360-compact .account-picker {
+  gap: 8px;
+}
+
+.orders-compact .order-search-row {
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.orders-compact .order-search {
+  min-height: 36px;
+}
+
+.orders-compact .order-filter-grid label {
+  gap: 6px;
+  font-size: 10px;
+}
+
+.orders-compact .order-filter-grid input,
+.orders-compact .order-filter-grid select {
+  min-height: 36px;
+  font-size: 12px;
+}
+
+.orders-compact .orders-insight-grid {
+  gap: 12px;
+}
+
+.orders-compact .orders-detail-shell .record-header {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+}
+
+.orders-compact .orders-detail-actions {
+  gap: 6px;
+}
+
+.orders-compact .orders-detail-actions .button,
+.orders-compact .orders-detail-actions .ghost-button {
+  min-height: 32px;
+  padding: 7px 10px;
+  font-size: 11px;
+}
+
+.orders-compact .order-detail-layout {
+  gap: 12px;
+}
+
+.orders-compact .workflow-track {
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.orders-compact .workflow-step {
+  min-height: 64px;
+  padding: 9px 10px;
+}
+
+.orders-compact .integration-status-grid {
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.orders-compact .integration-chip {
+  padding: 9px 10px;
+}
+
+.orders-compact .service-topology {
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+
+.orders-compact .topology-node {
+  min-height: 78px;
+  padding: 10px;
+}
+
+.orders-compact .dependency-summary-grid {
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.customer360-landing-grid {
+  display: grid;
+  grid-template-columns: minmax(370px, 0.48fr) minmax(0, 0.52fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.customer360-workspace {
+  display: grid;
+  gap: 12px;
+}
+
+.customer360-pulse-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.customer360-pulse-card {
+  display: grid;
+  gap: 5px;
+  padding: 11px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.customer360-pulse-card span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.customer360-pulse-card strong {
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.customer360-compact .account-chip {
+  padding: 10px 11px;
+}
+
+.customer360-compact .account-chip strong {
+  font-size: 13px;
+}
+
+.customer360-compact .account-chip span {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.reports-compact {
+  gap: 12px;
+}
+
+.reports-compact .report-catalog {
+  top: 10px;
+  padding: 11px;
+}
+
+.reports-compact .report-item {
+  padding: 10px;
+}
+
+.reports-compact .report-workbench {
+  gap: 6px;
+}
+
+.reports-compact .parameter-ribbon {
+  position: sticky;
+  top: 8px;
+  margin-top: -8px;
+}
+
+.reports-compact .report-page {
+  padding: 11px;
+}
+
+.reports-compact .report-page-header {
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+}
+
+.reports-compact .report-summary-strip {
+  margin-bottom: 8px;
+  gap: 7px;
+}
+
+.reports-compact .report-summary-card {
+  padding: 10px;
+}
+
+.reports-compact .report-summary-card strong {
+  font-size: 19px;
+}
+
 .table-block {
   margin-top: 14px;
 }
@@ -1738,6 +2032,25 @@ body[data-page="index"] .topbar {
   background: linear-gradient(180deg, #0b2342 0%, #071b34 100%);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
   color: #f8fafc;
+}
+
+.topbar.compact-page-header {
+  min-height: 62px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.topbar.compact-page-header .topbar-title h1 {
+  font-size: 24px;
+}
+
+.topbar.compact-page-header .topbar-title p {
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.topbar.compact-page-header .topbar-search {
+  min-height: 32px;
 }
 
 .topbar::after {

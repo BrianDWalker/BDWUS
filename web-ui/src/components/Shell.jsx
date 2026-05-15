@@ -45,9 +45,9 @@ export function Shell({ activeRoute, setRoute, children }) {
   );
 }
 
-export function PageHeader({ title, description, actions }) {
+export function PageHeader({ title, description, actions, className = "" }) {
   return (
-    <header className="topbar">
+    <header className={`topbar ${className}`}>
       <div className="topbar-title">
         <h1>{title}</h1>
         <p>{description}</p>
