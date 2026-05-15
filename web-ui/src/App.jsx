@@ -2521,7 +2521,7 @@ function DetailPage({ route, setRoute, showToast }) {
   );
 }
 
-function ServiceOpsModule({ route }) {
+function ServiceOpsModule({ route, showToast }) {
   const copy = {
     network: ["Network", "Network events, customer-reported outages, SLA exposure, and impact monitoring."],
     "service-management": ["Service management", "Service catalog, SLA policies, provisioning queues, and change work."],
@@ -2530,7 +2530,7 @@ function ServiceOpsModule({ route }) {
   }[route] || ["Operations", "Operational workspace."];
   return (
     <>
-      <PageHeader title={copy[0]} description={copy[1]} actions={<ToolbarButton icon="workflow" variant="button">Advance workflow</ToolbarButton>} />
+      <PageHeader title={copy[0]} description={copy[1]} actions={<ToolbarButton icon="workflow" variant="button" onClick={() => showToast("Workflow advanced")}>Advance workflow</ToolbarButton>} />
       <section className="overview-grid">
         <MetricCard label="Network events" value={networkEvents.length} delta="Impact and SLA exposure" />
         <MetricCard label="Provisioning jobs" value={orders.length} delta="Orders needing fulfillment" />
@@ -2545,6 +2545,60 @@ function ServiceOpsModule({ route }) {
           <div className="compact-card-stack">{services.map(service => <div className="compact-card" key={service.id}><strong>{service.name}</strong><span>{service.owner} · {service.lifecycle} · {service.subProducts.join(", ")}</span></div>)}</div>
         </Panel>
       </section>
+    </>
+  );
+}
+
+function AdministrationModule({ setRoute, showToast }) {
+  const [tab, setTab] = useState("Users");
+  const users = [
+    { id: "USR-1001", name: "Rhea Patel", role: "Sales Operations", status: "Active", lastLogin: "2026-05-14 08:45" },
+    { id: "USR-1002", name: "Cal Brooks", role: "Billing Ops", status: "Active", lastLogin: "2026-05-14 09:10" },
+    { id: "USR-1003", name: "Maya Ortiz", role: "Network Ops", status: "Locked", lastLogin: "2026-05-12 17:05" }
+  ];
+  const roles = [
+    { id: "ROLE-1", name: "Sales Manager", permissions: "Opportunities, Quotes, Approvals", status: "Active" },
+    { id: "ROLE-2", name: "Billing Analyst", permissions: "Invoices, Payments, Adjustments", status: "Active" },
+    { id: "ROLE-3", name: "Provisioning Lead", permissions: "Orders, Tasks, Escalations", status: "Review" }
+  ];
+  const integrations = [
+    { id: "INT-1", name: "CRM Sync", status: "Connected", owner: "Platform", detail: "Customer and account sync" },
+    { id: "INT-2", name: "Billing Engine", status: "Connected", owner: "Finance", detail: "Ledger and invoice posting" },
+    { id: "INT-3", name: "Provisioning API", status: "Pending", owner: "Network", detail: "Activation and circuit mapping" }
+  ];
+  return (
+    <>
+      <PageHeader
+        title="Administration"
+        description="Platform users, roles, integrations, audit, and system settings."
+        actions={<ToolbarButton icon="settings" variant="button" onClick={() => showToast("Administration settings opened")}>System Settings</ToolbarButton>}
+      />
+      <section className="overview-grid">
+        <MetricCard label="Users" value={users.length} delta="Licensed accounts" />
+        <MetricCard label="Roles" value={roles.length} delta="Permission sets" />
+        <MetricCard label="Integrations" value={integrations.length} delta="Connected systems" />
+        <MetricCard label="Alerts" value="2" delta="Platform issues" />
+      </section>
+      <Tabs tabs={["Users", "Roles", "Integrations", "Audit", "Settings"]} active={tab} onChange={setTab} />
+      {tab === "Users" && (
+        <section className="record-main-layout">
+          <Panel title="Users" description="Operational user accounts and access state.">
+            <DataTable columns={[{ key: "id", label: "User ID" }, { key: "name", label: "Name" }, { key: "role", label: "Role" }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Active" ? "success" : "warn"}>{row.status}</StatusTag> }, { key: "lastLogin", label: "Last Login" }, { key: "details", label: "", render: row => <button className="link-button compact-action" type="button" onClick={() => setRoute(`details/record/${row.id}`)}>View</button> }]} rows={users} />
+          </Panel>
+          <section className="side-stack">
+            <Panel title="Invite user" description="Add a new platform account.">
+              <div className="button-cluster">
+                <button className="button" type="button" onClick={() => showToast("Invite workflow opened")}>Invite</button>
+                <button className="ghost-button" type="button" onClick={() => showToast("SSO invitation copied")}>Copy invite</button>
+              </div>
+            </Panel>
+          </section>
+        </section>
+      )}
+      {tab === "Roles" && <Panel title="Roles" description="Permission groups and access scope."><DataTable columns={[{ key: "id", label: "Role ID" }, { key: "name", label: "Role" }, { key: "permissions", label: "Permissions" }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Active" ? "success" : "warn"}>{row.status}</StatusTag> }]} rows={roles} /></Panel>}
+      {tab === "Integrations" && <Panel title="Integrations" description="Platform connections and sync status."><DataTable columns={[{ key: "id", label: "Integration ID" }, { key: "name", label: "Integration" }, { key: "detail", label: "Detail" }, { key: "owner", label: "Owner" }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Connected" ? "success" : "warn"}>{row.status}</StatusTag> }]} rows={integrations} /></Panel>}
+      {tab === "Audit" && <Panel title="Audit" description="System actions and version history."><TimelineList items={[{ date: "May 14, 2026", title: "Role updated", body: "Billing Analyst permissions changed", status: "Changed" }, { date: "May 13, 2026", title: "Integration synced", body: "CRM Sync completed successfully", status: "Synced", tone: "success" }, { date: "May 12, 2026", title: "User locked", body: "Inactive login detected", status: "Locked", tone: "warn" }]} /></Panel>}
+      {tab === "Settings" && <Panel title="Settings" description="Platform defaults and governance controls."><div className="field-grid"><MiniStat label="Security" value="MFA required" /><MiniStat label="Session timeout" value="30 minutes" /><MiniStat label="Audit retention" value="7 years" /><MiniStat label="Release mode" value="Controlled" /></div></Panel>}
     </>
   );
 }
@@ -2634,8 +2688,9 @@ export default function App() {
       {route === "billing" && <BillingModule setRoute={setRoute} showToast={showToast} />}
       {route === "orders" && <OrdersModule setRoute={setRoute} showToast={showToast} />}
       {route === "reports" && <ReportsModule showToast={showToast} />}
+      {route === "administration" && <AdministrationModule setRoute={setRoute} showToast={showToast} />}
       {route.startsWith("details/") && <DetailPage route={route} setRoute={setRoute} showToast={showToast} />}
-      {["network", "service-management", "provisioning", "carrier-settlement"].includes(route) && <ServiceOpsModule route={route} />}
+      {["network", "service-management", "provisioning", "carrier-settlement"].includes(route) && <ServiceOpsModule route={route} showToast={showToast} />}
       <Toast toast={toast} />
     </Shell>
   );

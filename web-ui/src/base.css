@@ -183,24 +183,12 @@ button {
 }
 
 .app-shell {
-  display: grid;
-  grid-template-columns: 286px minmax(0, 1fr);
+  display: block;
   min-height: 100vh;
 }
 
 .sidebar {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  padding: 22px 18px 18px;
-  background:
-    linear-gradient(180deg, rgba(12, 19, 35, 0.98), rgba(6, 10, 20, 0.98)),
-    linear-gradient(180deg, var(--sidebar) 0%, var(--sidebar-2) 100%);
-  color: #e2e8f0;
-  border-right: 1px solid var(--border-dark);
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  display: none;
 }
 
 .brand {
@@ -310,7 +298,7 @@ button {
 
 .content {
   min-width: 0;
-  padding: 26px;
+  padding: 92px 24px 24px;
 }
 
 .topbar {
