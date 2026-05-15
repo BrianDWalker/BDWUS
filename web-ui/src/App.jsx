@@ -407,6 +407,7 @@ function orderMeta(order) {
   const index = orders.findIndex(item => item.id === order.id);
   const service = order.service || ["Fiber 1G", "Mobile Plus", "Cloud Voice"][index % 3];
   const serviceCategory = order.serviceCategory || deriveOrderServiceCategory(service);
+  const sourceQuote = quotes.find(item => item.id === order.sourceQuote) || quotes[0];
   const lifecycleStage = order.lifecycleStage || orderLifecycleSteps[index % orderLifecycleSteps.length];
   const overallStatus = order.overallStatus || orderOverallStatuses[index % orderOverallStatuses.length];
   const slaStatus = order.slaStatus || (index === 1 ? "At Risk" : index === 2 ? "Breached" : "On Track");
@@ -427,6 +428,7 @@ function orderMeta(order) {
     provisioningStatus: ["Network assignment", "Pending customer CPE", "Activation scheduled"][index % 3],
     blocker: index === 1 ? "Customer LOA" : index === 2 ? "Fiber facility check" : "None",
     sourceQuote: order.source.includes("Quote") ? order.source.replace("Quote ", "") : "Q-2061",
+    opportunityId: sourceQuote?.opportunityId || "OPP-812",
     circuitId: `CKT-${customer.id.slice(-4)}-${index + 7}01`,
     contact: customer.contact,
     requestedDue: order.due,
@@ -1407,39 +1409,18 @@ function OrdersModule({ setRoute, showToast }) {
     query: "",
     status: "All statuses",
     orderType: "All types",
-    lifecycleStage: "All stages",
-    serviceAddress: "",
-    owner: "All owners",
-    serviceCategory: "All categories",
-    service: "All services"
+    orderNumber: "",
+    accountNumber: "",
+    opportunityNumber: "",
+    quoteNumber: ""
   });
   const [filters, setFilters] = useState(draftFilters);
 
-  const orderViews = [
-    { id: "all", label: "All Orders", match: () => true },
-    { id: "in-progress", label: "In Progress", match: order => ["Submitted", "Validated", "In Progress", "Provisioning"].includes(order.overallStatus) },
-    { id: "at-risk", label: "At Risk", match: order => order.slaStatus !== "On Track" || order.blocker !== "None" },
-    { id: "waiting", label: "Waiting on Customer", match: order => order.overallStatus === "Pending Customer" || order.blocker === "Customer LOA" },
-    { id: "completed", label: "Completed (7 days)", match: order => order.overallStatus === "Completed" }
-  ];
-
-  const serviceOptions = draftFilters.serviceCategory === "All categories"
-    ? [...new Set(Object.values(orderServiceCatalog).flat())]
-    : orderServiceCatalog[draftFilters.serviceCategory] || [];
-  const ownerOptions = ["All owners", ...new Set(enrichedOrders.map(order => order.owner))];
-  const activeViewConfig = orderViews.find(view => view.id === activeView) || orderViews[0];
-
   const visibleOrders = useMemo(() => {
     return enrichedOrders.filter(order => {
-      const matchesQuery = !filters.query.trim() || [order.id, order.orderName, order.account, order.service, order.serviceCategory, order.circuitId, order.location, order.owner].some(value => textMatch(value, filters.query));
+      const matchesQuery = !filters.query.trim() || [order.id, order.orderName, order.account, order.service, order.circuitId, order.location, order.owner, order.opportunityId, order.sourceQuote].some(value => textMatch(value, filters.query));
       const matchesStatus = filters.status === "All statuses" || order.overallStatus === filters.status;
       const matchesOrderType = filters.orderType === "All types" || order.orderType === filters.orderType;
-      const matchesLifecycle = filters.lifecycleStage === "All stages" || order.lifecycleStage === filters.lifecycleStage;
-      const matchesAddress = !filters.serviceAddress.trim() || textMatch(order.location, filters.serviceAddress);
-      const matchesOwner = filters.owner === "All owners" || order.owner === filters.owner;
-      const matchesCategory = filters.serviceCategory === "All categories" || order.serviceCategory === filters.serviceCategory;
-      const matchesService = filters.service === "All services" || order.service === filters.service;
-      const matchesView = activeViewConfig.match(order);
       const matchesTab = tab === "All Orders"
         ? true
         : tab === "Provisioning Queue"
@@ -1447,36 +1428,22 @@ function OrdersModule({ setRoute, showToast }) {
           : tab === "Research"
             ? order.overallStatus === "Pending Customer" || order.blocker !== "None"
           : order.orderType === tab;
-      return matchesQuery && matchesStatus && matchesOrderType && matchesLifecycle && matchesAddress && matchesOwner && matchesCategory && matchesService && matchesView && matchesTab;
+      const matchesOrderNumber = !filters.orderNumber.trim() || textMatch(order.id, filters.orderNumber);
+      const matchesAccountNumber = !filters.accountNumber.trim() || textMatch(order.accountNumber, filters.accountNumber);
+      const matchesOpportunity = !filters.opportunityNumber.trim() || textMatch(order.opportunityId, filters.opportunityNumber);
+      const matchesQuote = !filters.quoteNumber.trim() || textMatch(order.sourceQuote, filters.quoteNumber);
+      return matchesQuery && matchesStatus && matchesOrderType && matchesOrderNumber && matchesAccountNumber && matchesOpportunity && matchesQuote && matchesTab;
     });
-  }, [activeViewConfig, enrichedOrders, filters, tab]);
+  }, [enrichedOrders, filters, tab]);
 
   const totalOrders = visibleOrders.length;
   const inProgressOrders = visibleOrders.filter(order => ["Submitted", "Validated", "In Progress", "Provisioning"].includes(order.overallStatus)).length;
   const atRiskOrders = visibleOrders.filter(order => order.slaStatus !== "On Track" || order.blocker !== "None").length;
-  const waitingOnCustomer = visibleOrders.filter(order => order.overallStatus === "Pending Customer" || order.blocker === "Customer LOA").length;
-  const completedOrders = visibleOrders.filter(order => order.overallStatus === "Completed").length;
   const breachedOrders = visibleOrders.filter(order => order.slaStatus === "Breached").length;
-
-  const lifecycleRows = orderLifecycleSteps.map(step => ({ id: step, step, count: visibleOrders.filter(order => order.lifecycleStage === step).length }));
-  const typeRows = ["Install", "Modify", "Disconnect"].map(type => ({ id: type, type, count: visibleOrders.filter(order => order.orderType === type).length }));
-  const riskRows = Array.from(new Map(visibleOrders.map(order => [order.riskReason, order])).entries()).map(([reason, order], index) => ({
-    id: `${reason}-${index}`,
-    reason,
-    owner: order.owner,
-    impact: order.slaStatus === "Breached" ? "High" : order.blocker !== "None" ? "Medium" : "Low",
-    status: order.blocker === "None" ? "Resolved" : "Open"
-  }));
 
   function applyFilters() {
     setFilters(draftFilters);
     showToast("Order filters applied");
-  }
-
-  function setServiceCategory(value) {
-    const serviceList = value === "All categories" ? [...new Set(Object.values(orderServiceCatalog).flat())] : orderServiceCatalog[value] || [];
-    const nextService = serviceList.includes(draftFilters.service) ? draftFilters.service : "All services";
-    setDraftFilters(current => ({ ...current, serviceCategory: value, service: nextService }));
   }
 
   return (
@@ -1491,17 +1458,13 @@ function OrdersModule({ setRoute, showToast }) {
         { label: "Total Orders", value: totalOrders, note: "Operational queue" },
         { label: "In Progress", value: inProgressOrders, note: "Design through activation" },
         { label: "At Risk", value: atRiskOrders, note: "Blockers present" },
-        { label: "Waiting on Customer", value: waitingOnCustomer, note: "External dependency" },
-        { label: "Completed (7 days)", value: completedOrders, note: "Recent completions" },
         { label: "SLA Breached", value: breachedOrders, note: "Escalate immediately" }
       ]} />
       <section className="orders-stack orders-compact">
         <Panel
           title="Order filters"
-          description="Search orders, circuits, services, and accounts. Save the current view once the queue is narrowed."
+          description="Search orders, accounts, opportunities, and quotes with direct operational fields."
           action={<div className="module-toolbar">
-            <button className="tiny-button" type="button" onClick={() => showToast("Saved views menu opened")}>Saved Views</button>
-            <button className="tiny-button" type="button" onClick={() => showToast("More filters opened")}>More Filters</button>
             <ActionButton icon="search" variant="button" onClick={applyFilters}>Search</ActionButton>
           </div>}
         >
@@ -1514,20 +1477,20 @@ function OrdersModule({ setRoute, showToast }) {
                 placeholder="Search orders, circuits, services, accounts"
               />
             </label>
-            <div className="saved-views-row" aria-label="Saved views">
-              {orderViews.map(view => (
-                <button
-                  key={view.id}
-                  type="button"
-                  className={activeView === view.id ? "view-chip active" : "view-chip"}
-                  onClick={() => setActiveView(view.id)}
-                >
-                  {view.label}
-                </button>
-              ))}
-            </div>
           </div>
-          <div className="order-filter-grid">
+          <div className="order-filter-grid order-lookup-grid">
+            <label>Order Number
+              <input value={draftFilters.orderNumber} onChange={event => setDraftFilters(current => ({ ...current, orderNumber: event.target.value }))} placeholder="ORD-2048" />
+            </label>
+            <label>Account Number
+              <input value={draftFilters.accountNumber} onChange={event => setDraftFilters(current => ({ ...current, accountNumber: event.target.value }))} placeholder="CUST-1001" />
+            </label>
+            <label>Opportunity Number
+              <input value={draftFilters.opportunityNumber} onChange={event => setDraftFilters(current => ({ ...current, opportunityNumber: event.target.value }))} placeholder="OPP-812" />
+            </label>
+            <label>Quote Number
+              <input value={draftFilters.quoteNumber} onChange={event => setDraftFilters(current => ({ ...current, quoteNumber: event.target.value }))} placeholder="Q-2048" />
+            </label>
             <label>Status
               <select value={draftFilters.status} onChange={event => setDraftFilters(current => ({ ...current, status: event.target.value }))}>
                 {["All statuses", "Draft", "Submitted", "Validated", "In Progress", "Pending Customer", "Pending Network", "Provisioning", "Completed", "Cancelled"].map(value => <option key={value}>{value}</option>)}
@@ -1536,29 +1499,6 @@ function OrdersModule({ setRoute, showToast }) {
             <label>Order Type
               <select value={draftFilters.orderType} onChange={event => setDraftFilters(current => ({ ...current, orderType: event.target.value }))}>
                 {["All types", "Install", "Modify", "Disconnect"].map(value => <option key={value}>{value}</option>)}
-              </select>
-            </label>
-            <label>Lifecycle Stage
-              <select value={draftFilters.lifecycleStage} onChange={event => setDraftFilters(current => ({ ...current, lifecycleStage: event.target.value }))}>
-                {["All stages", ...orderLifecycleSteps].map(value => <option key={value}>{value}</option>)}
-              </select>
-            </label>
-            <label>Service Address
-              <input value={draftFilters.serviceAddress} onChange={event => setDraftFilters(current => ({ ...current, serviceAddress: event.target.value }))} placeholder="Search by service location" />
-            </label>
-            <label>Owner
-              <select value={draftFilters.owner} onChange={event => setDraftFilters(current => ({ ...current, owner: event.target.value }))}>
-                {ownerOptions.map(value => <option key={value}>{value}</option>)}
-              </select>
-            </label>
-            <label>Service Category
-              <select value={draftFilters.serviceCategory} onChange={event => setServiceCategory(event.target.value)}>
-                {["All categories", ...orderServiceCategories].map(value => <option key={value}>{value}</option>)}
-              </select>
-            </label>
-            <label>Service
-              <select value={draftFilters.service} onChange={event => setDraftFilters(current => ({ ...current, service: event.target.value }))}>
-                {["All services", ...serviceOptions].map(value => <option key={value}>{value}</option>)}
               </select>
             </label>
           </div>
@@ -1575,7 +1515,6 @@ function OrdersModule({ setRoute, showToast }) {
               { key: "orderName", label: "Order Name" },
               { key: "account", label: "Account" },
               { key: "orderType", label: "Order Type" },
-              { key: "lifecycleStage", label: "Lifecycle Stage", render: row => <StatusTag tone={row.lifecycleStage === "Complete" ? "success" : "blue"}>{row.lifecycleStage}</StatusTag> },
               { key: "overallStatus", label: "Overall Status", render: row => <StatusTag tone={orderStatusTone(row.overallStatus)}>{row.overallStatus}</StatusTag> },
               { key: "slaStatus", label: "SLA", render: row => <StatusTag tone={orderSlaTone(row.slaStatus)}>{row.slaStatus}</StatusTag> },
               { key: "due", label: "Due Date", render: row => <span className={row.slaStatus === "Breached" ? "text-danger" : ""}>{row.due}</span> },
@@ -1585,22 +1524,6 @@ function OrdersModule({ setRoute, showToast }) {
             rows={visibleOrders}
           />
         </Panel>
-        <div className="orders-insight-grid">
-          <Panel title="Orders by Lifecycle Stage" description="Where the queue is sitting in the delivery chain.">
-            <DataTable columns={[{ key: "step", label: "Lifecycle Stage" }, { key: "count", label: "Orders" }]} rows={lifecycleRows} />
-          </Panel>
-          <Panel title="Orders by Type" description="Install, modify, and disconnect volume.">
-            <DataTable columns={[{ key: "type", label: "Type" }, { key: "count", label: "Orders" }]} rows={typeRows} />
-          </Panel>
-          <Panel title="Top Risk Reasons" description="Blockers and dependency reasons called out in the queue.">
-            <DataTable columns={[
-              { key: "reason", label: "Risk Reason" },
-              { key: "owner", label: "Owner" },
-              { key: "impact", label: "Impact" },
-              { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Resolved" ? "success" : "warn"}>{row.status}</StatusTag> }
-            ]} rows={riskRows.length ? riskRows : [{ id: "none", reason: "No open blockers", owner: "Operations", impact: "Low", status: "Resolved" }]} />
-          </Panel>
-        </div>
       </section>
     </>
   );
