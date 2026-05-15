@@ -25,6 +25,39 @@ const textMatch = (value, query) => String(value ?? "").toLowerCase().includes(q
 const matchAny = (item, query, fields) => !query.trim() || fields.some(field => textMatch(field(item), query));
 const routeAliases = { pricing: "product-pricing", products: "product-pricing" };
 const normalizeRoute = route => routeAliases[route] || route;
+const orderLifecycleSteps = ["Design", "Provisioning", "Installation", "Activation", "Complete"];
+const orderOverallStatuses = ["Draft", "Submitted", "Validated", "In Progress", "Pending Customer", "Pending Network", "Provisioning", "Completed", "Cancelled"];
+const orderServiceCatalog = {
+  Access: ["Fiber 500", "Fiber 1G", "DIA 100M", "DIA 1G", "Ethernet Access"],
+  Managed: ["SD-WAN", "MPLS VPN", "Cloud Connect", "Managed Router"],
+  Voice: ["Cloud Voice", "SIP Trunk", "Hosted Voice", "POTS Replacement"],
+  Wireless: ["Mobile Plus", "Fixed Wireless", "Private LTE"],
+  Transport: ["Dark Fiber", "Wavelength", "Ethernet Private Line"]
+};
+const orderServiceCategories = Object.keys(orderServiceCatalog);
+
+function deriveOrderServiceCategory(service) {
+  const value = String(service ?? "").toLowerCase();
+  if (value.includes("voice") || value.includes("sip") || value.includes("phone")) return "Voice";
+  if (value.includes("mobile") || value.includes("wireless") || value.includes("private lte")) return "Wireless";
+  if (value.includes("dark fiber") || value.includes("wavelength") || value.includes("private line")) return "Transport";
+  if (value.includes("sd-wan") || value.includes("mpls") || value.includes("cloud connect") || value.includes("managed")) return "Managed";
+  if (value.includes("fiber") || value.includes("dia") || value.includes("ethernet") || value.includes("access")) return "Access";
+  return "Managed";
+}
+
+function orderSlaTone(status) {
+  if (["Breached", "Risk", "Blocked"].includes(status)) return "warn";
+  if (["On Track", "Complete"].includes(status)) return "success";
+  return "blue";
+}
+
+function orderStatusTone(status) {
+  if (["Completed", "Validated"].includes(status)) return "success";
+  if (["Pending Customer", "Pending Network", "Provisioning", "In Progress"].includes(status)) return "warn";
+  if (["Cancelled", "Draft"].includes(status)) return "blue";
+  return "blue";
+}
 
 const detailBackRoutes = {
   lead: "sales",
@@ -181,7 +214,7 @@ function RecordHeader({ breadcrumb, title, status, subtitle, actions, meta }) {
         <Breadcrumb items={breadcrumb} />
         <div className="record-title-line">
           <h2>{title}</h2>
-          {status && <StatusTag tone={["Past Due", "At Risk", "Approval Required", "Pending Network", "Disputed"].includes(status) ? "warn" : ["Active", "Approved", "Paid", "Completed"].includes(status) ? "success" : "blue"}>{status}</StatusTag>}
+          {status && <StatusTag tone={["Past Due", "At Risk", "Approval Required", "Pending Network", "Disputed", "Pending Customer", "Provisioning", "Cancelled", "In Progress"].includes(status) ? "warn" : ["Active", "Approved", "Paid", "Completed", "Validated"].includes(status) ? "success" : "blue"}>{status}</StatusTag>}
         </div>
         {subtitle && <p>{subtitle}</p>}
         {meta && <div className="record-meta-row">{meta}</div>}
@@ -372,20 +405,38 @@ function productMeta(service) {
 function orderMeta(order) {
   const customer = customers.find(item => item.id === order.customerId) || customers[0];
   const index = orders.findIndex(item => item.id === order.id);
+  const service = order.service || ["Fiber 1G", "Mobile Plus", "Cloud Voice"][index % 3];
+  const serviceCategory = order.serviceCategory || deriveOrderServiceCategory(service);
+  const lifecycleStage = order.lifecycleStage || orderLifecycleSteps[index % orderLifecycleSteps.length];
+  const overallStatus = order.overallStatus || orderOverallStatuses[index % orderOverallStatuses.length];
+  const slaStatus = order.slaStatus || (index === 1 ? "At Risk" : index === 2 ? "Breached" : "On Track");
   return {
     ...order,
     account: customer.name,
     accountNumber: customer.id,
     orderType: ["Install", "Modify", "Disconnect"][index % 3],
+    orderName: order.orderName || `${customer.name} ${service} ${["Turn-up", "Change", "Disconnect"][index % 3]}`,
+    serviceCategory,
+    service,
     location: `${100 + index * 22} Network Plaza, ${customer.region}`,
-    status: ["Validated", "Pending Network", "Provisioning"][index % 3],
+    status: overallStatus,
+    overallStatus,
+    lifecycleStage,
+    slaStatus,
+    progress: `${Math.min(95, 45 + index * 18)}%`,
     provisioningStatus: ["Network assignment", "Pending customer CPE", "Activation scheduled"][index % 3],
     blocker: index === 1 ? "Customer LOA" : index === 2 ? "Fiber facility check" : "None",
     sourceQuote: order.source.includes("Quote") ? order.source.replace("Quote ", "") : "Q-2061",
     circuitId: `CKT-${customer.id.slice(-4)}-${index + 7}01`,
     contact: customer.contact,
     requestedDue: order.due,
-    installType: index % 2 ? "Customer coordinated" : "Standard dispatch"
+    installType: index % 2 ? "Customer coordinated" : "Standard dispatch",
+    serviceCategoryDetail: `${serviceCategory} service delivery`,
+    assignedTeam: ["Provisioning Ops", "Network Ops", "Field Ops"][index % 3],
+    criticalPath: ["Design approval", "Circuit reservation", "Equipment allocation", "Install window"][index % 4],
+    dependencyCount: index === 0 ? 1 : index === 1 ? 2 : 3,
+    riskReason: index === 0 ? "Waiting on circuit reservation" : index === 1 ? "Customer access confirmation" : "Field installation blocked",
+    activationStatus: index === 2 ? "Awaiting handoff" : "Ready for install"
   };
 }
 
@@ -1273,7 +1324,7 @@ function Customer360Module({ setRoute, showToast }) {
         {tab === "Overview" && <section className="record-main-layout"><Panel title="Account Information" description="Account, parent, owner, balance, and payment context."><div className="field-grid"><MiniStat label="Billing Account" value={billingAccountNumber(customer)} note={customer.billingProfile} /><MiniStat label="Parent Account" value={customer.segment === "Enterprise" ? "Northstar Enterprise Parent" : "None"} note="Account hierarchy" /><MiniStat label="Payment Terms" value={customer.billingProfile.split(",")[0]} note="Billing profile" /><MiniStat label="Sales Owner" value={owners[0]} note="Commercial owner" /><MiniStat label="Account Manager" value={customer.contact} note="Primary contact" /><MiniStat label="Account Balance" value={formatMoney(accountBalance(customer))} note={`Past due ${formatMoney(pastDue(customer))}`} /></div></Panel><Panel title="Recent Activity" description="CRM timeline for account events."><TimelineList items={[{ date: "May 12, 2026", title: "Invoice generated", body: `${customerInvoices[0]?.id || "INV-0000"} posted to billing account`, status: "Billing" }, { date: "May 10, 2026", title: "Payment received", body: `${formatMoney(25000)} ACH payment posted`, status: "Posted", tone: "success" }, { date: "May 8, 2026", title: "Order completed", body: `${customerOrders[0]?.id || "ORD-0000"} service workflow updated`, status: "Order" }, { date: "May 5, 2026", title: "New service activated", body: `${accountServices[0]?.service} at primary location`, status: "Active", tone: "success" }]} /></Panel></section>}
         {tab === "Services" && <Panel title="Active Services" description="Billing charges connect back to active service and circuit records."><DataTable columns={[{ key: "id", label: "Service ID" }, { key: "service", label: "Product" }, { key: "location", label: "Location" }, { key: "circuitId", label: "Circuit ID" }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Active" ? "success" : "warn"}>{row.status}</StatusTag> }, { key: "price", label: "MRC", render: row => formatMoney(row.price) }, { key: "install", label: "Install Date", render: () => "2026-04-15" }, { key: "details", label: "", render: row => <DetailButton type="service" id={row.id} setRoute={setRoute} /> }]} rows={accountServices} /></Panel>}
         {tab === "Locations" && <Panel title="Service Locations" description="Serviceability and active products by address."><DataTable columns={[{ key: "id", label: "Location ID" }, { key: "address", label: "Service Address" }, { key: "status", label: "Serviceability Status", render: row => <StatusTag tone="success">{row.status}</StatusTag> }, { key: "available", label: "Available Products" }, { key: "active", label: "Active Services" }]} rows={accountServices.map((service, index) => ({ id: `LOC-${customer.id.slice(-4)}-${index + 1}`, address: `${100 + index * 22} Network Plaza, ${customer.region}`, status: "Serviceable", available: "Fiber, DIA, Ethernet, SD-WAN", active: service.service }))} /></Panel>}
-        {tab === "Orders" && <Panel title="Orders" description="Customer order records."><DataTable columns={[{ key: "id", label: "Order ID" }, { key: "service", label: "Service" }, { key: "source", label: "Source" }, { key: "due", label: "Due Date" }, { key: "status", label: "Status", render: row => <StatusTag>{orderMeta(row).status}</StatusTag> }, { key: "details", label: "", render: row => <DetailButton type="order" id={row.id} setRoute={setRoute} /> }]} rows={customerOrders} /></Panel>}
+        {tab === "Orders" && <Panel title="Orders" description="Customer order records."><DataTable columns={[{ key: "id", label: "Order ID" }, { key: "serviceCategory", label: "Service Category", render: row => orderMeta(row).serviceCategory }, { key: "service", label: "Service", render: row => orderMeta(row).service }, { key: "due", label: "Due Date" }, { key: "status", label: "Status", render: row => <StatusTag tone={orderStatusTone(orderMeta(row).overallStatus)}>{orderMeta(row).overallStatus}</StatusTag> }, { key: "details", label: "", render: row => <DetailButton type="order" id={row.id} setRoute={setRoute} /> }]} rows={customerOrders} /></Panel>}
         {tab === "Tickets" && <Panel title="Tickets" description="Care and support records for the selected account."><DataTable columns={[{ key: "id", label: "Ticket ID" }, { key: "type", label: "Issue" }, { key: "category", label: "Category" }, { key: "priority", label: "Priority", render: row => <StatusTag tone={["Urgent", "High"].includes(row.priority) ? "warn" : "blue"}>{row.priority}</StatusTag> }, { key: "status", label: "Status" }]} rows={customerTickets} /></Panel>}
         {tab === "Invoices" && <Panel title="Invoices" description="Billing account invoices and balances."><DataTable columns={[{ key: "id", label: "Invoice #" }, { key: "billingAccount", label: "Billing Account", render: row => enrichedInvoice(row).billingAccount }, { key: "due", label: "Due Date" }, { key: "amount", label: "Total", render: row => formatMoney(row.amount) }, { key: "balance", label: "Balance", render: row => formatMoney(enrichedInvoice(row).balance) }, { key: "status", label: "Status", render: row => <StatusTag tone={invoiceStatus(row) === "Past Due" ? "warn" : "blue"}>{invoiceStatus(row)}</StatusTag> }, { key: "details", label: "", render: row => <DetailButton type="invoice" id={row.id} setRoute={setRoute} /> }]} rows={customerInvoices} /></Panel>}
         {tab === "Quotes" && <Panel title="Quotes" description="Account quotes and approval status."><DataTable columns={[{ key: "id", label: "Quote ID" }, { key: "package", label: "Package" }, { key: "value", label: "TCV", render: row => formatMoney(row.value) }, { key: "margin", label: "Margin", render: row => `${row.margin}%` }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Approval" ? "warn" : "blue"}>{row.status}</StatusTag> }, { key: "details", label: "", render: row => <DetailButton type="quote" id={row.id} setRoute={setRoute} /> }]} rows={customerQuotes} /></Panel>}
@@ -1325,63 +1376,206 @@ function BillingModule({ setRoute, showToast }) {
 }
 
 function OrdersModule({ setRoute, showToast }) {
-  const [filters, setFilters] = useState({ customer: "", orderId: "", leadId: "", opportunityId: "", account: "", service: "", source: "" });
+  const enrichedOrders = useMemo(() => orders.map(orderMeta), []);
   const [tab, setTab] = useState("All Orders");
-  const filteredOrders = orders.map(orderMeta).filter(order => (
-    matchAny(order, filters.customer, [item => customerName(item.customerId)]) &&
-    matchAny(order, filters.orderId, [item => item.id]) &&
-    matchAny(order, filters.leadId, [item => item.source]) &&
-    matchAny(order, filters.opportunityId, [item => item.source]) &&
-    matchAny(order, filters.account, [item => item.customerId]) &&
-    matchAny(order, filters.service, [item => item.service]) &&
-    matchAny(order, filters.source, [item => item.source])
-  ));
+  const [activeView, setActiveView] = useState("all");
+  const [draftFilters, setDraftFilters] = useState({
+    query: "",
+    status: "All statuses",
+    orderType: "All types",
+    lifecycleStage: "All stages",
+    serviceAddress: "",
+    owner: "All owners",
+    serviceCategory: "All categories",
+    service: "All services"
+  });
+  const [filters, setFilters] = useState(draftFilters);
+
+  const orderViews = [
+    { id: "all", label: "All Orders", match: () => true },
+    { id: "in-progress", label: "In Progress", match: order => ["Submitted", "Validated", "In Progress", "Provisioning"].includes(order.overallStatus) },
+    { id: "at-risk", label: "At Risk", match: order => order.slaStatus !== "On Track" || order.blocker !== "None" },
+    { id: "waiting", label: "Waiting on Customer", match: order => order.overallStatus === "Pending Customer" || order.blocker === "Customer LOA" },
+    { id: "completed", label: "Completed (7 days)", match: order => order.overallStatus === "Completed" }
+  ];
+
+  const serviceOptions = draftFilters.serviceCategory === "All categories"
+    ? [...new Set(Object.values(orderServiceCatalog).flat())]
+    : orderServiceCatalog[draftFilters.serviceCategory] || [];
+  const ownerOptions = ["All owners", ...new Set(enrichedOrders.map(order => order.owner))];
+  const activeViewConfig = orderViews.find(view => view.id === activeView) || orderViews[0];
+
+  const visibleOrders = useMemo(() => {
+    return enrichedOrders.filter(order => {
+      const matchesQuery = !filters.query.trim() || [order.id, order.orderName, order.account, order.service, order.serviceCategory, order.circuitId, order.location, order.owner].some(value => textMatch(value, filters.query));
+      const matchesStatus = filters.status === "All statuses" || order.overallStatus === filters.status;
+      const matchesOrderType = filters.orderType === "All types" || order.orderType === filters.orderType;
+      const matchesLifecycle = filters.lifecycleStage === "All stages" || order.lifecycleStage === filters.lifecycleStage;
+      const matchesAddress = !filters.serviceAddress.trim() || textMatch(order.location, filters.serviceAddress);
+      const matchesOwner = filters.owner === "All owners" || order.owner === filters.owner;
+      const matchesCategory = filters.serviceCategory === "All categories" || order.serviceCategory === filters.serviceCategory;
+      const matchesService = filters.service === "All services" || order.service === filters.service;
+      const matchesView = activeViewConfig.match(order);
+      const matchesTab = tab === "All Orders"
+        ? true
+        : tab === "Provisioning Queue"
+          ? ["Submitted", "Validated", "In Progress", "Pending Network", "Provisioning"].includes(order.overallStatus)
+          : tab === "Research"
+            ? order.overallStatus === "Pending Customer" || order.blocker !== "None"
+          : order.orderType === tab;
+      return matchesQuery && matchesStatus && matchesOrderType && matchesLifecycle && matchesAddress && matchesOwner && matchesCategory && matchesService && matchesView && matchesTab;
+    });
+  }, [activeViewConfig, enrichedOrders, filters, tab]);
+
+  const totalOrders = visibleOrders.length;
+  const inProgressOrders = visibleOrders.filter(order => ["Submitted", "Validated", "In Progress", "Provisioning"].includes(order.overallStatus)).length;
+  const atRiskOrders = visibleOrders.filter(order => order.slaStatus !== "On Track" || order.blocker !== "None").length;
+  const waitingOnCustomer = visibleOrders.filter(order => order.overallStatus === "Pending Customer" || order.blocker === "Customer LOA").length;
+  const completedOrders = visibleOrders.filter(order => order.overallStatus === "Completed").length;
+  const breachedOrders = visibleOrders.filter(order => order.slaStatus === "Breached").length;
+
+  const lifecycleRows = orderLifecycleSteps.map(step => ({ id: step, step, count: visibleOrders.filter(order => order.lifecycleStage === step).length }));
+  const typeRows = ["Install", "Modify", "Disconnect"].map(type => ({ id: type, type, count: visibleOrders.filter(order => order.orderType === type).length }));
+  const riskRows = Array.from(new Map(visibleOrders.map(order => [order.riskReason, order])).entries()).map(([reason, order], index) => ({
+    id: `${reason}-${index}`,
+    reason,
+    owner: order.owner,
+    impact: order.slaStatus === "Breached" ? "High" : order.blocker !== "None" ? "Medium" : "Low",
+    status: order.blocker === "None" ? "Resolved" : "Open"
+  }));
+
+  function applyFilters() {
+    setFilters(draftFilters);
+    showToast("Order filters applied");
+  }
+
+  function setServiceCategory(value) {
+    const serviceList = value === "All categories" ? [...new Set(Object.values(orderServiceCatalog).flat())] : orderServiceCatalog[value] || [];
+    const nextService = serviceList.includes(draftFilters.service) ? draftFilters.service : "All services";
+    setDraftFilters(current => ({ ...current, serviceCategory: value, service: nextService }));
+  }
+
   return (
     <>
       <PageHeader
         title="Orders"
-        description="Telecom order management and provisioning workflow for installs, modifies, disconnects, research, and network handoff."
-        actions={<><ActionButton icon="orders" variant="button" onClick={() => showToast("New order workflow opened")}>New Order</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Order validation checks passed")}>Validate Order</ActionButton><ActionButton icon="reports" onClick={() => showToast("Provisioning queue exported")}>Export Queue</ActionButton></>}
+        description="Telecom service delivery work queue for installs, modifies, disconnects, provisioning, and field coordination."
+        actions={<ActionButton icon="orders" variant="button" onClick={() => showToast("New order workflow opened")}>New Order</ActionButton>}
       />
       <SummaryStrip items={[
-        { label: "Open Orders", value: orders.length, note: "Submitted and in progress" },
-        { label: "Due This Week", value: orders.filter(order => order.due <= "2026-05-20").length, note: "Customer committed dates" },
-        { label: "At Risk", value: filteredOrders.filter(order => order.blocker !== "None").length, note: "Blockers present" },
-        { label: "Pending Provisioning", value: filteredOrders.filter(order => order.status === "Provisioning").length, note: "Network queue" },
-        { label: "Completed", value: 18, note: "Rolling 30 days" }
+        { label: "Total Orders", value: totalOrders, note: "Operational queue" },
+        { label: "In Progress", value: inProgressOrders, note: "Design through activation" },
+        { label: "At Risk", value: atRiskOrders, note: "Blockers present" },
+        { label: "Waiting on Customer", value: waitingOnCustomer, note: "External dependency" },
+        { label: "Completed (7 days)", value: completedOrders, note: "Recent completions" },
+        { label: "SLA Breached", value: breachedOrders, note: "Escalate immediately" }
       ]} />
       <section className="orders-stack">
-        <Panel title="Search orders" description="Use one or many fields to narrow the order list.">
+        <Panel
+          title="Order filters"
+          description="Search orders, circuits, services, and accounts. Save the current view once the queue is narrowed."
+          action={<div className="module-toolbar">
+            <button className="tiny-button" type="button" onClick={() => showToast("Saved views menu opened")}>Saved Views</button>
+            <button className="tiny-button" type="button" onClick={() => showToast("More filters opened")}>More Filters</button>
+            <ActionButton icon="search" variant="button" onClick={applyFilters}>Search</ActionButton>
+          </div>}
+        >
+          <div className="order-search-row">
+            <label className="order-search">
+              <Icon name="search" className="button-icon" />
+              <input
+                value={draftFilters.query}
+                onChange={event => setDraftFilters(current => ({ ...current, query: event.target.value }))}
+                placeholder="Search orders, circuits, services, accounts"
+              />
+            </label>
+            <div className="saved-views-row" aria-label="Saved views">
+              {orderViews.map(view => (
+                <button
+                  key={view.id}
+                  type="button"
+                  className={activeView === view.id ? "view-chip active" : "view-chip"}
+                  onClick={() => setActiveView(view.id)}
+                >
+                  {view.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="order-filter-grid">
-            <label>Customer<input value={filters.customer} onChange={event => setFilters({ ...filters, customer: event.target.value })} placeholder="Customer name" /></label>
-            <label>Order ID<input value={filters.orderId} onChange={event => setFilters({ ...filters, orderId: event.target.value })} placeholder="ORD-2048" /></label>
-            <label>Lead ID<input value={filters.leadId} onChange={event => setFilters({ ...filters, leadId: event.target.value })} placeholder="LEAD-452" /></label>
-            <label>Opportunity ID<input value={filters.opportunityId} onChange={event => setFilters({ ...filters, opportunityId: event.target.value })} placeholder="OPP-833" /></label>
-            <label>Account #<input value={filters.account} onChange={event => setFilters({ ...filters, account: event.target.value })} placeholder="CUST-1001" /></label>
-            <label>Service<input value={filters.service} onChange={event => setFilters({ ...filters, service: event.target.value })} placeholder="Fiber, Voice..." /></label>
-            <label>Source<input value={filters.source} onChange={event => setFilters({ ...filters, source: event.target.value })} placeholder="Quote, Lead, Opportunity" /></label>
+            <label>Status
+              <select value={draftFilters.status} onChange={event => setDraftFilters(current => ({ ...current, status: event.target.value }))}>
+                {["All statuses", "Draft", "Submitted", "Validated", "In Progress", "Pending Customer", "Pending Network", "Provisioning", "Completed", "Cancelled"].map(value => <option key={value}>{value}</option>)}
+              </select>
+            </label>
+            <label>Order Type
+              <select value={draftFilters.orderType} onChange={event => setDraftFilters(current => ({ ...current, orderType: event.target.value }))}>
+                {["All types", "Install", "Modify", "Disconnect"].map(value => <option key={value}>{value}</option>)}
+              </select>
+            </label>
+            <label>Lifecycle Stage
+              <select value={draftFilters.lifecycleStage} onChange={event => setDraftFilters(current => ({ ...current, lifecycleStage: event.target.value }))}>
+                {["All stages", ...orderLifecycleSteps].map(value => <option key={value}>{value}</option>)}
+              </select>
+            </label>
+            <label>Service Address
+              <input value={draftFilters.serviceAddress} onChange={event => setDraftFilters(current => ({ ...current, serviceAddress: event.target.value }))} placeholder="Search by service location" />
+            </label>
+            <label>Owner
+              <select value={draftFilters.owner} onChange={event => setDraftFilters(current => ({ ...current, owner: event.target.value }))}>
+                {ownerOptions.map(value => <option key={value}>{value}</option>)}
+              </select>
+            </label>
+            <label>Service Category
+              <select value={draftFilters.serviceCategory} onChange={event => setServiceCategory(event.target.value)}>
+                {["All categories", ...orderServiceCategories].map(value => <option key={value}>{value}</option>)}
+              </select>
+            </label>
+            <label>Service
+              <select value={draftFilters.service} onChange={event => setDraftFilters(current => ({ ...current, service: event.target.value }))}>
+                {["All services", ...serviceOptions].map(value => <option key={value}>{value}</option>)}
+              </select>
+            </label>
           </div>
         </Panel>
         <Tabs tabs={["All Orders", "Install", "Modify", "Disconnect", "Research", "Provisioning Queue"]} active={tab} onChange={setTab} />
-        <Panel title="Order list" description="Open an order to modify, cancel, reschedule, or inspect fulfillment details.">
+        <Panel
+          title="Operational order queue"
+          description="Service delivery execution for installs, modifications, disconnects, and provisioning handoff."
+          action={<span className="small-muted">{visibleOrders.length} visible orders</span>}
+        >
           <DataTable
             columns={[
               { key: "id", label: "Order ID" },
+              { key: "orderName", label: "Order Name" },
               { key: "account", label: "Account" },
               { key: "orderType", label: "Order Type" },
-              { key: "service", label: "Service" },
-              { key: "location", label: "Location" },
-              { key: "status", label: "Status", render: order => <StatusTag tone={order.status === "Pending Network" ? "warn" : "blue"}>{order.status}</StatusTag> },
-              { key: "provisioningStatus", label: "Provisioning Status" },
-              { key: "due", label: "Due Date" },
+              { key: "lifecycleStage", label: "Lifecycle Stage", render: row => <StatusTag tone={row.lifecycleStage === "Complete" ? "success" : "blue"}>{row.lifecycleStage}</StatusTag> },
+              { key: "overallStatus", label: "Overall Status", render: row => <StatusTag tone={orderStatusTone(row.overallStatus)}>{row.overallStatus}</StatusTag> },
+              { key: "slaStatus", label: "SLA", render: row => <StatusTag tone={orderSlaTone(row.slaStatus)}>{row.slaStatus}</StatusTag> },
+              { key: "due", label: "Due Date", render: row => <span className={row.slaStatus === "Breached" ? "text-danger" : ""}>{row.due}</span> },
               { key: "owner", label: "Owner" },
-              { key: "blocker", label: "Blocker", render: order => <StatusTag tone={order.blocker === "None" ? "success" : "warn"}>{order.blocker}</StatusTag> },
-              { key: "sourceQuote", label: "Source Quote" },
-              { key: "details", label: "", render: order => <DetailButton type="order" id={order.id} setRoute={setRoute} /> }
+              { key: "details", label: "", render: row => <DetailButton type="order" id={row.id} setRoute={setRoute} children="View" /> }
             ]}
-            rows={tab === "All Orders" ? filteredOrders : filteredOrders.filter(order => tab === "Provisioning Queue" ? order.status === "Provisioning" : order.orderType === tab)}
+            rows={visibleOrders}
           />
         </Panel>
+        <div className="orders-insight-grid">
+          <Panel title="Orders by Lifecycle Stage" description="Where the queue is sitting in the delivery chain.">
+            <DataTable columns={[{ key: "step", label: "Lifecycle Stage" }, { key: "count", label: "Orders" }]} rows={lifecycleRows} />
+          </Panel>
+          <Panel title="Orders by Type" description="Install, modify, and disconnect volume.">
+            <DataTable columns={[{ key: "type", label: "Type" }, { key: "count", label: "Orders" }]} rows={typeRows} />
+          </Panel>
+          <Panel title="Top Risk Reasons" description="Blockers and dependency reasons called out in the queue.">
+            <DataTable columns={[
+              { key: "reason", label: "Risk Reason" },
+              { key: "owner", label: "Owner" },
+              { key: "impact", label: "Impact" },
+              { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Resolved" ? "success" : "warn"}>{row.status}</StatusTag> }
+            ]} rows={riskRows.length ? riskRows : [{ id: "none", reason: "No open blockers", owner: "Operations", impact: "Low", status: "Resolved" }]} />
+          </Panel>
+        </div>
       </section>
     </>
   );
@@ -1575,17 +1769,352 @@ function BillingAccountDetail({ id, setRoute, showToast }) {
 
 function OrderDetail({ id, setRoute, showToast }) {
   const order = orderMeta(orders.find(item => item.id === id) || orders[0]);
-  const [tab, setTab] = useState("Summary");
+  const [tab, setTab] = useState("Provisioning");
+  const [auditType, setAuditType] = useState("All actions");
+  const serviceRows = [
+    { id: `${order.id}-service`, serviceId: order.circuitId, bandwidth: order.serviceCategory === "Voice" ? "Voice" : "1 Gbps", slaProfile: "Gold", network: order.serviceCategory, requestedDate: order.requestedDue, activationDate: order.overallStatus === "Completed" ? order.due : "Pending" },
+    { id: `${order.id}-backup`, serviceId: `ALT-${order.circuitId.slice(-4)}`, bandwidth: "500 Mbps", slaProfile: "Silver", network: `${order.serviceCategory} backup`, requestedDate: order.requestedDue, activationDate: "Pending" }
+  ];
+  const dependencyRows = [
+    { id: "dep-1", dependency: "MPLS Circuit", type: "Network", owner: "Network Ops", status: order.serviceCategory === "Managed" ? "Resolved" : "Pending", impact: "High", dueDate: order.due },
+    { id: "dep-2", dependency: "Customer Equipment", type: "Customer", owner: "Field Ops", status: order.overallStatus === "Completed" ? "Resolved" : "At Risk", impact: "Medium", dueDate: order.due },
+    { id: "dep-3", dependency: "Site Survey", type: "Field", owner: "Provisioning", status: order.blocker === "None" ? "Resolved" : "Blocking", impact: "High", dueDate: order.due }
+  ];
+  const auditRows = [
+    { id: "audit-1", timestamp: "2026-05-13 09:12", user: "Order Ops", action: "Status update", oldValue: "Draft", newValue: "Validated" },
+    { id: "audit-2", timestamp: "2026-05-13 10:01", user: "Network Ops", action: "Circuit reservation", oldValue: "None", newValue: order.circuitId },
+    { id: "audit-3", timestamp: "2026-05-13 11:20", user: "Field Ops", action: "Assignment update", oldValue: "Unassigned", newValue: order.assignedTeam },
+    { id: "audit-4", timestamp: "2026-05-13 12:45", user: "System", action: "SLA refresh", oldValue: "On Track", newValue: order.slaStatus }
+  ].filter(entry => auditType === "All actions" || entry.action === auditType);
+
+  function serviceStatusTone(value) {
+    if (["Connected", "Resolved", "Complete", "Passed"].includes(value)) return "success";
+    if (["Pending", "At Risk", "Blocking", "Awaiting handoff"].includes(value)) return "warn";
+    return "blue";
+  }
+
+  const provisioningSteps = orderLifecycleSteps.map(step => ({
+    id: step,
+    step,
+    status: order.lifecycleStage === step || (step === "Complete" && order.overallStatus === "Completed") ? "Current" : orderLifecycleSteps.indexOf(step) < orderLifecycleSteps.indexOf(order.lifecycleStage) ? "Complete" : "Pending"
+  }));
+
   return (
     <>
-      <RecordHeader breadcrumb={["Orders", order.orderType, order.id]} title={`${order.id} order detail`} status={order.status} subtitle={`${order.account} · ${order.orderType} · ${order.service} · Due ${order.due} · Owner ${order.owner}`} actions={<><ActionButton icon="workflow" variant="button" onClick={() => showToast("Order validation checks passed")}>Validate</ActionButton><ActionButton icon="orders" onClick={() => showToast("Order submitted")}>Submit</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Assignment updated")}>Assign</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Order status updated")}>Update Status</ActionButton><ActionButton icon="orders" onClick={() => showToast("Order completed")}>Complete</ActionButton><ActionButton icon="workflow" onClick={() => setRoute("orders")}>Back</ActionButton></>} />
-      <SummaryStrip items={[{ label: "Order Type", value: order.orderType, note: order.source }, { label: "Provisioning Status", value: order.provisioningStatus, note: order.blocker }, { label: "Circuit ID", value: order.circuitId, note: order.location }, { label: "Due Date", value: order.due, note: order.owner }]} />
-      <Tabs tabs={["Summary", "Service Details", "Location", "Provisioning", "Tasks", "Customer Communications", "Related Quote", "Audit History"]} active={tab} onChange={setTab} />
-      {tab === "Summary" && <Panel title="Order Summary" description="Sales lineage, requested dates, customer contact, and install type."><div className="field-grid"><MiniStat label="Source" value={order.source} note="Lead-to-cash lineage" /><MiniStat label="Quote ID" value={order.sourceQuote} note="Source quote" /><MiniStat label="Opportunity ID" value={opportunities.find(opp => opp.customerId === order.customerId)?.id || "OPP-000"} note="Commercial record" /><MiniStat label="Requested Due Date" value={order.requestedDue} note={order.installType} /><MiniStat label="Customer Contact" value={order.contact} note={order.account} /><MiniStat label="Install Type" value={order.installType} note={order.location} /></div></Panel>}
-      {tab === "Provisioning" && <Panel title="Provisioning" description="Network assignment, equipment, activation, and validation checks."><DataTable columns={[{ key: "step", label: "Validation Checks" }, { key: "owner", label: "Owner" }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Blocked" ? "warn" : "success"}>{row.status}</StatusTag> }, { key: "notes", label: "Notes" }]} rows={[{ id: "validate", step: "Serviceability validation", owner: "Order Ops", status: "Passed", notes: "Address serviceable" }, { id: "network", step: "Network assignment", owner: "Network Ops", status: order.blocker === "None" ? "Passed" : "Blocked", notes: `Circuit ${order.circuitId}` }, { id: "equipment", step: "Equipment / ONT / CPE", owner: "Field Ops", status: "Passed", notes: "ONT + managed CPE reserved" }, { id: "activation", step: "Activation status", owner: "Provisioning", status: "Passed", notes: order.provisioningStatus }, { id: "failure", step: "Failure reason", owner: "System", status: order.blocker === "None" ? "Passed" : "Blocked", notes: order.blocker }]} /></Panel>}
-      {tab === "Tasks" && <Panel title="Tasks" description="Checklist with owner and status."><DataTable columns={[{ key: "task", label: "Task" }, { key: "owner", label: "Owner" }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Done" ? "success" : "blue"}>{row.status}</StatusTag> }]} rows={["Validate order", "Reserve circuit", "Ship CPE", "Schedule dispatch", "Activate service"].map((task, index) => ({ id: task, task, owner: ["Order Ops", "Network Ops", "Warehouse", "Field Ops", "Provisioning"][index], status: index < 2 ? "Done" : "Open" }))} /></Panel>}
-      {tab === "Audit History" && <Panel title="Audit History" description="Timestamped user and system actions."><TimelineList items={[{ date: "May 13, 2026 09:12", title: "Order validated", body: "Order Ops completed validation checks", status: "Validated" }, { date: "May 13, 2026 10:01", title: "Network assignment updated", body: `${order.circuitId} assigned`, status: "Network" }, { date: "May 13, 2026 11:20", title: "Due date confirmed", body: order.due, status: "Audit" }]} /></Panel>}
-      {!["Summary", "Provisioning", "Tasks", "Audit History"].includes(tab) && <Panel title={tab} description={`${tab} for ${order.id}.`}><DataTable columns={[{ key: "field", label: "Field" }, { key: "value", label: "Value" }]} rows={[{ id: "account", field: "Account", value: order.account }, { id: "service", field: "Service", value: order.service }, { id: "location", field: "Service Address", value: order.location }, { id: "quote", field: "Related Quote", value: order.sourceQuote }]} /></Panel>}
+      <RecordHeader
+        breadcrumb={["Orders", "Work Queue", order.id]}
+        title={`Order ${order.id}`}
+        status={order.overallStatus}
+        subtitle={`${order.account} · ${order.serviceCategory} · ${order.service} · SLA ${order.slaStatus} · Due ${order.due}`}
+        meta={<div className="record-meta-chips"><StatusTag tone={orderStatusTone(order.overallStatus)}>{order.overallStatus}</StatusTag><StatusTag tone={orderSlaTone(order.slaStatus)}>{order.slaStatus}</StatusTag><StatusTag tone="blue">{order.serviceCategory}</StatusTag><StatusTag tone="blue">{order.owner}</StatusTag></div>}
+        actions={<div className="orders-detail-actions">
+          <div className="module-toolbar">
+            <ActionButton icon="workflow" variant="button" onClick={() => showToast("Action menu opened")}>Actions</ActionButton>
+            <ActionButton icon="workflow" onClick={() => showToast("Assignment updated")}>Assign</ActionButton>
+          </div>
+          <div className="module-toolbar">
+            <ActionButton icon="workflow" onClick={() => showToast("Escalation sent")}>Escalate</ActionButton>
+            <ActionButton icon="orders" variant="button" onClick={() => showToast("Order completed")}>Complete Order</ActionButton>
+          </div>
+        </div>}
+      />
+      <SummaryStrip items={[
+        { label: "Service Type", value: order.serviceCategory, note: order.service },
+        { label: "Service Address", value: order.location, note: order.circuitId },
+        { label: "Requested Due Date", value: order.requestedDue, note: order.criticalPath },
+        { label: "Assigned Team", value: order.assignedTeam, note: `Progress ${order.progress}` }
+      ]} />
+      <Tabs tabs={["Provisioning", "Tasks", "Service Details", "Communications", "Dependencies & Risks", "Audit History"]} active={tab} onChange={setTab} />
+
+      {tab === "Provisioning" && (
+        <section className="order-detail-layout">
+          <Panel
+            title="Workflow orchestration"
+            description="Provisioning moves through design, provisioning, implementation, installation, activation, and complete."
+          >
+            <div className="workflow-track" role="list" aria-label="Provisioning workflow">
+              {provisioningSteps.map(step => (
+                <div key={step.id} className={step.status === "Current" ? "workflow-step current" : step.status === "Complete" ? "workflow-step complete" : "workflow-step"} role="listitem">
+                  <strong>{step.step}</strong>
+                  <span>{step.status}</span>
+                </div>
+              ))}
+            </div>
+            <div className="order-workspace-grid">
+              <section className="workspace-pane">
+                <div className="workspace-pane-header">
+                  <strong>Workflow steps</strong>
+                  <span>Step details and orchestration state</span>
+                </div>
+                <DataTable
+                  columns={[
+                    { key: "step", label: "Step" },
+                    { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Complete" ? "success" : row.status === "Current" ? "warn" : "blue"}>{row.status}</StatusTag> }
+                  ]}
+                  rows={provisioningSteps}
+                />
+              </section>
+              <section className="workspace-pane">
+                <div className="workspace-pane-header">
+                  <strong>Provisioning context</strong>
+                  <span>Customer and activation data used by delivery teams</span>
+                </div>
+                <div className="field-grid">
+                  <MiniStat label="Service Address" value={order.location} />
+                  <MiniStat label="Requested Due Date" value={order.requestedDue} />
+                  <MiniStat label="Target Activation" value={order.due} />
+                  <MiniStat label="Assigned Teams" value={order.assignedTeam} />
+                  <MiniStat label="Activation Status" value={order.activationStatus} />
+                  <MiniStat label="Circuit Reservation" value={order.circuitId} />
+                  <MiniStat label="IP Assignment" value="10.84.12.0/29" />
+                  <MiniStat label="Equipment Allocation" value="CPE + ONT reserved" />
+                </div>
+              </section>
+            </div>
+            <div className="integration-status-grid">
+              {[
+                { label: "Inventory", value: "Connected" },
+                { label: "Network", value: order.blocker === "None" ? "Connected" : "Pending" },
+                { label: "IPAM", value: "Connected" },
+                { label: "Billing", value: "Pending" },
+                { label: "CRM", value: "Connected" }
+              ].map(item => (
+                <div key={item.label} className="integration-chip">
+                  <strong>{item.label}</strong>
+                  <StatusTag tone={serviceStatusTone(item.value)}>{item.value}</StatusTag>
+                </div>
+              ))}
+            </div>
+          </Panel>
+          <Panel title="Delivery context" description="Account, circuit, and activation details used by the fulfillment team.">
+            <div className="field-grid">
+              <MiniStat label="Account" value={order.account} note={order.accountNumber} />
+              <MiniStat label="Order Name" value={order.orderName} note={order.orderType} />
+              <MiniStat label="Circuit ID" value={order.circuitId} note={order.provisioningStatus} />
+              <MiniStat label="Overall Status" value={order.overallStatus} note={order.slaStatus} />
+            </div>
+          </Panel>
+        </section>
+      )}
+
+      {tab === "Tasks" && (
+        <section className="record-main-layout">
+          <Panel title="Task summary" description="Install and project coordination by phase.">
+            <div className="field-grid">
+              <MiniStat label="Total Tasks" value={7} note="Design through activation" />
+              <MiniStat label="In Progress" value={3} note="Currently owned work" />
+              <MiniStat label="Critical Path" value={order.criticalPath} note={order.slaStatus} />
+              <MiniStat label="Time Remaining" value="2 days 4 hours" note="To due date" />
+            </div>
+            <DataTable
+              columns={[
+                { key: "task", label: "Task" },
+                { key: "phase", label: "Phase" },
+                { key: "owner", label: "Owner" },
+                { key: "team", label: "Team" },
+                { key: "dueDate", label: "Due Date" },
+                { key: "priority", label: "Priority" },
+                { key: "sla", label: "SLA" },
+                { key: "completion", label: "Completion %" },
+                { key: "critical", label: "Critical Path", render: row => <StatusTag tone={row.critical === "Yes" ? "warn" : "blue"}>{row.critical}</StatusTag> }
+              ]}
+              rows={[
+                { id: "task-1", task: "Design approval", phase: "Design", owner: "Order Ops", team: "Provisioning", dueDate: order.due, priority: "High", sla: "48h", completion: "100", critical: "Yes" },
+                { id: "task-2", task: "Circuit order", phase: "Provisioning", owner: "Network Ops", team: "NOC", dueDate: order.due, priority: "High", sla: "36h", completion: "75", critical: "Yes" },
+                { id: "task-3", task: "Equipment allocation", phase: "Implementation", owner: "Warehouse", team: "Field", dueDate: order.due, priority: "Medium", sla: "24h", completion: "60", critical: "No" },
+                { id: "task-4", task: "Site survey", phase: "Installation", owner: "Field Ops", team: "Field", dueDate: order.due, priority: "Medium", sla: "24h", completion: "45", critical: "Yes" },
+                { id: "task-5", task: "Equipment delivery", phase: "Installation", owner: "Logistics", team: "Field", dueDate: order.due, priority: "Medium", sla: "24h", completion: "30", critical: "No" },
+                { id: "task-6", task: "Activation", phase: "Activation", owner: "Provisioning", team: "Network", dueDate: order.due, priority: "High", sla: "12h", completion: "15", critical: "Yes" },
+                { id: "task-7", task: "Customer validation", phase: "Complete", owner: "Customer Success", team: "CRM", dueDate: order.due, priority: "Low", sla: "12h", completion: "0", critical: "No" }
+              ]}
+            />
+          </Panel>
+          <Panel title="Delivery control" description="SLA summary, time remaining, critical path, and slack time.">
+            <div className="field-grid">
+              <MiniStat label="SLA Summary" value={order.slaStatus} note={order.overallStatus} />
+              <MiniStat label="Time Remaining" value="2 days 4 hours" note="Install window" />
+              <MiniStat label="Critical Path" value={order.criticalPath} note="Blocking workstream" />
+              <MiniStat label="Slack Time" value="6 hours" note="Escalate if overrun" />
+            </div>
+            <TimelineList items={[
+              { date: "May 13, 2026", title: "Design approval complete", body: "Workflow baseline locked", status: "Done", tone: "success" },
+              { date: "May 13, 2026", title: "Circuit order placed", body: order.circuitId, status: "In progress" },
+              { date: "May 14, 2026", title: "Installation scheduled", body: order.location, status: "Planned" }
+            ]} />
+          </Panel>
+        </section>
+      )}
+
+      {tab === "Service Details" && (
+        <section className="record-main-layout">
+          <Panel title="Technical service workspace" description="Service summary, circuit mapping, IP addressing, equipment, and test results.">
+            <div className="field-grid">
+              <MiniStat label="Service ID" value={`SVC-${order.id.slice(-4)}`} note={order.service} />
+              <MiniStat label="Circuit ID" value={order.circuitId} note={order.serviceCategory} />
+              <MiniStat label="Bandwidth" value={order.serviceCategory === "Voice" ? "Voice trunk" : "1 Gbps"} note="Requested service" />
+              <MiniStat label="SLA Profile" value="Gold" note="Operational profile" />
+              <MiniStat label="Network" value={order.serviceCategory} note="Primary path" />
+              <MiniStat label="Activation Date" value={order.overallStatus === "Completed" ? order.due : "Pending"} note="Handoff target" />
+            </div>
+            <div className="service-topology">
+              <div className="topology-node">
+                <strong>Service Address</strong>
+                <span>{order.location}</span>
+              </div>
+              <div className="topology-path"></div>
+              <div className="topology-node">
+                <strong>Network Edge</strong>
+                <span>{order.serviceCategory} handoff</span>
+              </div>
+              <div className="topology-path"></div>
+              <div className="topology-node">
+                <strong>Customer Equipment</strong>
+                <span>ONT / CPE / demarcation</span>
+              </div>
+            </div>
+            <DataTable
+              columns={[
+                { key: "serviceId", label: "Service ID" },
+                { key: "bandwidth", label: "Bandwidth" },
+                { key: "slaProfile", label: "SLA Profile" },
+                { key: "network", label: "Network" },
+                { key: "requestedDate", label: "Requested Date" },
+                { key: "activationDate", label: "Activation Date", render: row => <StatusTag tone={row.activationDate === "Pending" ? "warn" : "success"}>{row.activationDate}</StatusTag> }
+              ]}
+              rows={serviceRows}
+            />
+          </Panel>
+          <Panel title="Service health" description="Operational health, dependencies, and update status.">
+            <div className="field-grid">
+              <MiniStat label="Service Health" value={order.slaStatus === "Breached" ? "Critical" : "Healthy"} note={order.overallStatus} />
+              <MiniStat label="Availability" value={order.blocker === "None" ? "Available" : "Degraded"} note={order.blocker} />
+              <MiniStat label="Dependencies" value={`${order.dependencyCount} open`} note={order.riskReason} />
+              <MiniStat label="Last Updated" value="2026-05-14 09:30" note="Provisioning sync" />
+            </div>
+            <DataTable
+              columns={[
+                { key: "serviceId", label: "Circuit Mapping" },
+                { key: "bandwidth", label: "Path" },
+                { key: "network", label: "Primary / Backup" }
+              ]}
+              rows={serviceRows.map((row, index) => ({
+                ...row,
+                serviceId: index === 0 ? order.circuitId : `ALT-${order.circuitId.slice(-4)}`,
+                bandwidth: index === 0 ? "Primary path" : "Backup path",
+                network: index === 0 ? "Primary" : "Backup"
+              }))}
+            />
+          </Panel>
+        </section>
+      )}
+
+      {tab === "Communications" && (
+        <section className="record-main-layout">
+          <Panel title="Communications timeline" description="Customer and internal updates tied to the install window.">
+            <div className="panel-row-actions">
+              <ActionButton icon="workflow" variant="button" onClick={() => showToast("Communication sent")}>Send Communication</ActionButton>
+              <ActionButton icon="workflow" onClick={() => showToast("Install notice scheduled")}>Schedule Install Notice</ActionButton>
+              <ActionButton icon="workflow" onClick={() => showToast("Delay notice sent")}>Send Delay Notice</ActionButton>
+              <ActionButton icon="workflow" onClick={() => showToast("Internal note added")}>Add Internal Note</ActionButton>
+            </div>
+            <TimelineList items={[
+              { date: "May 13, 2026 08:10", title: "Customer install notice", body: "Install window confirmed with account contact", status: "Sent", tone: "success" },
+              { date: "May 13, 2026 09:40", title: "Internal provisioning note", body: "Circuit reservation requested", status: "Internal" },
+              { date: "May 13, 2026 11:15", title: "Delay notice drafted", body: order.blocker === "None" ? "No delay issues currently logged" : order.blocker, status: order.blocker === "None" ? "Clear" : "Draft", tone: order.blocker === "None" ? "success" : "warn" }
+            ]} />
+            <DataTable
+              columns={[
+                { key: "channel", label: "Channel" },
+                { key: "sentBy", label: "Sent By" },
+                { key: "sentOn", label: "Sent On" },
+                { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Sent" ? "success" : "blue"}>{row.status}</StatusTag> },
+                { key: "subject", label: "Subject" }
+              ]}
+              rows={[
+                { id: "comm-1", channel: "Email", sentBy: "Order Ops", sentOn: "2026-05-13 08:10", status: "Sent", subject: "Install window confirmation" },
+                { id: "comm-2", channel: "Teams", sentBy: "Provisioning", sentOn: "2026-05-13 09:40", status: "Internal", subject: "Circuit reservation follow-up" },
+                { id: "comm-3", channel: "Email", sentBy: "Field Ops", sentOn: "2026-05-13 11:15", status: "Draft", subject: "Delay notice review" }
+              ]}
+            />
+          </Panel>
+          <Panel title="Coordination notes" description="Customer, internal, and escalation notes for the delivery team.">
+            <div className="field-grid">
+              <MiniStat label="Customer Contact" value={order.contact} note="Primary recipient" />
+              <MiniStat label="Assigned Teams" value={order.assignedTeam} note="Active workstream" />
+              <MiniStat label="Escalation Path" value="Provisioning Manager" note="If blocked" />
+              <MiniStat label="Notification Status" value={order.blocker === "None" ? "Current" : "Warning"} note={order.slaStatus} />
+            </div>
+          </Panel>
+        </section>
+      )}
+
+      {tab === "Dependencies & Risks" && (
+        <section className="record-main-layout">
+          <Panel title="Dependency and risk management" description="Blockers, owners, impact, and mitigation plans.">
+            <div className="dependency-summary-grid">
+              {[
+                { label: "Blocking", value: dependencyRows.filter(row => row.status === "Blocking").length },
+                { label: "At Risk", value: dependencyRows.filter(row => row.status === "At Risk").length },
+                { label: "Resolved", value: dependencyRows.filter(row => row.status === "Resolved").length }
+              ].map(item => <MiniStat key={item.label} label={item.label} value={item.value} note="Dependencies" />)}
+            </div>
+            <DataTable
+              columns={[
+                { key: "dependency", label: "Dependency" },
+                { key: "type", label: "Type" },
+                { key: "owner", label: "Owner" },
+                { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Resolved" ? "success" : row.status === "Blocking" ? "warn" : "blue"}>{row.status}</StatusTag> },
+                { key: "impact", label: "Impact" },
+                { key: "dueDate", label: "Due Date" }
+              ]}
+              rows={dependencyRows}
+            />
+          </Panel>
+          <Panel title="Risk detail" description="Risk description, impact level, mitigation plan, and notes.">
+            <div className="field-grid">
+              <MiniStat label="Risk Description" value={order.riskReason} note="Operational blocker" />
+              <MiniStat label="Impact Level" value={order.slaStatus === "Breached" ? "High" : "Medium"} note="Service delivery" />
+              <MiniStat label="Mitigation Plan" value="Escalate field access and confirm circuit reservation" note="Ops playbook" />
+              <MiniStat label="Notes" value="Update customer communications if blocker persists." note="Provisioning lead" />
+            </div>
+          </Panel>
+        </section>
+      )}
+
+      {tab === "Audit History" && (
+        <section className="record-main-layout">
+          <Panel title="Audit trail" description="Timestamped user actions, field changes, and version awareness.">
+            <div className="module-toolbar" style={{ marginBottom: 12 }}>
+              <label className="inline-search">
+                <Icon name="search" className="button-icon" />
+                <select value={auditType} onChange={event => setAuditType(event.target.value)}>
+                  {["All actions", "Status update", "Circuit reservation", "Assignment update", "SLA refresh"].map(value => <option key={value}>{value}</option>)}
+                </select>
+              </label>
+              <StatusTag tone="blue">Version 3 current</StatusTag>
+              <StatusTag tone="success">Rollback available</StatusTag>
+            </div>
+            <DataTable
+              columns={[
+                { key: "timestamp", label: "Timestamp" },
+                { key: "user", label: "User" },
+                { key: "action", label: "Action" },
+                { key: "oldValue", label: "Old Value" },
+                { key: "newValue", label: "New Value" }
+              ]}
+              rows={auditRows}
+            />
+          </Panel>
+          <Panel title="Audit timeline" description="Workflow changes and assignment history in chronological order.">
+            <TimelineList items={[
+              { date: "May 13, 2026 09:12", title: "Status update", body: "Draft moved to Validated", status: "Validated", tone: "success" },
+              { date: "May 13, 2026 10:01", title: "Circuit reservation", body: order.circuitId, status: "Network" },
+              { date: "May 13, 2026 11:20", title: "Assignment update", body: order.assignedTeam, status: "Assigned" },
+              { date: "May 14, 2026 08:45", title: "SLA refresh", body: order.slaStatus, status: order.slaStatus, tone: orderSlaTone(order.slaStatus) }
+            ]} />
+          </Panel>
+        </section>
+      )}
     </>
   );
 }
@@ -1936,7 +2465,22 @@ function ReportsModule({ showToast }) {
             <ToolbarButton icon="reports" variant="button" onClick={() => showToast("Report refreshed")}>Run</ToolbarButton>
           </div>
           <section className="report-page">
-            <div className="report-page-header"><div><h2>{definition.name}</h2><p>{definition.description}</p></div><div className="module-toolbar"><button className="ghost-button" disabled={page === 1} onClick={() => setPage(value => Math.max(1, value - 1))}>Previous</button><button className="ghost-button" disabled={page === pages} onClick={() => setPage(value => Math.min(pages, value + 1))}>Next</button><button className="button" type="button" onClick={exportReport}>.xlsx Excel</button><button className="ghost-button" type="button" onClick={exportCsv}>.csv CSV</button></div></div>
+            <div className="report-page-header">
+              <div>
+                <h2>{definition.name}</h2>
+                <p>{definition.description}</p>
+              </div>
+              <div className="report-page-actions">
+                <div className="module-toolbar report-page-pagination">
+                  <button className="ghost-button" disabled={page === 1} onClick={() => setPage(value => Math.max(1, value - 1))}>Previous</button>
+                  <button className="ghost-button" disabled={page === pages} onClick={() => setPage(value => Math.min(pages, value + 1))}>Next</button>
+                </div>
+                <div className="module-toolbar report-page-exports">
+                  <button className="button" type="button" onClick={exportReport}>Export Excel</button>
+                  <button className="ghost-button" type="button" onClick={exportCsv}>Export CSV</button>
+                </div>
+              </div>
+            </div>
             <div className="report-summary-strip"><div className="report-summary-card"><span>Total exposure</span><strong>{formatMoney(total)}</strong></div><div className="report-summary-card"><span>Rows</span><strong>{filteredRows.length}</strong></div><div className="report-summary-card"><span>Page</span><strong>{page} of {pages}</strong></div><div className="report-summary-card"><span>Area</span><strong>{definition.area}</strong></div></div>
             <DataTable columns={[{ key: "account", label: "Account" }, { key: "region", label: "Region" }, { key: "segment", label: "Segment" }, { key: "service", label: "Service" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount) }, { key: "metric", label: "Metric" }, { key: "status", label: "Status", render: row => <StatusTag tone={["Priority", "Open", "Review", "Urgent"].includes(row.status) ? "warn" : "blue"}>{row.status}</StatusTag> }]} rows={visibleRows} />
             {!visibleRows.length && <div className="empty-state">No rows match the current parameters.</div>}
