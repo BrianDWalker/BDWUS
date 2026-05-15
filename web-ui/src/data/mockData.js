@@ -10,8 +10,7 @@ export const navGroups = [
     label: "Commercial",
     items: [
       { id: "sales", label: "Sales", icon: "sales" },
-      { id: "pricing", label: "Pricing", icon: "pricing" },
-      { id: "products", label: "Products", icon: "products" }
+      { id: "product-pricing", label: "Product & Pricing", icon: "pricing" }
     ]
   },
   {

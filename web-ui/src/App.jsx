@@ -23,28 +23,31 @@ const customerName = id => customers.find(customer => customer.id === id)?.name 
 const sum = (items, selector) => items.reduce((total, item) => total + selector(item), 0);
 const textMatch = (value, query) => String(value ?? "").toLowerCase().includes(query.trim().toLowerCase());
 const matchAny = (item, query, fields) => !query.trim() || fields.some(field => textMatch(field(item), query));
+const routeAliases = { pricing: "product-pricing", products: "product-pricing" };
+const normalizeRoute = route => routeAliases[route] || route;
 
 const detailBackRoutes = {
   lead: "sales",
   opportunity: "sales",
   quote: "sales",
   customer: "customer-360",
-  product: "products",
+  product: "product-pricing",
+  "product-pricing": "product-pricing",
   ticket: "customer-service",
   network: "customer-service",
   invoice: "billing",
   service: "billing",
-  "pricing-strategic": "pricing",
-  "pricing-promos": "pricing",
-  "pricing-offers": "pricing",
-  "pricing-costs": "pricing",
-  "pricing-coefficients": "pricing",
-  "pricing-reporting": "pricing",
-  "product-development": "products",
-  "product-lifecycle": "products",
-  "product-costs": "products",
-  "product-offers": "products",
-  "product-reporting": "products"
+  "pricing-strategic": "product-pricing",
+  "pricing-promos": "product-pricing",
+  "pricing-offers": "product-pricing",
+  "pricing-costs": "product-pricing",
+  "pricing-coefficients": "product-pricing",
+  "pricing-reporting": "product-pricing",
+  "product-development": "product-pricing",
+  "product-lifecycle": "product-pricing",
+  "product-costs": "product-pricing",
+  "product-offers": "product-pricing",
+  "product-reporting": "product-pricing"
 };
 
 function serviceInstancesFor(customer) {
@@ -85,7 +88,7 @@ function usageRowsFor(customer) {
 
 function currentHashRoute() {
   const route = window.location.hash.replace(/^#\/?/, "");
-  return route === "quotes" ? "sales" : route || "dashboard";
+  return normalizeRoute(route === "quotes" ? "sales" : route || "dashboard");
 }
 
 function useRoute() {
@@ -96,8 +99,9 @@ function useRoute() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
   function setRoute(next) {
-    window.location.hash = `/${next}`;
-    setRouteState(next);
+    const route = normalizeRoute(next);
+    window.location.hash = `/${route}`;
+    setRouteState(route);
   }
   return [route, setRoute];
 }
@@ -170,7 +174,7 @@ function Breadcrumb({ items }) {
   return <div className="breadcrumb">{items.join(" / ")}</div>;
 }
 
-function RecordHeader({ breadcrumb, title, status, subtitle, actions }) {
+function RecordHeader({ breadcrumb, title, status, subtitle, actions, meta }) {
   return (
     <section className="record-header">
       <div>
@@ -180,6 +184,7 @@ function RecordHeader({ breadcrumb, title, status, subtitle, actions }) {
           {status && <StatusTag tone={["Past Due", "At Risk", "Approval Required", "Pending Network", "Disputed"].includes(status) ? "warn" : ["Active", "Approved", "Paid", "Completed"].includes(status) ? "success" : "blue"}>{status}</StatusTag>}
         </div>
         {subtitle && <p>{subtitle}</p>}
+        {meta && <div className="record-meta-row">{meta}</div>}
       </div>
       <div className="record-actions">{actions}</div>
     </section>
@@ -309,19 +314,58 @@ function quoteMeta(quote) {
 
 function productMeta(service) {
   const index = services.findIndex(item => item.id === service.id);
+  const category = productCategories[index % productCategories.length];
+  const lifecycle = service.lifecycle;
+  const health = Math.max(58, Math.min(97, Math.round(service.margin + (service.status === "Live" ? 30 : 22) + (lifecycle === "Growth" ? 8 : lifecycle === "Launch" ? 5 : lifecycle === "Refresh" ? 2 : 0))));
+  const healthBand = health >= 80 ? "Healthy" : health >= 65 ? "Watch" : "At Risk";
+  const availability = ["On-net", "Near-net", "Multi-market", "Serviceable"][index % 4];
   return {
     ...service,
     code: ["FIB-1G", "WIRE-IOT", "VOICE-PRO", "SDWAN-EDGE", "IOT-APN"][index] || service.id,
-    category: productCategories[index % productCategories.length],
+    category,
+    subCategory: ["Access", "Managed", "Voice", "Transport", "Wireless"][index % 5],
     billingType: index % 2 ? "Usage + Monthly" : "Monthly",
     productType: service.productType === "Mobility" ? "Wireless" : service.productType,
     serviceType: service.family,
+    provisioningType: ["Standard install", "Managed activation", "Self-serve", "Field install", "Network turn-up"][index % 5],
+    contractTypes: index % 2 ? ["MSA", "Order Form"] : ["MSA", "Term Commitment"],
+    dependencies: service.subProducts,
+    tags: [category, lifecycle, service.status, service.owner.split(" ")[0]],
+    availability,
     launchDate: ["2025-02-01", "2024-09-15", "2023-11-10", "2025-04-01", "2026-01-15"][index],
     retirementDate: service.lifecycle === "Mature" ? "2027-12-31" : "TBD",
     defaultMrc: 980 + index * 420,
     defaultNrc: 750 + index * 180,
     minMargin: Math.max(22, Math.round(service.margin - 6)),
-    discountLimit: `${index % 2 ? 15 : 10}%`
+    discountLimit: `${index % 2 ? 15 : 10}%`,
+    health,
+    healthBand,
+    createdDate: ["2024-08-10", "2024-06-04", "2023-11-20", "2025-01-25", "2025-12-08"][index],
+    lastUpdated: ["2026-05-11", "2026-05-09", "2026-05-06", "2026-05-12", "2026-05-13"][index],
+    totalQuotes: 14 + index * 9,
+    winRate: [62, 54, 46, 58, 39][index],
+    revenueFromWins: service.revenue,
+    grossMargin: service.margin,
+    billingCodes: [`${service.id}-MRC`, `${service.id}-NRC`, `${service.id}-DISC`],
+    priceList: [`${category} Core`, `${category} Strategic`, `${category} Enterprise`],
+    priceRules: [
+      "Volume discounts require approval above 10%",
+      "Term uplift applies to 36 month commitments",
+      "Regional uplift applies to constrained markets"
+    ],
+    promoCodes: [`${service.id}-PROMO`, `${category}-RAMP`],
+    offerBundles: [`${service.name} base`, `${category} service bundle`],
+    costComponents: [
+      { id: `${service.id}-TRANSPORT`, label: "Transport", amount: Math.round(service.cost * 0.34) },
+      { id: `${service.id}-EQUIP`, label: "Equipment", amount: Math.round(service.cost * 0.29) },
+      { id: `${service.id}-INSTALL`, label: "Install", amount: Math.round(service.cost * 0.19) },
+      { id: `${service.id}-SUPPORT`, label: "Support", amount: Math.round(service.cost * 0.18) }
+    ],
+    coefficientNotes: [
+      { name: "Market pressure", value: "+2.1%" },
+      { name: "Term uplift", value: "-0.6%" },
+      { name: "Install density", value: "+1.4%" }
+    ]
   };
 }
 
@@ -491,7 +535,7 @@ function SalesModule({ setRoute, showToast }) {
         actions={
           <>
             <ActionButton icon="opportunities" variant="button" onClick={() => setModal(true)}>New Opportunity</ActionButton>
-            <ActionButton icon="pricing" onClick={() => setRoute("pricing")}>Create Quote</ActionButton>
+            <ActionButton icon="pricing" onClick={() => setTab("Custom Pricing")}>Create Quote</ActionButton>
           </>
         }
       />
@@ -501,7 +545,7 @@ function SalesModule({ setRoute, showToast }) {
         { label: "Open Opportunities", value: filteredOpps.length, note: "Across sales stages" },
         { label: "Quotes Pending Approval", value: quotes.filter(quote => quote.status === "Approval").length, note: "Pricing and finance queue" }
       ]} />
-      <Tabs tabs={["Leads", "Opportunities", "Accounts", "Quotes", "Activities"]} active={tab} onChange={setTab} />
+      <Tabs tabs={["Leads", "Opportunities", "Accounts", "Custom Pricing", "Activities"]} active={tab} onChange={setTab} />
       {tab === "Opportunities" && (
         <Panel
           title="Opportunities"
@@ -545,7 +589,7 @@ function SalesModule({ setRoute, showToast }) {
       )}
       {tab === "Leads" && <Panel title="Leads" description="Lead to cash starts with account and product interest." action={<SearchBox value={filters.leads} onChange={value => setFilters({ ...filters, leads: value })} placeholder="Search leads" />}><DataTable columns={[{ key: "id", label: "Lead ID" }, { key: "account", label: "Account" }, { key: "source", label: "Source" }, { key: "stage", label: "Stage", render: row => <StatusTag>{row.stage}</StatusTag> }, { key: "product", label: "Product Interest" }, { key: "estValue", label: "Est. Value", render: row => formatMoney(row.estValue) }, { key: "owner", label: "Owner" }, { key: "details", label: "", render: row => <DetailButton type="lead" id={row.id} setRoute={setRoute} /> }]} rows={filteredLeads} /></Panel>}
       {tab === "Accounts" && <Panel title="Accounts" description="Customer records with open commercial and billing context." action={<SearchBox value={filters.customers} onChange={value => setFilters({ ...filters, customers: value })} placeholder="Search accounts" />}><DataTable columns={[{ key: "id", label: "Account Number" }, { key: "name", label: "Account" }, { key: "segment", label: "Segment" }, { key: "region", label: "Region" }, { key: "mrr", label: "MRR", render: row => formatMoney(row.mrr) }, { key: "health", label: "Health", render: row => `${row.health}` }, { key: "churnRisk", label: "Risk", render: row => <StatusTag tone={row.churnRisk === "High" ? "warn" : "blue"}>{row.churnRisk}</StatusTag> }, { key: "details", label: "", render: row => <DetailButton type="customer" id={row.id} setRoute={setRoute} /> }]} rows={filteredCustomers} /></Panel>}
-      {tab === "Quotes" && <Panel title="Quotes" description="Quotes connected to opportunities and approval workflow." action={<SearchBox value={filters.quotes} onChange={value => setFilters({ ...filters, quotes: value })} placeholder="Search quotes" />}><DataTable columns={[{ key: "id", label: "Quote ID" }, { key: "account", label: "Account" }, { key: "opportunityName", label: "Opportunity" }, { key: "productPackage", label: "Product Package" }, { key: "term", label: "Term", render: row => `${row.term} mo` }, { key: "mrc", label: "MRC", render: row => formatMoney(row.mrc) }, { key: "nrc", label: "NRC", render: row => formatMoney(row.nrc) }, { key: "margin", label: "Margin %", render: row => `${row.margin}%` }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Approval" ? "warn" : "blue"}>{row.status}</StatusTag> }, { key: "details", label: "", render: row => <DetailButton type="quote" id={row.id} setRoute={setRoute} /> }]} rows={filteredQuotes} /></Panel>}
+      {tab === "Custom Pricing" && <Panel title="Custom Pricing" description="Sales-owned quote pricing, approval routing, and account-specific pricing exceptions." action={<SearchBox value={filters.quotes} onChange={value => setFilters({ ...filters, quotes: value })} placeholder="Search quote, package, account" />}><DataTable columns={[{ key: "id", label: "Quote ID" }, { key: "account", label: "Account" }, { key: "opportunityName", label: "Opportunity" }, { key: "productPackage", label: "Product Package" }, { key: "term", label: "Term", render: row => `${row.term} mo` }, { key: "mrc", label: "MRC", render: row => formatMoney(row.mrc) }, { key: "nrc", label: "NRC", render: row => formatMoney(row.nrc) }, { key: "margin", label: "Margin %", render: row => `${row.margin}%` }, { key: "discount", label: "Discount %", render: row => `${row.discount}%` }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Approval" ? "warn" : "blue"}>{row.status}</StatusTag> }, { key: "owner", label: "Owner" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><DetailButton type="quote" id={row.id} setRoute={setRoute} children="View" /><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.id}`)}>Edit Pricing</button><button className="link-button compact-action" type="button" onClick={() => showToast("Custom pricing submitted for approval")}>Submit Approval</button><button className="link-button compact-action" type="button" onClick={() => setRoute("orders")}>Convert to Order</button></div> }]} rows={filteredQuotes.filter(quote => quote.customPrice)} /></Panel>}
       {tab === "Activities" && <Panel title="Activities" description="Commercial timeline by opportunity and account."><TimelineList items={["Discovery call completed", "Pricing review requested", "Quote sent to customer", "Customer follow-up scheduled"].map((title, index) => ({ title, date: `May ${8 + index}, 2026`, body: `${filteredOpps[index % filteredOpps.length]?.account} · ${owners[index]}`, status: index === 1 ? "Pricing" : "Logged" }))} /></Panel>}
       {modal && (
         <Modal
@@ -574,76 +618,72 @@ function SalesModule({ setRoute, showToast }) {
   );
 }
 
-function PricingModule({ setRoute, showToast }) {
-  const [query, setQuery] = useState("");
-  const [filters, setFilters] = useState({ product: "All product types", status: "All statuses", margin: "All margins", region: "All regions", owner: "All owners" });
-  const [tab, setTab] = useState("Quote Desk");
-  const quoteRows = quotes.map(quoteMeta).filter(quote => matchAny(quote, query, [
-    item => item.id,
-    item => item.productPackage,
-    item => item.account,
-    item => item.opportunityName
-  ]) && (filters.status === "All statuses" || itemStatus(quote.status) === filters.status) && (filters.owner === "All owners" || quote.owner === filters.owner));
-  function itemStatus(status) { return status === "Approval" ? "Pending Approval" : status; }
-
-  return (
-    <>
-      <PageHeader
-        title="Pricing"
-        description="Telecom CPQ quote desk with pricing programs, discount guardrails, cost inputs, and approval routing."
-        actions={<><ActionButton icon="pricing" variant="button" onClick={() => showToast("New quote draft opened")}>New Quote</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Pricing engine run complete")}>Run Pricing</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Quote submitted for approval")}>Submit Approval</ActionButton></>}
-      />
-      <SummaryStrip items={[
-        { label: "Quotes in Draft", value: quotes.filter(quote => quote.status === "Draft").length, note: "Sales editable" },
-        { label: "Quotes Pending Approval", value: quotes.filter(quote => quote.status === "Approval").length, note: "Pricing desk queue" },
-        { label: "Avg Margin", value: `${(sum(quotes, quote => quote.margin) / quotes.length).toFixed(1)}%`, note: "Across active quotes" },
-        { label: "Discount Exceptions", value: quoteRows.filter(quote => quote.discount > 10).length, note: "Outside guardrail" }
-      ]} />
-      <Tabs tabs={["Quote Desk", "Pricing Programs", "Discounts", "Cost Inputs", "Approval Queue", "Coefficients"]} active={tab} onChange={setTab} />
-      <FilterRibbon filters={[
-        { label: "Product Type", value: filters.product, onChange: value => setFilters({ ...filters, product: value }), options: ["All product types", ...productCategories] },
-        { label: "Quote Status", value: filters.status, onChange: value => setFilters({ ...filters, status: value }), options: ["All statuses", "Draft", "Sent", "Pending Approval"] },
-        { label: "Margin Range", value: filters.margin, onChange: value => setFilters({ ...filters, margin: value }), options: ["All margins", "< 25%", "25-35%", "> 35%"] },
-        { label: "Region", value: filters.region, onChange: value => setFilters({ ...filters, region: value }), options: ["All regions", "Midwest", "Southeast", "Southwest", "West Coast"] },
-        { label: "Sales Owner", value: filters.owner, onChange: value => setFilters({ ...filters, owner: value }), options: ["All owners", ...owners] }
-      ]} />
-      {tab === "Quote Desk" && <Panel title="Quote Desk" description="Quote records tied to accounts, opportunities, margin rules, and approval status." action={<SearchBox value={query} onChange={setQuery} placeholder="Search quote, account, opportunity" />}><DataTable columns={[{ key: "id", label: "Quote ID" }, { key: "account", label: "Account" }, { key: "opportunityName", label: "Opportunity" }, { key: "productPackage", label: "Product Package" }, { key: "term", label: "Term", render: row => `${row.term} mo` }, { key: "mrc", label: "MRC", render: row => formatMoney(row.mrc) }, { key: "nrc", label: "NRC", render: row => formatMoney(row.nrc) }, { key: "margin", label: "Margin %", render: row => `${row.margin}%` }, { key: "discount", label: "Discount %", render: row => `${row.discount}%` }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Approval" ? "warn" : "blue"}>{itemStatus(row.status)}</StatusTag> }, { key: "expiration", label: "Expiration" }, { key: "owner", label: "Owner" }, { key: "details", label: "", render: row => <DetailButton type="quote" id={row.id} setRoute={setRoute} /> }]} rows={quoteRows} /></Panel>}
-      {tab !== "Quote Desk" && <Panel title={tab} description="Pricing desk governance records for telecom offers, discount exceptions, cost inputs, approvals, and coefficient monitoring."><DataTable columns={[{ key: "id", label: "ID" }, { key: "name", label: "Name" }, { key: "type", label: "Type" }, { key: "discount", label: "Discount" }, { key: "segment", label: "Segment" }, { key: "status", label: "Approval Status", render: row => <StatusTag tone={row.status === "Approval" ? "warn" : "success"}>{row.status}</StatusTag> }, { key: "lift", label: "Margin / Lift" }]} rows={pricingPrograms} /></Panel>}
-    </>
-  );
-}
-
-function ProductsModule({ setRoute, showToast }) {
+function ProductPricingModule({ setRoute, showToast }) {
   const [query, setQuery] = useState("");
   const [modal, setModal] = useState(false);
-  const [filters, setFilters] = useState({ category: "All categories", lifecycle: "All lifecycles", status: "All statuses", billing: "All billing types" });
-  const filteredProducts = services.map(productMeta).filter(service => matchAny(service, query, [item => item.code, item => item.name, item => item.product, item => item.productType, item => item.productManager, item => item.lifecycle]));
+  const [filters, setFilters] = useState({
+    category: "All categories",
+    lifecycle: "All lifecycles",
+    health: "All health",
+    status: "All statuses",
+    owner: "All owners"
+  });
+  const catalog = services.map(productMeta);
+  const filteredProducts = catalog.filter(product => matchAny(product, query, [
+    item => item.code,
+    item => item.name,
+    item => item.category,
+    item => item.lifecycle,
+    item => item.owner,
+    item => item.status,
+    item => item.billingCodes.join(" "),
+    item => item.promoCodes.join(" "),
+    item => item.offerBundles.join(" ")
+  ]) && (filters.category === "All categories" || product.category === filters.category) && (filters.lifecycle === "All lifecycles" || product.lifecycle === filters.lifecycle) && (filters.health === "All health" || product.healthBand === filters.health) && (filters.status === "All statuses" || product.status === filters.status) && (filters.owner === "All owners" || product.owner === filters.owner));
+  const totalProducts = catalog.length;
+  const activeProducts = catalog.filter(product => product.status === "Live").length;
+  const newThisQuarter = catalog.filter(product => new Date(product.launchDate) >= new Date("2026-04-01")).length;
+  const growthProducts = catalog.filter(product => product.lifecycle === "Growth").length;
+  const atRiskProducts = catalog.filter(product => product.healthBand === "At Risk").length;
+  const retiringSoon = catalog.filter(product => product.lifecycle === "Refresh" || (product.retirementDate !== "TBD" && new Date(product.retirementDate) <= new Date("2028-01-01"))).length;
+
   return (
     <>
       <PageHeader
-        title="Product Catalog"
-        description="Telecom product and service catalog for pricing, eligibility, billing mapping, provisioning mapping, and lifecycle operations."
-        actions={<ActionButton icon="products" variant="button" onClick={() => setModal(true)}>New Product</ActionButton>}
+        title="Product & Pricing"
+        description="Telecom product lifecycle, billing code, pricing governance, promos, offers, costs, coefficients, and performance."
+        actions={<><ActionButton icon="reports" variant="button" onClick={() => showToast("Product export prepared")}>Export</ActionButton><ActionButton icon="products" variant="button" onClick={() => setModal(true)}>New Product</ActionButton></>}
       />
+      <SummaryStrip items={[
+        { label: "Total Products", value: totalProducts, note: "Catalog entries" },
+        { label: "Active Products", value: activeProducts, note: "Live in market" },
+        { label: "New This Quarter", value: newThisQuarter, note: "Recent launches" },
+        { label: "Products with Growth", value: growthProducts, note: "Lifecycle growth" },
+        { label: "At Risk Products", value: atRiskProducts, note: "Health watch list" },
+        { label: "Retiring Soon", value: retiringSoon, note: "Lifecycle planning" }
+      ]} />
       <FilterRibbon filters={[
         { label: "Category", value: filters.category, onChange: value => setFilters({ ...filters, category: value }), options: ["All categories", ...productCategories] },
         { label: "Lifecycle", value: filters.lifecycle, onChange: value => setFilters({ ...filters, lifecycle: value }), options: ["All lifecycles", "Launch", "Growth", "Mature", "Refresh", "Retire"] },
+        { label: "Health", value: filters.health, onChange: value => setFilters({ ...filters, health: value }), options: ["All health", "Healthy", "Watch", "At Risk"] },
         { label: "Status", value: filters.status, onChange: value => setFilters({ ...filters, status: value }), options: ["All statuses", "Live", "Review", "Optimize"] },
-        { label: "Billing Type", value: filters.billing, onChange: value => setFilters({ ...filters, billing: value }), options: ["All billing types", "Monthly", "Usage + Monthly"] }
+        { label: "Owner", value: filters.owner, onChange: value => setFilters({ ...filters, owner: value }), options: ["All owners", ...owners] }
       ]} />
-      <Panel title="Product Catalog" description="Operational catalog records, not ecommerce SKUs. Open a product for pricing, billing, and provisioning mappings." action={<SearchBox value={query} onChange={setQuery} placeholder="Search product code, name, manager" />}>
+      <Panel
+        title="Product catalog"
+        description="Operational telecom catalog records with lifecycle, billing codes, ownership, and pricing governance context."
+        action={<div className="module-toolbar"><SearchBox value={query} onChange={setQuery} placeholder="Search products, billing codes, promos, offers" /><button className="tiny-button" type="button" onClick={() => showToast("More filters opened")}>More Filters</button></div>}
+      >
         <DataTable
           columns={[
             { key: "code", label: "Product Code" },
             { key: "name", label: "Product Name" },
             { key: "category", label: "Category" },
-            { key: "productType", label: "Product Type" },
-            { key: "billingType", label: "Billing Type" },
-            { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Live" ? "success" : "warn"}>{row.status}</StatusTag> },
-            { key: "lifecycle", label: "Lifecycle" },
-            { key: "productManager", label: "Product Manager" },
-            { key: "pricingManager", label: "Pricing Manager" },
-            { key: "details", label: "", render: row => <DetailButton type="product" id={row.id} setRoute={setRoute} /> }
+            { key: "lifecycle", label: "Lifecycle", render: row => <StatusTag tone={row.lifecycle === "Growth" ? "success" : row.lifecycle === "Launch" ? "blue" : "warn"}>{row.lifecycle}</StatusTag> },
+            { key: "health", label: "Health", render: row => <StatusTag tone={row.healthBand === "Healthy" ? "success" : row.healthBand === "Watch" ? "blue" : "warn"}>{row.healthBand}</StatusTag> },
+            { key: "owner", label: "Owner" },
+            { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Live" ? "success" : row.status === "Optimize" ? "warn" : "blue"}>{row.status}</StatusTag> },
+            { key: "details", label: "Details", render: row => <DetailButton type="product-pricing" id={row.id} setRoute={setRoute} children="Details" /> }
           ]}
           rows={filteredProducts}
         />
@@ -662,13 +702,453 @@ function ProductsModule({ setRoute, showToast }) {
         >
           <form className="modal-form">
             <label>Product Code<input placeholder="DIA-1G" /></label>
-            <label>Category<select>{productCategories.map(category => <option key={category}>{category}</option>)}</select></label>
             <label>Product Name<input placeholder="Dedicated Internet Access 1G" /></label>
-            <label>Billing Type<select><option>Monthly</option><option>Usage + Monthly</option><option>One-time</option></select></label>
-            <label>Product Manager<input placeholder="Owner name" /></label>
-            <label>Pricing Manager<input placeholder="Pricing owner" /></label>
+            <label>Category<select>{productCategories.map(category => <option key={category}>{category}</option>)}</select></label>
             <label>Lifecycle<select><option>Launch</option><option>Growth</option><option>Mature</option><option>Refresh</option><option>Retire</option></select></label>
-            <label>Provisioning Workflow<input placeholder="Fiber install / CPE activation" /></label>
+            <label>Billing Type<select><option>Monthly</option><option>Usage + Monthly</option><option>One-time</option></select></label>
+            <label>Owner<select>{owners.map(owner => <option key={owner}>{owner}</option>)}</select></label>
+          </form>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function ProductPricingDetail({ id, setRoute, showToast }) {
+  const product = productMeta(services.find(item => item.id === id) || services[0]);
+  const [tab, setTab] = useState("Overview");
+  const [editModal, setEditModal] = useState(false);
+  const billingElements = [
+    {
+      id: `${product.code}-MRC`,
+      code: `${product.code}-MRC`,
+      description: `${product.name} monthly recurring charge`,
+      type: "Recurring",
+      feature: "Core service",
+      mrc: product.defaultMrc,
+      nrc: 0,
+      contractType: product.contractTypes[0],
+      status: "Active",
+      effective: product.launchDate,
+      reason: "Standard lifecycle rate"
+    },
+    {
+      id: `${product.code}-NRC`,
+      code: `${product.code}-NRC`,
+      description: `${product.name} activation and install charge`,
+      type: "One-time",
+      feature: "Provisioning",
+      mrc: 0,
+      nrc: product.defaultNrc,
+      contractType: product.contractTypes[1],
+      status: "Active",
+      effective: product.launchDate,
+      reason: "Installation and turn-up"
+    },
+    {
+      id: `${product.code}-DISC`,
+      code: `${product.code}-DISC`,
+      description: `${product.name} strategic discount control`,
+      type: "Discount",
+      feature: "Price protection",
+      mrc: -Math.round(product.defaultMrc * 0.08),
+      nrc: 0,
+      contractType: "Approval required",
+      status: product.healthBand === "At Risk" ? "Review" : "Active",
+      effective: product.lastUpdated,
+      reason: "Guardrail exception"
+    }
+  ];
+  const priceRules = product.priceRules.map((rule, index) => ({
+    id: `${product.code}-RULE-${index + 1}`,
+    name: rule,
+    type: ["Guardrail", "Term", "Regional"][index % 3],
+    precedence: index + 1,
+    status: index === 0 ? "Active" : "Review"
+  }));
+  const contractTiers = [
+    { id: "tier-1", segment: "SMB", term: "12 mo", price: formatMoney(Math.round(product.defaultMrc * 0.96)), margin: "Min 24%" },
+    { id: "tier-2", segment: "Enterprise", term: "24 mo", price: formatMoney(product.defaultMrc), margin: "Min 28%" },
+    { id: "tier-3", segment: "Strategic", term: "36 mo", price: formatMoney(Math.round(product.defaultMrc * 0.94)), margin: "Approval" }
+  ];
+  const activePromos = [
+    { id: `${product.code}-PROMO-1`, promoCode: `${product.code}-RAMP`, discount: "12%", start: "2026-04-01", end: "2026-06-30", segments: "Enterprise, SMB", minTerm: "24 mo", stackable: "No", redemptions: 34, revenueImpact: formatMoney(28600), markets: "Midwest / Southeast" },
+    { id: `${product.code}-PROMO-2`, promoCode: `${product.code}-WINBACK`, discount: "Custom", start: "2026-05-01", end: "2026-07-31", segments: "Strategic", minTerm: "36 mo", stackable: "Yes", redemptions: 11, revenueImpact: formatMoney(12400), markets: "West Coast / Southwest" }
+  ];
+  const offerRows = [
+    { id: `${product.code}-OFFER-1`, name: `${product.name} core bundle`, components: product.dependencies.join(", "), attachRate: "42%", quoteUsage: "78 quotes", winRate: `${product.winRate}%`, segment: "Enterprise" },
+    { id: `${product.code}-OFFER-2`, name: `${product.category} expansion pack`, components: "Promo credit, install waiver", attachRate: "31%", quoteUsage: "44 quotes", winRate: `${Math.max(product.winRate - 8, 28)}%`, segment: "SMB" }
+  ];
+  const costRows = product.costComponents.map((component, index) => ({
+    ...component,
+    vendor: ["Northstar Network", "Carrier One", "Field Services", "Support Desk"][index],
+    history: ["Stable", "Increasing", "Stable", "Watch"][index],
+    impact: formatMoney(Math.round(component.amount * 1.18))
+  }));
+  const coefficientRows = product.coefficientNotes.map((item, index) => ({
+    id: `${product.code}-COEF-${index + 1}`,
+    name: item.name,
+    type: ["Regional", "Term", "Exception"][index],
+    value: item.value,
+    appliesTo: ["All quotes", "36 mo quotes", "Approval exceptions"][index],
+    effectiveDate: ["2026-01-01", "2026-03-01", "2026-05-01"][index],
+    status: index === 0 ? "Active" : "Review"
+  }));
+  const historyRows = [
+    { id: `${product.id}-H1`, user: "Rhea Patel", action: "Lifecycle refreshed", field: "Lifecycle", oldValue: "Mature", newValue: product.lifecycle, timestamp: "2026-05-06 09:18" },
+    { id: `${product.id}-H2`, user: "Cal Brooks", action: "Pricing guardrail updated", field: "Discount limit", oldValue: "12%", newValue: product.discountLimit, timestamp: "2026-05-09 14:22" },
+    { id: `${product.id}-H3`, user: "Maya Ortiz", action: "Billing code aligned", field: "Charge structure", oldValue: "Legacy map", newValue: "Current billing codes", timestamp: "2026-05-12 10:45" }
+  ];
+  const documents = [
+    { id: `${product.id}-DOC-1`, name: `${product.name} product spec`, type: "Spec", description: "Catalog definition and service parameters", uploadedBy: "Product Ops", uploadDate: "2026-05-08" },
+    { id: `${product.id}-DOC-2`, name: `${product.code} pricing guide`, type: "Pricing guide", description: "MRC, NRC, approval thresholds", uploadedBy: "Pricing Ops", uploadDate: "2026-05-10" },
+    { id: `${product.id}-DOC-3`, name: `${product.name} playbook`, type: "Sales playbook", description: "Attach rate, segment guidance, promos", uploadedBy: "Commercial Ops", uploadDate: "2026-05-12" }
+  ];
+  const performanceBars = [
+    { label: "Revenue trend", value: 82, tone: "success" },
+    { label: "Quote volume", value: 71, tone: "blue" },
+    { label: "Win/loss trend", value: 63, tone: "warn" },
+    { label: "Churn impact", value: 48, tone: "warn" }
+  ];
+
+  return (
+    <>
+      <RecordHeader
+        breadcrumb={["Product & Pricing", "Catalog", product.code]}
+        title={product.name}
+        status={product.status}
+        subtitle={`${product.code} · Product manager ${product.productManager} · Pricing manager ${product.pricingManager}`}
+        meta={
+          <div className="record-meta-chips">
+            <StatusTag tone={product.lifecycle === "Growth" ? "success" : product.lifecycle === "Launch" ? "blue" : "warn"}>{product.lifecycle}</StatusTag>
+            <StatusTag tone={product.healthBand === "Healthy" ? "success" : product.healthBand === "Watch" ? "blue" : "warn"}>{product.healthBand}</StatusTag>
+            <StatusTag tone="blue">{product.owner}</StatusTag>
+            <StatusTag tone="blue">Created {product.createdDate}</StatusTag>
+            <StatusTag tone="blue">Updated {product.lastUpdated}</StatusTag>
+          </div>
+        }
+        actions={<><ActionButton icon="workflow" onClick={() => showToast("Actions menu opened")}>Actions</ActionButton><ActionButton icon="products" variant="button" onClick={() => setEditModal(true)}>Edit Product</ActionButton></>}
+      />
+      <Tabs tabs={["Overview", "Billing Elements", "Pricing", "Promos", "Offers", "Costs", "Coefficients", "Performance", "History", "Documents"]} active={tab} onChange={setTab} />
+      {tab === "Overview" && (
+        <section className="record-main-layout">
+          <Panel title="Product overview" description="Executive and operational summary of the telecom product.">
+            <div className="field-grid">
+              <MiniStat label="Description" value={product.name} note={`${product.category} · ${product.subCategory}`} />
+              <MiniStat label="Contract Types" value={product.contractTypes.join(" / ")} note={product.provisioningType} />
+              <MiniStat label="Dependencies" value={product.dependencies.length} note={product.dependencies.join(", ")} />
+              <MiniStat label="Availability" value={product.availability} note="Serviceability and market reach" />
+              <MiniStat label="Tags" value={product.tags.slice(0, 2).join(" · ")} note={product.tags.slice(2).join(" · ")} />
+              <MiniStat label="Status" value={product.status} note={product.healthBand} />
+            </div>
+            <p className="small-muted">Operational telecom service definition with billing, pricing, eligibility, and provisioning context. This record drives product packaging, quote governance, and service turn-up.</p>
+            <div className="table-block">
+              <div className="panel-inline-title">Top billing elements</div>
+              <DataTable
+                columns={[
+                  { key: "code", label: "Billing Code" },
+                  { key: "description", label: "Description" },
+                  { key: "type", label: "Type" },
+                  { key: "feature", label: "Feature" },
+                  { key: "mrc", label: "MRC", render: row => formatMoney(row.mrc) },
+                  { key: "nrc", label: "NRC", render: row => formatMoney(row.nrc) }
+                ]}
+                rows={billingElements}
+              />
+            </div>
+          </Panel>
+          <section className="side-stack">
+            <Panel title="Lifecycle & health" description="Product governance and commercial performance.">
+              <div className="field-grid compact-fields">
+                <MiniStat label="Total Quotes" value={product.totalQuotes} />
+                <MiniStat label="Win Rate" value={`${product.winRate}%`} />
+                <MiniStat label="Revenue from Wins" value={formatMoney(product.revenueFromWins)} />
+                <MiniStat label="Gross Margin" value={`${product.grossMargin}%`} />
+              </div>
+            </Panel>
+            <Panel title="Related items" description="Billing, pricing, and commercial artifacts linked to this product.">
+              <div className="list">
+                <div className="list-item"><div><div className="title">Billing codes</div><div className="subtitle">{product.billingCodes.join(", ")}</div></div><StatusTag tone="blue">3</StatusTag></div>
+                <div className="list-item"><div><div className="title">Promos</div><div className="subtitle">{product.promoCodes.join(", ")}</div></div><StatusTag tone="success">2</StatusTag></div>
+                <div className="list-item"><div><div className="title">Offers</div><div className="subtitle">{product.offerBundles.join(", ")}</div></div><StatusTag tone="blue">2</StatusTag></div>
+                <div className="list-item"><div><div className="title">Dependencies</div><div className="subtitle">{product.dependencies.join(", ")}</div></div><StatusTag tone="warn">{product.dependencies.length}</StatusTag></div>
+              </div>
+            </Panel>
+          </section>
+        </section>
+      )}
+      {tab === "Billing Elements" && (
+        <section className="record-main-layout">
+          <Panel
+            title="Billing element management"
+            description="Telecom billing code management, effective dates, structure hierarchy, and change control."
+            action={<div className="module-toolbar"><ActionButton icon="reports" onClick={() => showToast("Billing elements exported")}>Export</ActionButton><ActionButton icon="products" variant="button" onClick={() => showToast("Billing element added")}>Add Billing Element</ActionButton></div>}
+          >
+            <DataTable
+              columns={[
+                { key: "code", label: "Billing Code" },
+                { key: "description", label: "Description" },
+                { key: "type", label: "Type" },
+                { key: "feature", label: "Feature" },
+                { key: "mrc", label: "MRC", render: row => formatMoney(row.mrc) },
+                { key: "nrc", label: "NRC", render: row => formatMoney(row.nrc) },
+                { key: "contractType", label: "Contract Type" },
+                { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Active" ? "success" : "warn"}>{row.status}</StatusTag> },
+                { key: "actions", label: "Actions", render: row => <button className="link-button compact-action" type="button" onClick={() => showToast(`Billing element ${row.code} opened`)}>Review</button> }
+              ]}
+              rows={billingElements}
+            />
+          </Panel>
+          <section className="side-stack">
+            <Panel title="Billing element details" description="Selected charge mapping and contract applicability.">
+              <div className="field-grid compact-fields">
+                <MiniStat label="Tax Mapping" value="Telecom + regulatory" />
+                <MiniStat label="Surcharge Mapping" value="State / local" />
+                <MiniStat label="Previous Pricing" value={formatMoney(Math.round(product.defaultMrc * 0.92))} />
+                <MiniStat label="Change Reason" value="Lifecycle refresh" />
+              </div>
+            </Panel>
+            <Panel title="Effective dates" description="Pricing history and activation windows.">
+              <DataTable columns={[{ key: "code", label: "Code" }, { key: "effective", label: "Effective Date" }, { key: "reason", label: "Reason" }]} rows={billingElements.map(item => ({ id: item.code, ...item }))} />
+            </Panel>
+            <Panel title="Bill structure" description="Billing hierarchy and audit trail.">
+              <div className="list">
+                <div className="list-item"><div><div className="title">Recurring service</div><div className="subtitle">Monthly recurring charge</div></div></div>
+                <div className="list-item"><div><div className="title">One-time install</div><div className="subtitle">Provisioning and activation</div></div></div>
+                <div className="list-item"><div><div className="title">Credits / discounts</div><div className="subtitle">Approval governed adjustments</div></div></div>
+              </div>
+            </Panel>
+          </section>
+        </section>
+      )}
+      {tab === "Pricing" && (
+        <section className="record-main-layout">
+          <Panel
+            title="Pricing governance"
+            description="Price list management, pricing rules, regional pricing, contract tiers, and exceptions."
+            action={<div className="module-toolbar"><ActionButton icon="pricing" variant="button" onClick={() => showToast("Pricing added")}>Add Pricing</ActionButton><ActionButton icon="reports" onClick={() => showToast("Pricing export prepared")}>Export</ActionButton><ActionButton icon="reports" onClick={() => showToast("Pricing import started")}>Import</ActionButton></div>}
+          >
+            <DataTable columns={[{ key: "name", label: "Price List" }, { key: "segment", label: "Segment" }, { key: "term", label: "Term" }, { key: "price", label: "Price" }, { key: "margin", label: "Margin" }]} rows={contractTiers.map(item => ({ id: item.id, name: `${product.category} ${item.segment}`, segment: item.segment, term: item.term, price: item.price, margin: item.margin }))} />
+            <div className="table-block">
+              <div className="panel-inline-title">Pricing rules</div>
+              <DataTable columns={[{ key: "name", label: "Rule" }, { key: "type", label: "Type" }, { key: "precedence", label: "Precedence" }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Active" ? "success" : "blue"}>{row.status}</StatusTag> }]} rows={priceRules} />
+            </div>
+          </Panel>
+          <section className="side-stack">
+            <Panel title="Pricing summary" description="Control point for margin and approval analysis.">
+              <div className="field-grid compact-fields">
+                <MiniStat label="Default MRC" value={formatMoney(product.defaultMrc)} />
+                <MiniStat label="Default NRC" value={formatMoney(product.defaultNrc)} />
+                <MiniStat label="Minimum Margin" value={`${product.minMargin}%`} />
+                <MiniStat label="Discount Limit" value={product.discountLimit} />
+              </div>
+            </Panel>
+            <Panel title="Margin simulator" description="Strategic pricing and waterfall preview.">
+              <div className="list">
+                {[
+                  ["Base MRC", formatMoney(product.defaultMrc)],
+                  ["Regional uplift", formatMoney(Math.round(product.defaultMrc * 0.08))],
+                  ["Discount allowance", formatMoney(-Math.round(product.defaultMrc * 0.06))],
+                  ["Floor price", formatMoney(Math.round(product.defaultMrc * 0.88))]
+                ].map(([label, value]) => <div className="list-item" key={label}><div><div className="title">{label}</div></div><strong>{value}</strong></div>)}
+              </div>
+            </Panel>
+            <Panel title="Pricing exceptions" description="Approval thresholds and guardrail breaches.">
+              <TimelineList items={[{ date: "May 10, 2026", title: "Regional exception", body: "West Coast constrained market uplift", status: "Approval", tone: "warn" }, { date: "May 12, 2026", title: "Discount exception", body: "Enterprise renewal above standard guardrail", status: "Pending", tone: "blue" }]} />
+            </Panel>
+          </section>
+        </section>
+      )}
+      {tab === "Promos" && (
+        <>
+          <SummaryStrip items={[
+            { label: "Redemptions", value: sum(activePromos, item => item.redemptions), note: "Tracked promo usage" },
+            { label: "Revenue Impact", value: formatMoney(41000), note: "Incremental lift" },
+            { label: "Active Markets", value: 4, note: "Targeted markets" }
+          ]} />
+          <section className="record-main-layout">
+            <Panel title="Promo list" description="Active, upcoming, and expired promotions with eligibility and stacking control.">
+              <DataTable columns={[{ key: "promoCode", label: "Promo Code" }, { key: "discount", label: "Discount %" }, { key: "start", label: "Start Date" }, { key: "end", label: "End Date" }, { key: "segments", label: "Segments" }, { key: "minTerm", label: "Min Term" }, { key: "stackable", label: "Stackable" }, { key: "redemptions", label: "Redemptions" }, { key: "revenueImpact", label: "Revenue Impact" }, { key: "markets", label: "Active Markets" }]} rows={activePromos} />
+            </Panel>
+            <section className="side-stack">
+              <Panel title="Eligibility criteria" description="Who can receive the promotion.">
+                <DataTable columns={[{ key: "segment", label: "Segment" }, { key: "term", label: "Term" }, { key: "stackable", label: "Stackable" }]} rows={activePromos.map(item => ({ id: `${item.id}-elig`, segment: item.segments, term: item.minTerm, stackable: item.stackable }))} />
+              </Panel>
+              <Panel title="Promo performance" description="Redemption and revenue impact by market.">
+                <div className="list">
+                  <div className="list-item"><div><div className="title">Active promos</div><div className="subtitle">{activePromos.length}</div></div><strong>{sum(activePromos, item => item.redemptions)}</strong></div>
+                  <div className="list-item"><div><div className="title">Upcoming promos</div><div className="subtitle">Seasonal launches queued</div></div><StatusTag tone="blue">2</StatusTag></div>
+                  <div className="list-item"><div><div className="title">Expired promos</div><div className="subtitle">Archived for audit</div></div><StatusTag tone="warn">1</StatusTag></div>
+                </div>
+              </Panel>
+            </section>
+          </section>
+        </>
+      )}
+      {tab === "Offers" && (
+        <>
+          <SummaryStrip items={[
+            { label: "Attach Rate", value: "42%", note: "Primary bundle" },
+            { label: "Win Rate", value: `${product.winRate}%`, note: "Quoted offers" },
+            { label: "Quote Usage", value: "122 quotes", note: "Offer usage" }
+          ]} />
+          <section className="record-main-layout">
+            <Panel title="Offer bundles" description="Sales packaging and bundling workspace.">
+              <DataTable columns={[{ key: "name", label: "Offer" }, { key: "components", label: "Included Products" }, { key: "attachRate", label: "Attach Rate" }, { key: "quoteUsage", label: "Quote Usage" }, { key: "winRate", label: "Win Rate" }, { key: "segment", label: "Segment" }]} rows={offerRows} />
+            </Panel>
+            <section className="side-stack">
+              <Panel title="Offer components" description="What is attached when the offer is sold.">
+                <div className="list">
+                  {product.dependencies.map(dep => <div className="list-item" key={dep}><div><div className="title">{dep}</div><div className="subtitle">Included product / add-on</div></div><StatusTag tone="blue">Required</StatusTag></div>)}
+                </div>
+              </Panel>
+              <Panel title="Offer performance" description="Attach rate, segment targeting, and commercial lift.">
+                <div className="field-grid compact-fields">
+                  <MiniStat label="Quote Usage" value="122" />
+                  <MiniStat label="Attach Rate" value="42%" />
+                  <MiniStat label="Segment Targeting" value="Enterprise, SMB" />
+                  <MiniStat label="Win Rate" value={`${product.winRate}%`} />
+                </div>
+              </Panel>
+            </section>
+          </section>
+        </>
+      )}
+      {tab === "Costs" && (
+        <section className="record-main-layout">
+          <Panel title="Cost components" description="Operational and vendor costing with margin impact.">
+            <DataTable columns={[{ key: "label", label: "Cost Component" }, { key: "vendor", label: "Vendor Mapping" }, { key: "amount", label: "Cost", render: row => formatMoney(row.amount) }, { key: "history", label: "History" }, { key: "impact", label: "Margin Impact" }]} rows={costRows} />
+          </Panel>
+          <section className="side-stack">
+            <Panel title="Cost breakdown" description="Transport, equipment, install, and support mix.">
+              <div className="list">
+                {costRows.map(item => <div className="list-item" key={item.id}><div><div className="title">{item.label}</div><div className="subtitle">{item.vendor}</div></div><strong>{formatMoney(item.amount)}</strong></div>)}
+              </div>
+            </Panel>
+            <Panel title="Margin impact" description="How costs shape product economics.">
+              <div className="field-grid compact-fields">
+                <MiniStat label="Current Margin" value={`${product.grossMargin}%`} />
+                <MiniStat label="Cost Basis" value={formatMoney(product.cost)} />
+                <MiniStat label="Target Margin" value={`${product.minMargin}%`} />
+                <MiniStat label="Economics" value="Within policy" />
+              </div>
+            </Panel>
+          </section>
+        </section>
+      )}
+      {tab === "Coefficients" && (
+        <section className="record-main-layout">
+          <Panel
+            title="Coefficient list"
+            description="Rules engine controls, overrides, and impact preview."
+            action={<div className="module-toolbar"><ActionButton icon="pricing" variant="button" onClick={() => showToast("Coefficient added")}>Add Coefficient</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Coefficient simulation ran")}>Run Simulation</ActionButton></div>}
+          >
+            <DataTable columns={[{ key: "name", label: "Coefficient Name" }, { key: "type", label: "Type" }, { key: "value", label: "Value" }, { key: "appliesTo", label: "Applies To" }, { key: "effectiveDate", label: "Effective Date" }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Active" ? "success" : "warn"}>{row.status}</StatusTag> }]} rows={coefficientRows} />
+          </Panel>
+          <section className="side-stack">
+            <Panel title="Coefficient details" description="Rule precedence and override context.">
+              <div className="field-grid compact-fields">
+                <MiniStat label="Rule precedence" value="1 > 2 > 3" />
+                <MiniStat label="Overrides" value="Approval only" />
+                <MiniStat label="Simulation" value="Enabled" />
+                <MiniStat label="Status" value="Governed" />
+              </div>
+            </Panel>
+            <Panel title="Formula / logic" description="Impact preview and calculation logic.">
+              <div className="list">
+                <div className="list-item"><div><div className="title">Market pressure</div><div className="subtitle">Regional demand uplift</div></div><strong>+2.1%</strong></div>
+                <div className="list-item"><div><div className="title">Term uplift</div><div className="subtitle">Longer commitments</div></div><strong>-0.6%</strong></div>
+                <div className="list-item"><div><div className="title">Install density</div><div className="subtitle">Network complexity</div></div><strong>+1.4%</strong></div>
+              </div>
+            </Panel>
+          </section>
+        </section>
+      )}
+      {tab === "Performance" && (
+        <section className="record-main-layout">
+          <Panel title="Performance trend" description="Revenue, quote volume, and win/loss trends by product.">
+            <div className="list">
+              {performanceBars.map(bar => (
+                <div className="list-item" key={bar.label}>
+                  <div style={{ width: "100%" }}>
+                    <div className="title">{bar.label}</div>
+                    <div className="product-bar"><span className={`product-bar-fill ${bar.tone}`} style={{ width: `${bar.value}%` }} /></div>
+                  </div>
+                  <strong>{bar.value}%</strong>
+                </div>
+              ))}
+            </div>
+          </Panel>
+          <section className="side-stack">
+            <Panel title="Revenue by segment" description="Executive product analytics view.">
+              <DataTable columns={[{ key: "segment", label: "Segment" }, { key: "revenue", label: "Revenue", render: row => formatMoney(row.revenue) }, { key: "margin", label: "Margin" }]} rows={[{ id: "seg-1", segment: "Enterprise", revenue: Math.round(product.revenueFromWins * 0.61), margin: `${product.grossMargin}%` }, { id: "seg-2", segment: "SMB", revenue: Math.round(product.revenueFromWins * 0.24), margin: `${Math.max(product.grossMargin - 4, 20)}%` }, { id: "seg-3", segment: "Wholesale", revenue: Math.round(product.revenueFromWins * 0.15), margin: `${Math.max(product.grossMargin - 7, 18)}%` }]} />
+            </Panel>
+            <Panel title="Regional performance" description="Top regions and win/loss analysis.">
+              <DataTable columns={[{ key: "region", label: "Region" }, { key: "quoteVolume", label: "Quote Volume" }, { key: "winLoss", label: "Win/Loss" }]} rows={[{ id: "reg-1", region: "Midwest", quoteVolume: 48, winLoss: "31 / 17" }, { id: "reg-2", region: "Southeast", quoteVolume: 41, winLoss: "24 / 17" }, { id: "reg-3", region: "West Coast", quoteVolume: 35, winLoss: "21 / 14" }]} />
+            </Panel>
+          </section>
+        </section>
+      )}
+      {tab === "History" && (
+        <section className="record-main-layout">
+          <Panel title="Change history" description="Field-level audit trail and version tracking.">
+            <DataTable columns={[{ key: "user", label: "User" }, { key: "action", label: "Action" }, { key: "field", label: "Field Changed" }, { key: "oldValue", label: "Old Value" }, { key: "newValue", label: "New Value" }, { key: "timestamp", label: "Timestamp" }]} rows={historyRows} />
+          </Panel>
+          <section className="side-stack">
+            <Panel title="Version history" description="Rollback and release control.">
+              <div className="list">
+                <div className="list-item"><div><div className="title">Version 3</div><div className="subtitle">Current approved record</div></div><StatusTag tone="success">Current</StatusTag></div>
+                <div className="list-item"><div><div className="title">Version 2</div><div className="subtitle">Pricing guardrail update</div></div><StatusTag tone="blue">Prior</StatusTag></div>
+                <div className="list-item"><div><div className="title">Version 1</div><div className="subtitle">Original launch definition</div></div><StatusTag tone="blue">Initial</StatusTag></div>
+              </div>
+            </Panel>
+            <Panel title="Rollback" description="Controlled rollback and version recovery.">
+              <div className="button-cluster">
+                <button className="button" type="button" onClick={() => showToast("Rollback workflow opened")}>Rollback</button>
+                <button className="ghost-button" type="button" onClick={() => showToast("Version comparison opened")}>Compare versions</button>
+              </div>
+            </Panel>
+          </section>
+        </section>
+      )}
+      {tab === "Documents" && (
+        <section className="record-main-layout">
+          <Panel
+            title="Document repository"
+            description="Pricing guides, technical documentation, contracts, product specs, and sales playbooks."
+            action={<div className="module-toolbar"><ActionButton icon="reports" variant="button" onClick={() => showToast("Upload document workflow opened")}>Upload</ActionButton><ActionButton icon="reports" onClick={() => showToast("Document download started")}>Download</ActionButton></div>}
+          >
+            <DataTable columns={[{ key: "name", label: "Document Name" }, { key: "type", label: "Type" }, { key: "description", label: "Description" }, { key: "uploadedBy", label: "Uploaded By" }, { key: "uploadDate", label: "Upload Date" }, { key: "view", label: "Action", render: row => <button className="link-button compact-action" type="button" onClick={() => showToast(`Opened ${row.name}`)}>View</button> }]} rows={documents} />
+          </Panel>
+          <section className="side-stack">
+            <Panel title="Repository notes" description="What belongs in the product library.">
+              <div className="list">
+                <div className="list-item"><div><div className="title">Pricing guides</div><div className="subtitle">MRC, NRC, approval thresholds</div></div></div>
+                <div className="list-item"><div><div className="title">Technical docs</div><div className="subtitle">Eligibility, provisioning, dependencies</div></div></div>
+                <div className="list-item"><div><div className="title">Contracts</div><div className="subtitle">MSA, order form, term commitments</div></div></div>
+              </div>
+            </Panel>
+          </section>
+        </section>
+      )}
+      {editModal && (
+        <Modal
+          title="Edit Product"
+          onClose={() => setEditModal(false)}
+          actions={
+            <>
+              <button className="button" type="button" onClick={() => { setEditModal(false); showToast("Product updated"); }}>Save</button>
+              <button className="ghost-button" type="button" onClick={() => setEditModal(false)}>Cancel</button>
+            </>
+          }
+        >
+          <form className="modal-form">
+            <label>Product Name<input defaultValue={product.name} /></label>
+            <label>Category<select defaultValue={product.category}>{productCategories.map(category => <option key={category}>{category}</option>)}</select></label>
+            <label>Lifecycle<select defaultValue={product.lifecycle}><option>Launch</option><option>Growth</option><option>Mature</option><option>Refresh</option><option>Retire</option></select></label>
+            <label>Owner<select defaultValue={product.owner}>{owners.map(owner => <option key={owner}>{owner}</option>)}</select></label>
+            <label>Billing Type<select defaultValue={product.billingType}><option>Monthly</option><option>Usage + Monthly</option><option>One-time</option></select></label>
+            <label>Availability<input defaultValue={product.availability} /></label>
           </form>
         </Modal>
       )}
@@ -778,7 +1258,7 @@ function Customer360Module({ setRoute, showToast }) {
           title={customer.name}
           status="Active"
           subtitle={`${customer.id} · ${customer.segment} · ${customer.region} · Health Score ${customer.health}`}
-          actions={<><ActionButton icon="opportunities" variant="button" onClick={() => setRoute("sales")}>New Opportunity</ActionButton><ActionButton icon="pricing" onClick={() => setRoute("pricing")}>Create Quote</ActionButton><ActionButton icon="orders" onClick={() => setRoute("orders")}>Create Order</ActionButton><ActionButton icon="serviceDesk" onClick={() => showToast("Ticket workflow opened")}>Create Ticket</ActionButton><ActionButton icon="billing" onClick={() => setRoute(`details/billing-account/${customer.id}`)}>View Billing</ActionButton></>}
+        actions={<><ActionButton icon="opportunities" variant="button" onClick={() => setRoute("sales")}>New Opportunity</ActionButton><ActionButton icon="pricing" onClick={() => setRoute("sales")}>Create Quote</ActionButton><ActionButton icon="orders" onClick={() => setRoute("orders")}>Create Order</ActionButton><ActionButton icon="serviceDesk" onClick={() => showToast("Ticket workflow opened")}>Create Ticket</ActionButton><ActionButton icon="billing" onClick={() => setRoute(`details/billing-account/${customer.id}`)}>View Billing</ActionButton></>}
         />
         <SummaryStrip items={[
           { label: "MRR", value: formatMoney(customer.mrr), note: customer.churnRisk },
@@ -1132,7 +1612,7 @@ function QuoteDetail({ id, setRoute, showToast }) {
   const lines = ["Internet Access 1Gbps", "MPLS Network", "SD-WAN Appliance"].map((name, index) => ({ id: `${quote.id}-${index + 1}`, line: index + 1, service: name, type: index === 2 ? "Equipment" : "Service", billing: index === 2 ? "One-time" : "Monthly", qty: index === 2 ? 3 : 1, unit: index === 0 ? 1000 : index === 1 ? 2500 : 1200, mrc: index === 2 ? 0 : index === 0 ? quote.mrc : Math.round(quote.mrc * 0.45), nrc: index === 2 ? quote.nrc : 0, discount: `${quote.discount}%`, taxes: Math.round(quote.taxes / 3), total: index === 2 ? quote.nrc : Math.round(quote.mrc * (index === 0 ? 1 : 0.45)) }));
   return (
     <>
-      <RecordHeader breadcrumb={["Pricing", "Quotes", quote.id]} title={`Quote: ${quote.id}`} status={quote.status === "Approval" ? "Approval Required" : quote.status} subtitle={`${quote.account} · ${quote.opportunityName} · Quote Date ${quote.quoteDate} · Expiration ${quote.expiration} · TCV ${formatMoney(quote.tcv)}`} actions={<><ActionButton icon="pricing" onClick={() => showToast("Quote cloned")}>Clone</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Quote sent")}>Send</ActionButton><ActionButton icon="workflow" variant="button" onClick={() => showToast("Quote submitted for approval")}>Submit Approval</ActionButton><ActionButton icon="reports" onClick={() => showToast("Quote PDF exported")}>Export PDF</ActionButton><ActionButton icon="orders" onClick={() => setRoute("orders")}>Convert to Order</ActionButton></>} />
+      <RecordHeader breadcrumb={["Sales", "Custom Pricing", quote.id]} title={`Quote: ${quote.id}`} status={quote.status === "Approval" ? "Approval Required" : quote.status} subtitle={`${quote.account} · ${quote.opportunityName} · Quote Date ${quote.quoteDate} · Expiration ${quote.expiration} · TCV ${formatMoney(quote.tcv)}`} actions={<><ActionButton icon="pricing" onClick={() => showToast("Quote cloned")}>Clone</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Quote sent")}>Send</ActionButton><ActionButton icon="workflow" variant="button" onClick={() => showToast("Quote submitted for approval")}>Submit Approval</ActionButton><ActionButton icon="reports" onClick={() => showToast("Quote PDF exported")}>Export PDF</ActionButton><ActionButton icon="orders" onClick={() => setRoute("orders")}>Convert to Order</ActionButton></>} />
       <SummaryStrip items={[{ label: "Account", value: quote.account, note: quote.billingAccount }, { label: "Term", value: `${quote.term} mo`, note: quote.productPackage }, { label: "Total MRC", value: formatMoney(quote.mrc), note: `NRC ${formatMoney(quote.nrc)}` }, { label: "Margin", value: `${quote.margin}%`, note: quote.approvalRequired ? "Approval required" : "Within guardrail" }]} />
       <Tabs tabs={["Quote Lines", "Pricing Summary", "Discounts", "Cost Inputs", "Approval", "Notes", "Documents"]} active={tab} onChange={setTab} />
       {tab === "Quote Lines" && <Panel title="Quote Lines" description="Service, equipment, recurring, one-time, discount, tax, and total line detail."><DataTable columns={[{ key: "line", label: "Line #" }, { key: "service", label: "Product/Service" }, { key: "type", label: "Type" }, { key: "billing", label: "Billing Type" }, { key: "qty", label: "Quantity" }, { key: "unit", label: "Unit Price", render: row => formatMoney(row.unit) }, { key: "mrc", label: "MRC", render: row => formatMoney(row.mrc) }, { key: "nrc", label: "NRC", render: row => formatMoney(row.nrc) }, { key: "discount", label: "Discount" }, { key: "taxes", label: "Taxes/Fees", render: row => formatMoney(row.taxes) }, { key: "total", label: "Total", render: row => formatMoney(row.total) }]} rows={lines} /></Panel>}
@@ -1144,21 +1624,7 @@ function QuoteDetail({ id, setRoute, showToast }) {
 }
 
 function ProductDetail({ id, setRoute, showToast }) {
-  const product = productMeta(services.find(item => item.id === id) || services[0]);
-  const [tab, setTab] = useState("Overview");
-  return (
-    <>
-      <RecordHeader breadcrumb={["Product", "Catalog", product.code]} title={product.name} status={product.status} subtitle={`${product.code} · ${product.lifecycle} · Product Manager ${product.productManager}`} actions={<><ActionButton icon="products" variant="button" onClick={() => showToast("Offer workflow opened")}>New Offer</ActionButton><ActionButton icon="pricing" onClick={() => setRoute("pricing")}>View Pricing</ActionButton><ActionButton icon="workflow" onClick={() => setRoute("products")}>Back</ActionButton></>} />
-      <Tabs tabs={["Overview", "Pricing", "Eligibility", "Billing Mapping", "Provisioning Mapping", "Dependencies", "Offers", "Reporting"]} active={tab} onChange={setTab} />
-      {tab === "Overview" && <Panel title="Overview" description="Operational service catalog definition."><div className="field-grid"><MiniStat label="Description" value={product.name} note={product.subProducts.join(", ")} /><MiniStat label="Category" value={product.category} note={product.productType} /><MiniStat label="Billing Type" value={product.billingType} note={product.serviceType} /><MiniStat label="Launch Date" value={product.launchDate} note={`Retirement ${product.retirementDate}`} /></div></Panel>}
-      {tab === "Pricing" && <Panel title="Pricing" description="Default charges, cost inputs, margin floor, and discount limits."><div className="field-grid"><MiniStat label="Default MRC" value={formatMoney(product.defaultMrc)} /><MiniStat label="Default NRC" value={formatMoney(product.defaultNrc)} /><MiniStat label="Cost Inputs" value={formatMoney(product.cost)} note="Annualized cost basis" /><MiniStat label="Minimum Margin" value={`${product.minMargin}%`} /><MiniStat label="Discount Limit" value={product.discountLimit} /></div></Panel>}
-      {tab === "Eligibility" && <Panel title="Eligibility" description="Where the product can be sold and provisioned."><DataTable columns={[{ key: "region", label: "Region" }, { key: "availability", label: "Network Availability" }, { key: "segment", label: "Customer Segment" }, { key: "requirements", label: "Location Requirements" }]} rows={["Midwest", "Southeast", "Southwest"].map(region => ({ id: region, region, availability: "On-net / near-net", segment: "Enterprise, SMB", requirements: "Serviceable address, LOA if tenant-managed" }))} /></Panel>}
-      {tab === "Billing Mapping" && <Panel title="Billing Mapping" description="Charge codes, GL code, invoice description, and tax category."><DataTable columns={[{ key: "charge", label: "Charge Code" }, { key: "gl", label: "GL Code" }, { key: "desc", label: "Invoice Description" }, { key: "tax", label: "Tax Category" }]} rows={[{ id: "mrc", charge: `${product.code}-MRC`, gl: "4100-Recurring", desc: `${product.name} monthly recurring`, tax: "Telecom recurring" }, { id: "nrc", charge: `${product.code}-NRC`, gl: "4200-Install", desc: `${product.name} install / activation`, tax: "One-time service" }]} /></Panel>}
-      {tab === "Provisioning Mapping" && <Panel title="Provisioning Mapping" description="Service codes, install workflow, equipment, and order dependencies."><DataTable columns={[{ key: "code", label: "Service Code" }, { key: "workflow", label: "Install Workflow" }, { key: "equipment", label: "Required Equipment" }, { key: "dependency", label: "Order Dependencies" }]} rows={[{ id: "svc", code: `${product.code}-SVC`, workflow: "Serviceability, circuit assignment, CPE activation", equipment: "ONT / managed CPE", dependency: "Billing account and service location required" }]} /></Panel>}
-      {tab === "Dependencies" && <Panel title="Dependencies" description="Required products and add-ons."><DataTable columns={[{ key: "product", label: "Required Product/Add-on" }, { key: "type", label: "Type" }, { key: "status", label: "Status" }]} rows={product.subProducts.map(item => ({ id: item, product: item, type: "Add-on", status: "Active" }))} /></Panel>}
-      {!["Overview", "Pricing", "Eligibility", "Billing Mapping", "Provisioning Mapping", "Dependencies"].includes(tab) && <Panel title={tab} description={`${tab} for ${product.name}.`}><DataTable columns={[{ key: "id", label: "Record" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }]} rows={[{ id: `${tab}-1`, name: `${product.name} ${tab}`, status: "Active" }]} /></Panel>}
-    </>
-  );
+  return <ProductPricingDetail id={id} setRoute={setRoute} showToast={showToast} />;
 }
 
 function displayInvoiceNumber(invoice) {
@@ -1358,7 +1824,7 @@ function DetailPage({ route, setRoute, showToast }) {
   if (type === "invoice") return <InvoiceDetail id={id} setRoute={setRoute} showToast={showToast} />;
   if (type === "opportunity") return <OpportunityDetail id={id} setRoute={setRoute} showToast={showToast} />;
   if (type === "quote") return <QuoteDetail id={id} setRoute={setRoute} showToast={showToast} />;
-  if (type === "product") return <ProductDetail id={id} setRoute={setRoute} showToast={showToast} />;
+  if (type === "product" || type === "product-pricing") return <ProductPricingDetail id={id} setRoute={setRoute} showToast={showToast} />;
   if (type === "order") return <OrderDetail id={id} setRoute={setRoute} showToast={showToast} />;
   if (type === "service") return <ServiceDetail id={id} setRoute={setRoute} showToast={showToast} />;
   const records = {
@@ -1489,8 +1955,7 @@ export default function App() {
     <Shell activeRoute={route} setRoute={setRoute}>
       {route === "dashboard" && <Dashboard setRoute={setRoute} />}
       {route === "sales" && <SalesModule setRoute={setRoute} showToast={showToast} />}
-      {route === "pricing" && <PricingModule setRoute={setRoute} showToast={showToast} />}
-      {route === "products" && <ProductsModule setRoute={setRoute} showToast={showToast} />}
+      {route === "product-pricing" && <ProductPricingModule setRoute={setRoute} showToast={showToast} />}
       {route === "customer-service" && <CustomerServiceModule setRoute={setRoute} />}
       {route === "customer-360" && <Customer360Module setRoute={setRoute} showToast={showToast} />}
       {route === "billing" && <BillingModule setRoute={setRoute} showToast={showToast} />}

@@ -1080,6 +1080,19 @@ button:disabled {
   color: var(--muted);
 }
 
+.record-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.record-meta-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .record-actions {
   display: flex;
   justify-content: flex-end;
@@ -1198,6 +1211,46 @@ button:disabled {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
   gap: 16px;
+}
+
+.table-block {
+  margin-top: 14px;
+}
+
+.panel-inline-title {
+  margin: 0 0 8px;
+  color: #475467;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.product-bar {
+  height: 8px;
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  border-radius: 999px;
+  background: #eef2f7;
+}
+
+.product-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.product-bar-fill.success {
+  background: linear-gradient(90deg, #039855, #12b76a);
+}
+
+.product-bar-fill.blue {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+
+.product-bar-fill.warn {
+  background: linear-gradient(90deg, #d97706, #f59e0b);
 }
 
 .field-grid {
