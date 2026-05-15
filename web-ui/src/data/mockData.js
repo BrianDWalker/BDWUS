@@ -10,6 +10,7 @@ export const navGroups = [
     label: "Commercial",
     items: [
       { id: "sales", label: "Sales", icon: "sales" },
+      { id: "orders", label: "Orders", icon: "orders" },
       { id: "product-pricing", label: "Product & Pricing", icon: "pricing" }
     ]
   },
@@ -26,7 +27,6 @@ export const navGroups = [
     items: [
       { id: "network", label: "Network", icon: "network" },
       { id: "service-management", label: "Service Mgmt", icon: "service" },
-      { id: "orders", label: "Orders", icon: "orders" },
       { id: "provisioning", label: "Provisioning", icon: "provisioning" }
     ]
   },

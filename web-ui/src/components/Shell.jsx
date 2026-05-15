@@ -1,8 +1,83 @@
-import React from "react";
+import React, { useState } from "react";
 import { navGroups } from "../data/mockData";
 import { Icon } from "./Icons";
 
-export function Shell({ activeRoute, setRoute, children }) {
+function navigateTo(route) {
+  window.location.hash = `/${route}`;
+}
+
+function TopbarMenu({ icon, label, menu, onToggle }) {
+  return (
+    <div className="topbar-menu-anchor">
+      <button className={icon === "user" ? "topbar-user" : "topbar-icon-button"} type="button" aria-label={label} onClick={() => onToggle(menu)}>
+        {icon === "user" ? "BW" : <Icon name={icon} className="button-icon" />}
+      </button>
+    </div>
+  );
+}
+
+function TopbarUtilities({ withSearch = false, searchPlaceholder = "Search accounts, invoices, orders..." }) {
+  const [openMenu, setOpenMenu] = useState(null);
+  const menuSets = {
+    notifications: [
+      { label: "Reports", description: "Open operational reporting", route: "reports" },
+      { label: "Billing", description: "Review ledger and invoices", route: "billing" },
+      { label: "Customer 360", description: "Jump into an account workspace", route: "customer-360" },
+      { label: "Orders", description: "Inspect delivery queue", route: "orders" }
+    ],
+    settings: [
+      { label: "Product & Pricing", description: "Catalog and pricing governance", route: "product-pricing" },
+      { label: "Customer Service", description: "Cases and service desk", route: "customer-service" },
+      { label: "Sales", description: "Pipeline and quote desk", route: "sales" },
+      { label: "Home", description: "Return to the daily brief", route: "dashboard" }
+    ],
+    user: [
+      { label: "Dashboard", description: "Home workspace", route: "dashboard" },
+      { label: "Reports", description: "Report catalog and exports", route: "reports" },
+      { label: "Billing", description: "Accounts and invoices", route: "billing" },
+      { label: "Sign out", description: "Session action placeholder", onClick: () => {} }
+    ]
+  };
+  const items = openMenu ? menuSets[openMenu] || [] : [];
+
+  return (
+    <div className="topbar-controls">
+      {withSearch && (
+        <label className="topbar-search">
+          <Icon name="search" className="button-icon" />
+          <input placeholder={searchPlaceholder} />
+        </label>
+      )}
+      <div className="topbar-button-group">
+        <TopbarMenu icon="bell" label="Notifications" menu="notifications" onToggle={setOpenMenu} />
+        <TopbarMenu icon="settings" label="Settings" menu="settings" onToggle={setOpenMenu} />
+        <TopbarMenu icon="user" label="User account" menu="user" onToggle={setOpenMenu} />
+        {openMenu && (
+          <div className="topbar-popover" role="menu" aria-label={`${openMenu} menu`}>
+            {items.map(item => (
+              <button
+                key={item.label}
+                className="topbar-popover-item"
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  if (item.route) navigateTo(item.route);
+                  item.onClick?.();
+                  setOpenMenu(null);
+                }}
+              >
+                <strong>{item.label}</strong>
+                <span>{item.description}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function Shell({ activeRoute, setRoute, children, onNotifications, onSettings, onUser }) {
   return (
     <div className="app-shell">
       <aside className="sidebar platform-sidebar">
@@ -53,14 +128,8 @@ export function PageHeader({ title, description, actions, className = "" }) {
         <p>{description}</p>
       </div>
       <div className="topbar-actions">
-        <label className="topbar-search">
-          <Icon name="search" className="button-icon" />
-          <input placeholder="Search accounts, invoices, orders..." />
-        </label>
         {actions}
-        <button className="topbar-icon-button" type="button" aria-label="Notifications"><Icon name="bell" className="button-icon" /></button>
-        <button className="topbar-icon-button" type="button" aria-label="Settings"><Icon name="settings" className="button-icon" /></button>
-        <button className="topbar-user" type="button" aria-label="User account">BW</button>
+        <TopbarUtilities withSearch />
       </div>
     </header>
   );

@@ -179,6 +179,34 @@ function Modal({ title, children, actions, onClose }) {
   );
 }
 
+function MenuModal({ title, description, items, onClose }) {
+  return (
+    <Modal
+      title={title}
+      onClose={onClose}
+      actions={<button className="button" type="button" onClick={onClose}>Done</button>}
+    >
+      {description && <p>{description}</p>}
+      <div className="menu-actions">
+        {items.map(item => (
+          <button
+            key={item.label}
+            className="menu-action"
+            type="button"
+            onClick={() => {
+              item.onClick?.();
+              if (!item.keepOpen) onClose();
+            }}
+          >
+            <strong>{item.label}</strong>
+            <span>{item.description}</span>
+          </button>
+        ))}
+      </div>
+    </Modal>
+  );
+}
+
 function MiniStat({ label, value, note }) {
   return (
     <div className="mini-stat">
@@ -771,6 +799,7 @@ function ProductPricingDetail({ id, setRoute, showToast }) {
   const product = productMeta(services.find(item => item.id === id) || services[0]);
   const [tab, setTab] = useState("Overview");
   const [editModal, setEditModal] = useState(false);
+  const [actionsModal, setActionsModal] = useState(false);
   const billingElements = [
     {
       id: `${product.code}-MRC`,
@@ -880,7 +909,7 @@ function ProductPricingDetail({ id, setRoute, showToast }) {
             <StatusTag tone="blue">Updated {product.lastUpdated}</StatusTag>
           </div>
         }
-        actions={<><ActionButton icon="workflow" onClick={() => showToast("Actions menu opened")}>Actions</ActionButton><ActionButton icon="products" variant="button" onClick={() => setEditModal(true)}>Edit Product</ActionButton></>}
+        actions={<><ActionButton icon="workflow" onClick={() => setActionsModal(true)}>Actions</ActionButton><ActionButton icon="products" variant="button" onClick={() => setEditModal(true)}>Edit Product</ActionButton></>}
       />
       <Tabs tabs={["Overview", "Billing Elements", "Pricing", "Promos", "Offers", "Costs", "Coefficients", "Performance", "History", "Documents"]} active={tab} onChange={setTab} />
       {tab === "Overview" && (
@@ -1205,6 +1234,21 @@ function ProductPricingDetail({ id, setRoute, showToast }) {
           </form>
         </Modal>
       )}
+      {actionsModal && (
+        <MenuModal
+          title="Product actions"
+          description="Navigate to the most common product lifecycle and pricing workstreams."
+          onClose={() => setActionsModal(false)}
+          items={[
+            { label: "Billing Elements", description: "Inspect charge mappings and billing hierarchy", onClick: () => setTab("Billing Elements") },
+            { label: "Pricing", description: "Review price lists and guardrails", onClick: () => setTab("Pricing") },
+            { label: "Promos", description: "Open promo lifecycle workspace", onClick: () => setTab("Promos") },
+            { label: "Costs", description: "Inspect cost and vendor impact", onClick: () => setTab("Costs") },
+            { label: "History", description: "Open audit and version trail", onClick: () => setTab("History") },
+            { label: "Export Record", description: "Create a structured product export", onClick: () => showToast("Product export prepared") }
+          ]}
+        />
+      )}
     </>
   );
 }
@@ -1284,6 +1328,7 @@ function Customer360Module({ setRoute, showToast }) {
   const [selectedId, setSelectedId] = useState(customers[0].id);
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState("Overview");
+  const [actionsModal, setActionsModal] = useState(false);
   const filteredCustomers = customers.filter(customer => matchAny(customer, query, [item => item.id, item => item.name, item => billingAccountNumber(item), item => item.region, item => item.contact, item => serviceInstancesFor(item).map(service => service.circuitId).join(" ")]));
   const customer = customers.find(item => item.id === selectedId) || filteredCustomers[0] || customers[0];
   const customerInvoices = invoices.filter(invoice => invoice.customerId === customer.id);
@@ -1317,7 +1362,7 @@ function Customer360Module({ setRoute, showToast }) {
               title={customer.name}
               status="Active"
               subtitle={`${customer.id} · ${customer.segment} · ${customer.region} · Health Score ${customer.health}`}
-              actions={<div className="module-toolbar"><ActionButton icon="workflow" onClick={() => showToast("Account actions opened")}>Actions</ActionButton><ActionButton icon="orders" variant="button" onClick={() => setRoute("orders")}>Create Order</ActionButton></div>}
+              actions={<div className="module-toolbar"><ActionButton icon="workflow" onClick={() => setActionsModal(true)}>Actions</ActionButton><ActionButton icon="orders" variant="button" onClick={() => setRoute("orders")}>Create Order</ActionButton></div>}
             />
             <SummaryStrip items={[
           { label: "MRR", value: formatMoney(customer.mrr), note: customer.churnRisk },
@@ -1358,6 +1403,20 @@ function Customer360Module({ setRoute, showToast }) {
         {tab === "Activity" && <Panel title="Activity Timeline" description="CRM-style account activity."><TimelineList items={[{ date: "May 13, 2026", title: "Customer follow-up", body: `${customer.contact} requested billing account statement`, status: "Open" }, { date: "May 11, 2026", title: "Quote sent", body: `${customerQuotes[0]?.id || "Q-0000"} emailed to customer`, status: "Sent" }, { date: "May 9, 2026", title: "Service check", body: `${accountServices[0]?.circuitId} SLA reviewed`, status: "Service" }]} /></Panel>}
         {["Contacts", "Documents"].includes(tab) && <Panel title={tab} description={`${tab} connected to ${customer.name}.`}><DataTable columns={[{ key: "id", label: "ID" }, { key: "name", label: "Name" }, { key: "role", label: "Role" }, { key: "status", label: "Status", render: row => <StatusTag>{row.status}</StatusTag> }]} rows={[{ id: `${customer.id}-${tab}-1`, name: tab === "Contacts" ? customer.contact : "Master service agreement", role: tab === "Contacts" ? "Primary contact" : "Contract document", status: "Active" }]} /></Panel>}
       </section>
+      {actionsModal && (
+        <MenuModal
+          title="Account actions"
+          description="Open the primary workflows attached to this customer record."
+          onClose={() => setActionsModal(false)}
+          items={[
+            { label: "New Opportunity", description: "Launch the sales pipeline", onClick: () => setRoute("sales") },
+            { label: "Create Quote", description: "Open the pricing desk", onClick: () => setRoute("sales") },
+            { label: "Create Order", description: "Open service delivery", onClick: () => setRoute("orders") },
+            { label: "Create Ticket", description: "Open customer service", onClick: () => setRoute("customer-service") },
+            { label: "View Billing", description: "Jump into account ledger", onClick: () => setRoute("billing") }
+          ]}
+        />
+      )}
     </>
   );
 }
@@ -1365,6 +1424,7 @@ function Customer360Module({ setRoute, showToast }) {
 function BillingModule({ setRoute, showToast }) {
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState("Accounts");
+  const [actionsModal, setActionsModal] = useState(false);
   const rows = customers.filter(customer => matchAny(customer, query, [item => item.id, item => item.name])).map(customer => ({
     ...customer,
     invoiceTotal: sum(invoices.filter(invoice => invoice.customerId === customer.id), invoice => invoice.amount),
@@ -1381,7 +1441,7 @@ function BillingModule({ setRoute, showToast }) {
       <PageHeader
         title="Billing"
         description="Internal billing system for billing accounts, invoices, payments, adjustments, usage, disputes, aging, and reports."
-        actions={<><ActionButton icon="billing" variant="button" onClick={() => showToast("Invoice generation queued")}>Generate Invoice</ActionButton><ActionButton icon="billing" onClick={() => showToast("Payment entry opened")}>Record Payment</ActionButton><ActionButton icon="workflow" onClick={() => showToast("Adjustment workflow opened")}>Create Adjustment</ActionButton><ActionButton icon="reports" onClick={() => showToast("Billing export prepared")}>Export</ActionButton></>}
+        actions={<><ActionButton icon="workflow" variant="button" onClick={() => setActionsModal(true)}>Actions</ActionButton><ActionButton icon="reports" onClick={() => showToast("Billing export prepared")}>Export</ActionButton></>}
       />
       <SummaryStrip items={[
         { label: "Total AR", value: formatMoney(sum(rows, row => row.invoiceTotal)), note: "Open receivables" },
@@ -1397,6 +1457,20 @@ function BillingModule({ setRoute, showToast }) {
         {tab === "Adjustments" && <DataTable columns={[{ key: "id", label: "Adjustment ID" }, { key: "type", label: "Type" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount) }, { key: "status", label: "Status", render: row => <StatusTag tone={row.status === "Posted" ? "success" : "warn"}>{row.status}</StatusTag> }, { key: "reason", label: "Adjustment Reason", render: row => row.type }, { key: "date", label: "Date", render: () => "2026-05-13" }]} rows={adjustments} />}
         {!["Accounts", "Invoices", "Adjustments"].includes(tab) && <DataTable columns={[{ key: "id", label: "Record" }, { key: "customer", label: "Customer" }, { key: "status", label: "Status" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount) }]} rows={invoiceRows.map(row => ({ id: `${tab}-${row.id}`, customer: row.customer, status: row.status, amount: row.balance }))} />}
       </Panel>
+      {actionsModal && (
+        <MenuModal
+          title="Billing actions"
+          description="Operational billing workflows for the account ledger."
+          onClose={() => setActionsModal(false)}
+          items={[
+            { label: "Generate Invoice", description: "Open invoice generation workflow", onClick: () => setTab("Invoices") },
+            { label: "Record Payment", description: "Open payment entry workspace", onClick: () => setTab("Payments") },
+            { label: "Create Adjustment", description: "Open adjustment workflow", onClick: () => setTab("Adjustments") },
+            { label: "View Aging", description: "Jump to receivables aging", onClick: () => setTab("Aging") },
+            { label: "Export", description: "Prepare ledger export", onClick: () => showToast("Billing export prepared") }
+          ]}
+        />
+      )}
     </>
   );
 }
@@ -1719,6 +1793,7 @@ function OrderDetail({ id, setRoute, showToast }) {
   const order = orderMeta(orders.find(item => item.id === id) || orders[0]);
   const [tab, setTab] = useState("Provisioning");
   const [auditType, setAuditType] = useState("All actions");
+  const [actionsModal, setActionsModal] = useState(false);
   const serviceRows = [
     { id: `${order.id}-service`, serviceId: order.circuitId, bandwidth: order.serviceCategory === "Voice" ? "Voice" : "1 Gbps", slaProfile: "Gold", network: order.serviceCategory, requestedDate: order.requestedDue, activationDate: order.overallStatus === "Completed" ? order.due : "Pending" },
     { id: `${order.id}-backup`, serviceId: `ALT-${order.circuitId.slice(-4)}`, bandwidth: "500 Mbps", slaProfile: "Silver", network: `${order.serviceCategory} backup`, requestedDate: order.requestedDue, activationDate: "Pending" }
@@ -1757,10 +1832,10 @@ function OrderDetail({ id, setRoute, showToast }) {
           subtitle={`${order.account} · ${order.serviceCategory} · ${order.service} · SLA ${order.slaStatus} · Due ${order.due}`}
           meta={<div className="record-meta-chips"><StatusTag tone={orderStatusTone(order.overallStatus)}>{order.overallStatus}</StatusTag><StatusTag tone={orderSlaTone(order.slaStatus)}>{order.slaStatus}</StatusTag><StatusTag tone="blue">{order.serviceCategory}</StatusTag><StatusTag tone="blue">{order.owner}</StatusTag></div>}
           actions={<div className="orders-detail-actions">
-            <ActionButton icon="workflow" onClick={() => showToast("Actions menu opened")}>Actions</ActionButton>
+            <ActionButton icon="workflow" onClick={() => setActionsModal(true)}>Actions</ActionButton>
             <ActionButton icon="orders" variant="button" onClick={() => showToast("Order completed")}>Complete Order</ActionButton>
           </div>}
-        />
+      />
       </section>
       <SummaryStrip items={[
         { label: "Service Type", value: order.serviceCategory, note: order.service },
@@ -2058,6 +2133,21 @@ function OrderDetail({ id, setRoute, showToast }) {
             ]} />
           </Panel>
         </section>
+      )}
+      {actionsModal && (
+        <MenuModal
+          title="Order actions"
+          description="Operational controls for delivery, provisioning, and escalation."
+          onClose={() => setActionsModal(false)}
+          items={[
+            { label: "Validate Order", description: "Run the current checklist", onClick: () => setTab("Provisioning") },
+            { label: "Assign Team", description: "Open assignment workflow", onClick: () => showToast("Assignment workflow opened") },
+            { label: "Escalate", description: "Flag blockers and SLA risk", onClick: () => showToast("Order escalated") },
+            { label: "Complete Order", description: "Open completion workflow", onClick: () => showToast("Order completion workflow opened") },
+            { label: "Audit History", description: "Jump to audit trail", onClick: () => setTab("Audit History") },
+            { label: "Cancel Order", description: "Open cancellation workflow", onClick: () => showToast("Cancellation workflow opened") }
+          ]}
+        />
       )}
     </>
   );
