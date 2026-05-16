@@ -5,11 +5,13 @@ on:
     branches:
       - main
       - feature-change
+      - fc-gpt
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
       - feature-change
+      - fc-gpt
 
 jobs:
   build_and_deploy_job:
@@ -26,6 +28,8 @@ jobs:
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "deployment_environment=production" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/fc-gpt" ]; then
+            echo "deployment_environment=preview-gpt" >> $GITHUB_OUTPUT
           else
             echo "deployment_environment=preview" >> $GITHUB_OUTPUT
           fi
