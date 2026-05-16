@@ -1,0 +1,602 @@
+/* CRM polish layer for fc-gpt.
+   Purpose: tighten the telecom CRM feel without redesigning the application. */
+
+:root {
+  --app-nav-height: 64px;
+  --crm-gap: 14px;
+  --crm-panel-pad: 14px;
+}
+
+html,
+body,
+#root {
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.app-shell {
+  min-width: 0;
+}
+
+.app-topnav {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 1000;
+  min-height: var(--app-nav-height);
+  height: var(--app-nav-height);
+  display: grid;
+  grid-template-columns: minmax(190px, 0.75fr) minmax(360px, 2.1fr) minmax(250px, 0.9fr);
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  background: linear-gradient(180deg, #081627 0%, #0d1d31 100%);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
+}
+
+.content {
+  padding-top: calc(var(--app-nav-height) + 20px) !important;
+  padding-inline: clamp(14px, 2vw, 24px);
+  min-width: 0;
+}
+
+.topnav-left,
+.topnav-center,
+.topnav-right {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.topnav-left {
+  justify-content: flex-start;
+}
+
+.topnav-center {
+  justify-content: center;
+  gap: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.topnav-center::-webkit-scrollbar {
+  display: none;
+}
+
+.topnav-right {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.topnav-brand {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #f8fafc;
+  background: transparent;
+  padding: 0;
+}
+
+.topnav-brand-mark {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0f766e, #38bdf8);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.topnav-brand-copy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  text-align: left;
+}
+
+.topnav-brand-copy strong {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 1.1;
+}
+
+.topnav-brand-copy span {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(226, 232, 240, 0.68);
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.topnav-nav-button {
+  min-height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+  color: rgba(226, 232, 240, 0.82);
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.topnav-nav-button .button-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.topnav-nav-button:hover,
+.topnav-nav-button.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.topnav-nav-button.active {
+  box-shadow: inset 0 -2px 0 #34d399;
+}
+
+.topnav-search-shell {
+  position: relative;
+  width: clamp(150px, 16vw, 240px);
+  flex: 0 1 auto;
+}
+
+.topnav-search-field {
+  width: 100%;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.topnav-search-field input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 12px;
+}
+
+.topnav-search-field input::placeholder {
+  color: rgba(226, 232, 240, 0.54);
+}
+
+.topnav-icon-button,
+.topnav-avatar {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.topnav-icon-button .button-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.topnav-utility-panel,
+.topnav-search-popover,
+.topnav-search-sheet,
+.topnav-drawer {
+  z-index: 1100;
+}
+
+.topnav-utility-panel,
+.topnav-search-popover {
+  position: fixed;
+  top: calc(var(--app-nav-height) + 8px);
+  right: 16px;
+  width: min(340px, calc(100vw - 32px));
+  max-height: calc(100vh - var(--app-nav-height) - 24px);
+  overflow-y: auto;
+  padding: 10px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.18);
+}
+
+.topnav-search-popover {
+  right: 116px;
+}
+
+.nav-menu-link {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.nav-menu-link:hover {
+  background: rgba(15, 118, 110, 0.07);
+}
+
+.nav-menu-link-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.nav-menu-link-copy strong {
+  font-size: 13px;
+}
+
+.nav-menu-link-copy span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.topbar {
+  min-height: 0;
+  align-items: flex-start;
+  gap: 14px;
+  padding-block: 2px;
+}
+
+.topbar-title {
+  gap: 5px;
+}
+
+.topbar-title h1 {
+  font-size: clamp(24px, 2.35vw, 34px);
+}
+
+.topbar-title p {
+  max-width: 720px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.topbar-actions {
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.button,
+.ghost-button,
+.toggle-button,
+.link-button {
+  min-height: 34px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.button-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.metric-card {
+  padding: 14px;
+}
+
+.metric-card .value {
+  font-size: 24px;
+}
+
+.metric-card .label,
+.metric-card .delta {
+  font-size: 11px;
+}
+
+.panel-header {
+  padding: 14px 14px 0;
+}
+
+.panel-body {
+  padding: 14px;
+}
+
+.panel-header h2 {
+  font-size: 18px;
+}
+
+.panel-header p {
+  margin-top: 5px;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  padding: 10px 9px;
+}
+
+.table td {
+  font-size: 13px;
+}
+
+.table th {
+  font-size: 11px;
+}
+
+.overview-grid,
+.sales-board,
+.dashboard-canvas,
+.pricing-lab,
+.care-layout,
+.billing-ledger,
+.invoice-research,
+.orders-layout,
+.ops-split,
+.customer360-layout,
+.report-studio,
+.workspace-grid,
+.stack,
+.orders-stack,
+.customer360-stack {
+  gap: var(--crm-gap) !important;
+}
+
+.summary-strip {
+  gap: 10px;
+}
+
+.mini-stat {
+  padding: 11px;
+}
+
+.mini-stat strong {
+  font-size: 18px;
+}
+
+.record-header,
+.detail-hero-panel {
+  padding: 14px;
+}
+
+.record-actions,
+.detail-action-stack,
+.row-actions,
+.button-cluster,
+.modal-actions {
+  gap: 7px;
+}
+
+.record-actions .ghost-button:nth-of-type(n+3),
+.topbar-actions .ghost-button:nth-of-type(n+3) {
+  opacity: 0.9;
+}
+
+.sales-board {
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+}
+
+.board-column {
+  min-height: 360px;
+  padding: 10px;
+}
+
+.pipeline-card,
+.product-card,
+.compact-card,
+.account-chip,
+.service-instance-card {
+  padding: 11px;
+}
+
+.report-workbench {
+  gap: 10px;
+}
+
+.parameter-ribbon {
+  margin-top: 0 !important;
+  align-items: end;
+}
+
+.report-page {
+  padding: 14px;
+}
+
+.table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  overflow-y: auto;
+  padding: max(18px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+
+.modal,
+.workflow-modal {
+  max-height: calc(100dvh - 36px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1180px) {
+  :root {
+    --app-nav-height: 58px;
+  }
+
+  .app-topnav {
+    grid-template-columns: 1fr auto;
+    padding: 0 12px;
+  }
+
+  .topnav-center {
+    display: none;
+  }
+
+  .topnav-brand-copy span {
+    display: none;
+  }
+
+  .topnav-search-shell {
+    display: none;
+  }
+}
+
+@media (max-width: 920px) {
+  .overview-grid,
+  .coefficient-grid,
+  .product-grid,
+  .profile-grid,
+  .mini-stat-row,
+  .report-summary-strip,
+  .sales-board,
+  .customer-action-grid,
+  .invoice-preview-grid,
+  .order-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .dashboard-canvas,
+  .pricing-lab,
+  .care-layout,
+  .billing-ledger,
+  .invoice-research,
+  .orders-layout,
+  .ops-split,
+  .customer360-layout,
+  .billing-detail-grid,
+  .detail-layout,
+  .workspace-grid,
+  .home-hero,
+  .report-studio {
+    grid-template-columns: 1fr !important;
+  }
+
+  .report-catalog {
+    position: static !important;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --app-nav-height: 54px;
+  }
+
+  .content {
+    padding-top: calc(var(--app-nav-height) + 14px) !important;
+    padding-inline: 10px;
+  }
+
+  .app-topnav {
+    height: var(--app-nav-height);
+    min-height: var(--app-nav-height);
+    gap: 8px;
+  }
+
+  .topnav-brand-copy strong {
+    max-width: 112px;
+  }
+
+  .topnav-icon-button,
+  .topnav-avatar {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+  }
+
+  .topbar {
+    flex-direction: column;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .overview-grid,
+  .coefficient-grid,
+  .product-grid,
+  .profile-grid,
+  .mini-stat-row,
+  .report-summary-strip,
+  .sales-board,
+  .customer-action-grid,
+  .invoice-preview-grid,
+  .order-filter-grid,
+  .modal-form,
+  .parameter-ribbon,
+  .order-form,
+  .billing-attribute-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .record-header,
+  .detail-hero-panel,
+  .report-page-header,
+  .profile-hero {
+    flex-direction: column;
+  }
+
+  .record-actions,
+  .detail-action-stack {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .topnav-drawer,
+  .topnav-search-sheet {
+    position: fixed;
+    top: var(--app-nav-height);
+    left: 0;
+    right: 0;
+    max-height: calc(100dvh - var(--app-nav-height));
+    overflow-y: auto;
+    padding: 12px;
+    background: #ffffff;
+    color: var(--text);
+    box-shadow: 0 24px 54px rgba(15, 23, 42, 0.22);
+  }
+
+  .topnav-drawer-flat {
+    display: grid;
+    gap: 8px;
+  }
+
+  .topnav-drawer-item {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.04);
+    color: var(--text);
+    text-align: left;
+  }
+
+  .topnav-drawer-item.active {
+    background: rgba(15, 118, 110, 0.1);
+    color: #0f766e;
+  }
+}
