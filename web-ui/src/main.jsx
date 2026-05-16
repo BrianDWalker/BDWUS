@@ -4,11 +4,10 @@ import "./base.css";
 import "./react-app.css";
 import "./crm-polish.css";
 import "./sales-crm.css";
-import "./sales-crm-enhancements.js";
-import App from "./App";
+import SalesAppRouter from "./SalesAppRouter";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <SalesAppRouter />
   </React.StrictMode>
 );
