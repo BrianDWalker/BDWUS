@@ -1,0 +1,77 @@
+import React, { useEffect, useState } from "react";
+import App from "./App";
+import { Shell } from "./components/Shell";
+import { SalesLeadDetail, SalesModule, SalesOpportunityDetail, SalesQuoteDetail } from "./components/SalesCRM";
+
+const routeAliases = { pricing: "product-pricing", products: "product-pricing", quotes: "sales" };
+
+function normalizeRoute(route) {
+  return routeAliases[route] || route;
+}
+
+function currentHashRoute() {
+  const route = window.location.hash.replace(/^#\/?/, "");
+  return normalizeRoute(route || "dashboard");
+}
+
+function useRoute() {
+  const [route, setRouteState] = useState(currentHashRoute);
+
+  useEffect(() => {
+    const handleHashChange = () => setRouteState(currentHashRoute());
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  function setRoute(next) {
+    const route = normalizeRoute(next);
+    window.location.hash = `/${route}`;
+    setRouteState(route);
+  }
+
+  return [route, setRoute];
+}
+
+function Toast({ toast }) {
+  return toast ? <div className="toast">{toast}</div> : null;
+}
+
+function isIntegratedSalesRoute(route) {
+  if (route === "sales") return true;
+  if (!route.startsWith("details/")) return false;
+  const [, type] = route.split("/");
+  return ["lead", "opportunity", "quote"].includes(type);
+}
+
+function IntegratedSalesRoute({ route, setRoute, showToast }) {
+  if (route === "sales") return <SalesModule setRoute={setRoute} showToast={showToast} />;
+
+  const [, type, id] = route.split("/");
+  if (type === "opportunity") return <SalesOpportunityDetail id={id} setRoute={setRoute} showToast={showToast} />;
+  if (type === "quote") return <SalesQuoteDetail id={id} setRoute={setRoute} showToast={showToast} />;
+  if (type === "lead") return <SalesLeadDetail id={id} setRoute={setRoute} showToast={showToast} />;
+
+  return <SalesModule setRoute={setRoute} showToast={showToast} />;
+}
+
+export default function SalesAppRouter() {
+  const [route, setRoute] = useRoute();
+  const [toast, setToast] = useState("");
+
+  function showToast(message) {
+    setToast(message);
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => setToast(""), 2200);
+  }
+
+  if (!isIntegratedSalesRoute(route)) {
+    return <App />;
+  }
+
+  return (
+    <Shell activeRoute={route} setRoute={setRoute}>
+      <IntegratedSalesRoute route={route} setRoute={setRoute} showToast={showToast} />
+      <Toast toast={toast} />
+    </Shell>
+  );
+}
