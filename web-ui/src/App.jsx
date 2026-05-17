@@ -21,7 +21,7 @@ import {
   services,
   tickets
 } from "./data/mockData";
-import { fetchAssistantUiOverrides, mergeKnowledgeUi } from "./utils/assistantApi";
+import { fetchAssistantUiOverrides, mergeKnowledgeUi, mergeAssistantPages } from "./utils/assistantApi";
 import { downloadBlob, makeXlsx } from "./utils/export";
 
 const customerName = id => customers.find(customer => customer.id === id)?.name || id;
@@ -968,6 +968,8 @@ export function KnowledgeModule({ showToast }) {
   const [topic, setTopic] = useState("All topics");
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantOverrides, setAssistantOverrides] = useState([]);
+  const [assistantPages, setAssistantPages] = useState([]);
+  const [pagePreview, setPagePreview] = useState(null);
   const [knowledgeUi, setKnowledgeUi] = useState({
     title: "Knowledge",
     description: "A centralized repository for telecom procedures, product information, customer materials, troubleshooting guides, policies, and training resources.",
@@ -988,6 +990,7 @@ export function KnowledgeModule({ showToast }) {
         if (!mounted) return;
         setAssistantOverrides(items);
         setKnowledgeUi(current => mergeKnowledgeUi(current, items));
+        setAssistantPages(mergeAssistantPages(items));
       })
       .catch(() => {});
     return () => { mounted = false; };
@@ -1049,6 +1052,21 @@ export function KnowledgeModule({ showToast }) {
           </div>
         </Panel>
       </section>
+      {assistantPages.length > 0 && (
+        <Panel title="Generated pages" description="Approved pages created by Ask AI.">
+          <div className="list">
+            {assistantPages.map(page => (
+              <button key={page.id || page.route || page.title} className="list-item" type="button" onClick={() => setPagePreview(page)}>
+                <div>
+                  <div className="title">{page.title || "Untitled page"}</div>
+                  <div className="subtitle">{page.description || page.route || "Approved assistant-generated page"}</div>
+                </div>
+                <StatusTag tone="success">Active</StatusTag>
+              </button>
+            ))}
+          </div>
+        </Panel>
+      )}
       <KnowledgeAssistant
         open={assistantOpen}
         onClose={() => setAssistantOpen(false)}
@@ -1064,8 +1082,30 @@ export function KnowledgeModule({ showToast }) {
         onUiOverridesChange={items => {
           setAssistantOverrides(items);
           setKnowledgeUi(current => mergeKnowledgeUi(current, items));
+          setAssistantPages(mergeAssistantPages(items));
         }}
       />
+      {pagePreview && (
+        <Modal
+          title={pagePreview.title || "Generated page"}
+          onClose={() => setPagePreview(null)}
+          actions={<button className="button" type="button" onClick={() => setPagePreview(null)}>Close</button>}
+        >
+          <p>{pagePreview.description || "Assistant-generated page"}</p>
+          {Array.isArray(pagePreview.sections) && pagePreview.sections.length > 0 && (
+            <div className="list">
+              {pagePreview.sections.map((section, index) => (
+                <div className="list-item" key={`${pagePreview.id || pagePreview.title}-${index}`}>
+                  <div>
+                    <div className="title">{section.title || `Section ${index + 1}`}</div>
+                    <div className="subtitle">{section.body || ""}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Modal>
+      )}
     </>
   );
 }

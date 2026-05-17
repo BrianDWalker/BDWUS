@@ -35,6 +35,45 @@ export function mergeKnowledgeUi(base, overrides = []) {
   return next;
 }
 
+export function mergeAssistantPages(overrides = []) {
+  const pages = [];
+  const pageOverrides = new Map();
+  overrides.forEach(override => {
+    const key = override.targetKey || "";
+    if (key === "assistant.pages") {
+      const value = override.value;
+      if (Array.isArray(value)) {
+        value.forEach(item => pages.push(item));
+      } else if (value) {
+        pages.push(value);
+      }
+      return;
+    }
+    if (!["pageTitle", "pageContent", "pageDescription"].includes(key)) return;
+    const bucketKey = String(override.sourceChangeRequestId || key);
+    const bucket = pageOverrides.get(bucketKey) || { id: bucketKey, title: "", description: "", content: "" };
+    if (key === "pageTitle") bucket.title = override.value;
+    if (key === "pageDescription") bucket.description = override.value;
+    if (key === "pageContent") bucket.content = override.value;
+    pageOverrides.set(bucketKey, bucket);
+  });
+  pageOverrides.forEach(page => {
+    pages.push({
+      id: page.id,
+      title: page.title || "Generated page",
+      description: page.description || page.content || "Assistant-generated page",
+      route: page.id,
+      sections: [
+        {
+          title: "Content",
+          body: page.content || page.description || "Approved by the assistant"
+        }
+      ]
+    });
+  });
+  return pages;
+}
+
 export async function fetchAssistantUiOverrides(scope = "knowledge") {
   return requestJson(`/api/assistant/ui-overrides?scope=${encodeURIComponent(scope)}`);
 }
