@@ -6,6 +6,11 @@ from uuid import UUID
 
 from app.database import SQL_DATABASE, SQL_SERVER
 from app.models import (
+    AssistantApprovalRequest,
+    AssistantChatRequest,
+    AssistantChatResponse,
+    AssistantChangeRequest,
+    AssistantUiOverride,
     CustomerMetadataOptionsResponse,
     CustomerProfileResponse,
     OpportunityDetailsResponse,
@@ -15,6 +20,14 @@ from app.models import (
     QuoteReviseRequest,
 )
 from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
+from app.services.assistant import (
+    approve_change_request,
+    chat,
+    ensure_ai_storage,
+    get_change_request,
+    list_ui_overrides,
+    reject_change_request,
+)
 from app.services.quotes import (
     create_quote,
     get_opportunity_details,
@@ -41,6 +54,11 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+def startup_assistant_storage():
+    ensure_ai_storage()
+
+
 @app.get("/")
 def root():
     return {
@@ -56,6 +74,16 @@ def root():
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+
+@app.get("/health/assistant")
+def health_assistant():
+    return {
+        "status": "healthy",
+        "sqlServer": SQL_SERVER,
+        "sqlDatabase": SQL_DATABASE,
+        "assistantStorage": "ready",
+    }
 
 
 @app.get("/health/pricing-context")
@@ -125,3 +153,37 @@ def billing_lookup_options():
 @app.post("/opportunities/{opportunity_id}/reprice", response_model=QuoteCreateResponse)
 def opportunity_reprice(opportunity_id: UUID, request: QuoteReviseRequest):
     return reprice_opportunity(opportunity_id, request)
+
+
+@app.post("/api/assistant/chat", response_model=AssistantChatResponse)
+def assistant_chat(request: AssistantChatRequest):
+    return chat(request)
+
+
+@app.get("/api/assistant/change-requests/{change_request_id}", response_model=AssistantChangeRequest)
+def assistant_change_request(change_request_id: UUID):
+    record = get_change_request(change_request_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Change request not found.")
+    return record
+
+
+@app.post("/api/assistant/change-requests/{change_request_id}/approve", response_model=AssistantChangeRequest)
+def assistant_approve_change_request(change_request_id: UUID, request: AssistantApprovalRequest):
+    try:
+        return approve_change_request(change_request_id, request)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.post("/api/assistant/change-requests/{change_request_id}/reject", response_model=AssistantChangeRequest)
+def assistant_reject_change_request(change_request_id: UUID, request: AssistantApprovalRequest):
+    try:
+        return reject_change_request(change_request_id, request.approvedBy or "admin")
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+
+
+@app.get("/api/assistant/ui-overrides", response_model=list[AssistantUiOverride])
+def assistant_ui_overrides(scope: str = "knowledge"):
+    return list_ui_overrides(scope)

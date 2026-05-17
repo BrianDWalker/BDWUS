@@ -149,6 +149,239 @@ body,
   box-shadow: inset 0 -2px 0 #34d399;
 }
 
+.assistant-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(15, 23, 42, 0.5);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.assistant-modal {
+  width: min(1180px, 100%);
+  max-height: min(92dvh, 980px);
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 34px 90px rgba(15, 23, 42, 0.28);
+}
+
+.assistant-modal-header,
+.assistant-composer {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.assistant-modal-header,
+.assistant-mode-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.assistant-modal-header strong {
+  display: block;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 18px;
+}
+
+.assistant-modal-header span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.assistant-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--text);
+  font-size: 20px;
+}
+
+.assistant-mode-switch {
+  padding: 10px 16px 0;
+}
+
+.assistant-mode-switch button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.05);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.assistant-mode-switch button.active {
+  background: rgba(15, 118, 110, 0.12);
+  color: #0f766e;
+}
+
+.assistant-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+  gap: 14px;
+  min-height: 0;
+  padding: 16px;
+}
+
+.assistant-thread,
+.assistant-sidebar {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 12px;
+}
+
+.assistant-thread {
+  align-content: start;
+}
+
+.assistant-message,
+.assistant-panel,
+.assistant-proposal-card {
+  padding: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.assistant-message.user {
+  background: rgba(15, 118, 110, 0.08);
+}
+
+.assistant-message-meta,
+.assistant-proposal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.assistant-message-meta span,
+.assistant-proposal-header span,
+.assistant-panel span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.assistant-message p,
+.assistant-panel p,
+.assistant-proposal-card p {
+  margin: 8px 0 0;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.assistant-panel strong {
+  display: block;
+  font-family: "Space Grotesk", sans-serif;
+  margin-bottom: 4px;
+}
+
+.assistant-proposal-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.assistant-proposal-badge.ui_override {
+  background: rgba(15, 118, 110, 0.12);
+  color: #0f766e;
+}
+
+.assistant-proposal-badge.ui_patch {
+  background: rgba(59, 130, 246, 0.14);
+  color: #1d4ed8;
+}
+
+.assistant-proposal-badge.note {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.assistant-proposal-patch {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.assistant-proposal-patch div {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.assistant-proposal-patch strong,
+.assistant-proposal-patch span {
+  display: block;
+  font-size: 12px;
+}
+
+.assistant-proposal-actions,
+.assistant-composer-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.assistant-loading,
+.assistant-error,
+.assistant-muted {
+  color: var(--muted);
+}
+
+.assistant-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.assistant-error {
+  padding: 0 16px 12px;
+  color: #b91c1c;
+}
+
+.assistant-composer {
+  display: grid;
+  gap: 10px;
+  border-bottom: 0;
+}
+
+.assistant-composer label {
+  display: grid;
+  gap: 6px;
+}
+
+.assistant-composer span {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.assistant-composer textarea {
+  width: 100%;
+  min-height: 90px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  resize: vertical;
+  font: inherit;
+}
+
 .topnav-search-shell {
   position: relative;
   width: clamp(150px, 16vw, 240px);
@@ -470,6 +703,10 @@ body,
 
   .topnav-search-shell {
     width: clamp(130px, 18vw, 190px);
+  }
+
+  .assistant-body {
+    grid-template-columns: 1fr;
   }
 }
 

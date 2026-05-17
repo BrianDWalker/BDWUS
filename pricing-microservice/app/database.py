@@ -9,6 +9,8 @@ from azure.identity import DefaultAzureCredential
 
 SQL_SERVER = os.getenv("SQL_SERVER", "bdwus.database.windows.net")
 SQL_DATABASE = os.getenv("SQL_DATABASE", "BDWUS_MS")
+SQL_USERNAME = os.getenv("SQL_USERNAME")
+SQL_PASSWORD = os.getenv("SQL_PASSWORD")
 ODBC_DRIVER = os.getenv("ODBC_DRIVER", "ODBC Driver 18 for SQL Server")
 SQL_COPT_SS_ACCESS_TOKEN = 1256
 
@@ -24,23 +26,39 @@ def get_sql_connection() -> pyodbc.Connection:
     
     Implements exponential backoff to handle lock timeouts and transient connection issues.
     """
-    credential = DefaultAzureCredential(exclude_interactive_browser_credential=False)
-    token = credential.get_token("https://database.windows.net/.default").token.encode("utf-16-le")
-    token_struct = struct.pack(f"<I{len(token)}s", len(token), token)
-
-    conn_str = (
-        f"Driver={{{ODBC_DRIVER}}};"
-        f"Server=tcp:{SQL_SERVER},1433;"
-        f"Database={SQL_DATABASE};"
-        "Encrypt=yes;"
-        "TrustServerCertificate=no;"
-        "Connection Timeout=30;"
-    )
+    if SQL_USERNAME and SQL_PASSWORD:
+        conn_str = (
+            f"Driver={{{ODBC_DRIVER}}};"
+            f"Server=tcp:{SQL_SERVER},1433;"
+            f"Database={SQL_DATABASE};"
+            f"Uid={SQL_USERNAME};"
+            f"Pwd={SQL_PASSWORD};"
+            "Encrypt=yes;"
+            "TrustServerCertificate=no;"
+            "Connection Timeout=30;"
+        )
+        connect_kwargs = {}
+    else:
+        credential = DefaultAzureCredential(exclude_interactive_browser_credential=False)
+        token = credential.get_token("https://database.windows.net/.default").token.encode("utf-16-le")
+        token_struct = struct.pack(f"<I{len(token)}s", len(token), token)
+        conn_str = (
+            f"Driver={{{ODBC_DRIVER}}};"
+            f"Server=tcp:{SQL_SERVER},1433;"
+            f"Database={SQL_DATABASE};"
+            "Encrypt=yes;"
+            "TrustServerCertificate=no;"
+            "Connection Timeout=30;"
+        )
+        connect_kwargs = {SQL_COPT_SS_ACCESS_TOKEN: token_struct}
 
     last_error = None
     for attempt in range(MAX_RETRIES):
         try:
-            conn = pyodbc.connect(conn_str, attrs_before={SQL_COPT_SS_ACCESS_TOKEN: token_struct})
+            if connect_kwargs:
+                conn = pyodbc.connect(conn_str, attrs_before=connect_kwargs)
+            else:
+                conn = pyodbc.connect(conn_str)
             # Set lock timeout to prevent indefinite waits
             conn.execute(f"SET LOCK_TIMEOUT {LOCK_TIMEOUT_MS}")
             return conn

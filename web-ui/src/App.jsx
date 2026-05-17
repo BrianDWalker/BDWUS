@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Shell, PageHeader } from "./components/Shell";
 import { Icon } from "./components/Icons";
+import { KnowledgeAssistant } from "./components/KnowledgeAssistant";
 import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "./components/Primitives";
 import {
   adjustments,
@@ -20,6 +21,7 @@ import {
   services,
   tickets
 } from "./data/mockData";
+import { fetchAssistantUiOverrides, mergeKnowledgeUi } from "./utils/assistantApi";
 import { downloadBlob, makeXlsx } from "./utils/export";
 
 const customerName = id => customers.find(customer => customer.id === id)?.name || id;
@@ -964,19 +966,39 @@ export function LeadDetail({ id, setRoute, showToast }) {
 export function KnowledgeModule({ showToast }) {
   const [query, setQuery] = useState("");
   const [topic, setTopic] = useState("All topics");
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantOverrides, setAssistantOverrides] = useState([]);
+  const [knowledgeUi, setKnowledgeUi] = useState({
+    title: "Knowledge",
+    description: "A centralized repository for telecom procedures, product information, customer materials, troubleshooting guides, policies, and training resources.",
+    askAiLabel: "Ask AI",
+    repositoryTitle: "Knowledge repository",
+    repositoryDescription: "Store, organize, and surface the operational knowledge teams need to support customers and day-to-day work.",
+    prompts: [
+      "What are the provisioning steps for fiber service X?",
+      "Show me the latest pricing and support documentation for wireless package Y.",
+      "How do I qualify a lead for a new enterprise customer?"
+    ]
+  });
   const filteredDocs = knowledgeDocuments.filter(document => matchAny(document, query, [item => item.title, item => item.category, item => item.audience, item => item.owner, item => item.summary]) && (topic === "All topics" || document.category === topic || knowledgeTopics.some(item => item.name === topic)));
-  const askExamples = [
-    "What are the provisioning steps for fiber service X?",
-    "Show me the latest pricing and support documentation for wireless package Y.",
-    "How do I qualify a lead for a new enterprise customer?"
-  ];
+  useEffect(() => {
+    let mounted = true;
+    fetchAssistantUiOverrides("knowledge")
+      .then(items => {
+        if (!mounted) return;
+        setAssistantOverrides(items);
+        setKnowledgeUi(current => mergeKnowledgeUi(current, items));
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <>
       <PageHeader
-        title="Knowledge"
-        description="A centralized repository for telecom procedures, product information, customer materials, troubleshooting guides, policies, and training resources."
-        actions={<ActionButton icon="search" variant="button" onClick={() => showToast("Knowledge AI search opened")}>Ask AI</ActionButton>}
+        title={knowledgeUi.title}
+        description={knowledgeUi.description}
+        actions={<ActionButton icon="search" variant="button" onClick={() => setAssistantOpen(true)}>{knowledgeUi.askAiLabel}</ActionButton>}
       />
       <SummaryStrip items={[
         { label: "Documents", value: knowledgeDocuments.length, note: "Central repository" },
@@ -985,8 +1007,8 @@ export function KnowledgeModule({ showToast }) {
         { label: "AI Ready", value: "Yes", note: "Natural language search" }
       ]} />
       <Panel
-        title="Knowledge repository"
-        description="Store, organize, and surface the operational knowledge teams need to support customers and day-to-day work."
+        title={knowledgeUi.repositoryTitle}
+        description={knowledgeUi.repositoryDescription}
         action={<div className="module-toolbar"><SearchBox value={query} onChange={setQuery} placeholder="Search documents, playbooks, policies" /><FilterRibbon filters={[{ label: "Topic", value: topic, onChange: setTopic, options: ["All topics", ...knowledgeTopics.map(item => item.name), ...new Set(knowledgeDocuments.map(item => item.category))] }]} /></div>}
       >
         <DataTable
@@ -1016,7 +1038,7 @@ export function KnowledgeModule({ showToast }) {
         </Panel>
         <Panel title="AI prompts" description="Example natural-language questions users can ask.">
           <div className="list">
-            {askExamples.map(example => (
+            {knowledgeUi.prompts.map(example => (
               <button key={example} className="list-item" type="button" onClick={() => showToast("AI assistant prompt opened")}>
                 <div>
                   <div className="title">{example}</div>
@@ -1027,6 +1049,23 @@ export function KnowledgeModule({ showToast }) {
           </div>
         </Panel>
       </section>
+      <KnowledgeAssistant
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        showToast={showToast}
+        context={{
+          route: "knowledge",
+          pageTitle: knowledgeUi.title,
+          pageSummary: knowledgeUi.description,
+          knowledgeDocuments: filteredDocs.slice(0, 10),
+          knowledgeTopics
+        }}
+        uiOverrides={assistantOverrides}
+        onUiOverridesChange={items => {
+          setAssistantOverrides(items);
+          setKnowledgeUi(current => mergeKnowledgeUi(current, items));
+        }}
+      />
     </>
   );
 }

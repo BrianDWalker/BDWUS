@@ -173,3 +173,71 @@ class OpportunityDetailsResponse(BaseModel):
     opportunity: OpportunityLatestResponse
     createdAtUtc: datetime
     quoteHistory: list[QuoteHistoryRecord]
+
+
+AssistantMode = Literal["knowledge", "dev"]
+AssistantProposalKind = Literal["ui_override", "ui_patch", "note"]
+
+
+class AssistantContext(BaseModel):
+    route: Optional[str] = None
+    pageTitle: Optional[str] = None
+    pageSummary: Optional[str] = None
+    knowledgeDocuments: list[dict[str, Any]] = Field(default_factory=list)
+    knowledgeTopics: list[dict[str, Any]] = Field(default_factory=list)
+    selectedText: Optional[str] = None
+
+
+class AssistantChatRequest(BaseModel):
+    conversationId: Optional[str] = None
+    mode: AssistantMode = "knowledge"
+    message: str
+    context: AssistantContext = Field(default_factory=AssistantContext)
+    userName: Optional[str] = None
+
+
+class AssistantProposal(BaseModel):
+    title: str
+    summary: str
+    target: str
+    kind: AssistantProposalKind = "note"
+    patch: dict[str, Any] = Field(default_factory=dict)
+    requiresApproval: bool = True
+
+
+class AssistantChatResponse(BaseModel):
+    conversationId: str
+    assistantMessage: str
+    mode: AssistantMode
+    proposals: list[AssistantProposal] = Field(default_factory=list)
+    changeRequestIds: list[UUID] = Field(default_factory=list)
+
+
+class AssistantUiOverride(BaseModel):
+    scope: str
+    targetKey: str
+    value: Any
+    sourceChangeRequestId: UUID
+    createdAtUtc: datetime
+
+
+class AssistantChangeRequest(BaseModel):
+    changeRequestId: UUID
+    conversationId: str
+    mode: AssistantMode
+    page: str
+    title: str
+    summary: str
+    target: str
+    kind: AssistantProposalKind
+    patch: dict[str, Any]
+    status: str
+    createdAtUtc: datetime
+    approvedAtUtc: Optional[datetime] = None
+    appliedAtUtc: Optional[datetime] = None
+    approvedBy: Optional[str] = None
+    appliedBy: Optional[str] = None
+
+
+class AssistantApprovalRequest(BaseModel):
+    approvedBy: Optional[str] = "admin"
