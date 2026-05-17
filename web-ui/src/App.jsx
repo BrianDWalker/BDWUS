@@ -637,7 +637,7 @@ function BoardColumn({ title, icon, search, onSearch, children }) {
   );
 }
 
-function SalesModule({ setRoute, showToast }) {
+export function SalesModule({ setRoute, showToast }) {
   const [newOppModal, setNewOppModal] = useState(false);
   const [leadConvertModal, setLeadConvertModal] = useState(null);
   const [contractPreview, setContractPreview] = useState(null);
@@ -797,7 +797,7 @@ function SalesModule({ setRoute, showToast }) {
   );
 }
 
-function LeadDetail({ id, setRoute, showToast }) {
+export function LeadDetail({ id, setRoute, showToast }) {
   const lead = leadMeta(leads.find(item => item.id === id) || leads[0]);
   const [tab, setTab] = useState("Overview");
   const [editModal, setEditModal] = useState(false);
@@ -961,7 +961,7 @@ function LeadDetail({ id, setRoute, showToast }) {
   );
 }
 
-function KnowledgeModule({ showToast }) {
+export function KnowledgeModule({ showToast }) {
   const [query, setQuery] = useState("");
   const [topic, setTopic] = useState("All topics");
   const filteredDocs = knowledgeDocuments.filter(document => matchAny(document, query, [item => item.title, item => item.category, item => item.audience, item => item.owner, item => item.summary]) && (topic === "All topics" || document.category === topic || knowledgeTopics.some(item => item.name === topic)));
@@ -2515,7 +2515,7 @@ function OrderDetail({ id, setRoute, showToast }) {
   );
 }
 
-function OpportunityDetail({ id, setRoute, showToast }) {
+export function OpportunityDetail({ id, setRoute, showToast }) {
   const opportunity = opportunityMeta(opportunities.find(item => item.id === id) || opportunities[0]);
   const relatedQuotes = quotes.filter(quote => quote.opportunityId === opportunity.id).map(quoteMeta);
   const [tab, setTab] = useState("Summary");
@@ -2593,7 +2593,7 @@ function OpportunityDetail({ id, setRoute, showToast }) {
   );
 }
 
-function QuoteDetail({ id, setRoute, showToast }) {
+export function QuoteDetail({ id, setRoute, showToast }) {
   const quote = quoteMeta(quotes.find(item => item.id === id) || quotes[0]);
   const [tab, setTab] = useState("Quote Lines");
   const [actionsModal, setActionsModal] = useState(false);
