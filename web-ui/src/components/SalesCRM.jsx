@@ -122,6 +122,50 @@ function activityRows(id) {
   ];
 }
 
+function WorkQueue({ opportunities: opps, quotes: quoteRows, setRoute }) {
+  const workItems = [
+    ...opps.slice(0, 3).map(item => ({
+      id: item.id,
+      type: "Opportunity",
+      account: item.account,
+      owner: item.owner,
+      priority: item.pricingRisk === "High" ? "High" : "Normal",
+      nextAction: item.nextStep,
+      route: `details/opportunity/${item.id}`
+    })),
+    ...quoteRows.filter(item => item.approvalRequired).slice(0, 2).map(item => ({
+      id: item.id,
+      type: "Pricing Review",
+      account: item.account,
+      owner: item.owner,
+      priority: item.pricingRisk,
+      nextAction: "Review margin and approval",
+      route: `details/quote/${item.id}`
+    }))
+  ];
+
+  return (
+    <Panel title="Work Queue" description="Open commercial work, approvals, and follow-ups.">
+      <DataTable
+        columns={[
+          { key: "type", label: "Work Type" },
+          { key: "id", label: "Record" },
+          { key: "account", label: "Account" },
+          { key: "priority", label: "Priority", render: row => <StatusTag tone={row.priority === "High" ? "warn" : "blue"}>{row.priority}</StatusTag> },
+          { key: "nextAction", label: "Next Action" },
+          { key: "owner", label: "Owner" },
+          { key: "actions", label: "", render: row => <button className="link-button compact-action" type="button" onClick={() => setRoute(row.route)}>Open</button> }
+        ]}
+        rows={workItems}
+      />
+    </Panel>
+  );
+}
+
+function TabToolbar({ children }) {
+  return <div className="module-toolbar sales-tab-toolbar">{children}</div>;
+}
+
 function SearchBox({ value, onChange, placeholder }) {
   return (
     <label className="inline-search">
@@ -708,6 +752,7 @@ export function SalesModule({ setRoute, showToast }) {
   const [approvalStatus, setApprovalStatus] = useState("All statuses");
   const [contractQuery, setContractQuery] = useState("");
   const [contractStatus, setContractStatus] = useState("All statuses");
+  const [newLeadModal, setNewLeadModal] = useState(false);
   const [newOppModal, setNewOppModal] = useState(false);
   const [leadConvertModal, setLeadConvertModal] = useState(null);
   const [contractPreview, setContractPreview] = useState(null);
@@ -731,8 +776,14 @@ export function SalesModule({ setRoute, showToast }) {
       <PageHeader
         title="Sales"
         description="Telecom CRM workspace for leads, opportunities, custom pricing, approvals, contracts, and account selling motions."
-        actions={<ActionButton icon="opportunities" variant="button" onClick={() => setNewOppModal(true)}>New Opportunity</ActionButton>}
+        actions={(
+          <>
+            <ActionButton icon="sales" variant="button" onClick={() => setNewLeadModal(true)}>New Lead</ActionButton>
+            <ActionButton icon="opportunities" variant="button" onClick={() => setNewOppModal(true)}>New Opportunity</ActionButton>
+          </>
+        )}
       />
+      <WorkQueue opportunities={filteredOpps} quotes={filteredQuotes} setRoute={setRoute} />
       <SummaryStrip items={[
         { label: "Pipeline", value: formatMoney(pipeline), note: "TCV across open deals" },
         { label: "Forecast", value: formatMoney(weighted), note: "Probability adjusted" },
@@ -745,7 +796,7 @@ export function SalesModule({ setRoute, showToast }) {
           title="Leads"
           description="Lead qualification for telecom accounts and product interest."
           action={
-            <div className="module-toolbar">
+            <TabToolbar>
               <SearchBox value={leadQuery} onChange={setLeadQuery} placeholder="Search leads" />
               <label className="inline-search">
                 <Icon name="workflow" className="button-icon" />
@@ -753,7 +804,7 @@ export function SalesModule({ setRoute, showToast }) {
                   {["All stages", "Open", "Discovery", "Needs analysis", "Qualified"].map(stage => <option key={stage}>{stage}</option>)}
                 </select>
               </label>
-            </div>
+            </TabToolbar>
           }
         >
           <DataTable
@@ -776,7 +827,7 @@ export function SalesModule({ setRoute, showToast }) {
           title="Opportunities"
           description="Telecom pipeline records connected to accounts, services, pricing, and order conversion."
           action={
-            <div className="module-toolbar">
+            <TabToolbar>
               <SearchBox value={opportunityQuery} onChange={setOpportunityQuery} placeholder="Search opportunities" />
               <label className="inline-search">
                 <Icon name="workflow" className="button-icon" />
@@ -790,7 +841,7 @@ export function SalesModule({ setRoute, showToast }) {
                   {["All owners", ...owners].map(owner => <option key={owner}>{owner}</option>)}
                 </select>
               </label>
-            </div>
+            </TabToolbar>
           }
         >
           <DataTable
@@ -813,16 +864,15 @@ export function SalesModule({ setRoute, showToast }) {
           title="Accounts"
           description="Customer records with open commercial and billing context."
           action={
-            <div className="module-toolbar">
+            <TabToolbar>
               <SearchBox value={accountQuery} onChange={setAccountQuery} placeholder="Search accounts" />
-              <ActionButton icon="opportunities" variant="button" onClick={() => setNewOppModal(true)}>New Opportunity</ActionButton>
               <label className="inline-search">
                 <Icon name="workflow" className="button-icon" />
                 <select value={accountSegment} onChange={event => setAccountSegment(event.target.value)}>
                   {["All segments", ...new Set(customers.map(customer => customer.segment))].map(segment => <option key={segment}>{segment}</option>)}
                 </select>
               </label>
-            </div>
+            </TabToolbar>
           }
         >
           <DataTable
@@ -832,7 +882,7 @@ export function SalesModule({ setRoute, showToast }) {
               { key: "segment", label: "Segment" },
               { key: "region", label: "Region" },
               { key: "mrr", label: "MRR", render: row => formatMoney(row.mrr) },
-              { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/customer/${row.id}`)}>Customer 360</button></div> }
+              { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/customer/${row.id}`)}>Customer 360</button><button className="link-button compact-action" type="button" onClick={() => setNewOppModal(true)}>New Opportunity</button></div> }
             ]}
             rows={filteredCustomers}
           />
@@ -843,7 +893,7 @@ export function SalesModule({ setRoute, showToast }) {
           title="Custom Pricing"
           description="Deal desk work for discount exceptions, term exceptions, margin review, and competitive responses."
           action={
-            <div className="module-toolbar">
+            <TabToolbar>
               <SearchBox value={quoteQuery} onChange={setQuoteQuery} placeholder="Search quote, package, account" />
               <label className="inline-search">
                 <Icon name="workflow" className="button-icon" />
@@ -851,7 +901,7 @@ export function SalesModule({ setRoute, showToast }) {
                   {["All statuses", "Approval Required", "Ready to Send", "Draft", "Sent"].map(status => <option key={status}>{status}</option>)}
                 </select>
               </label>
-            </div>
+            </TabToolbar>
           }
         >
           <DataTable
@@ -862,7 +912,7 @@ export function SalesModule({ setRoute, showToast }) {
               { key: "discount", label: "Discount", render: row => `${row.discount}%` },
               { key: "term", label: "Term", render: row => `${row.term} mo` },
               { key: "approvalStatus", label: "Status", render: row => <StatusTag tone={row.approvalRequired ? "warn" : "success"}>{row.approvalStatus}</StatusTag> },
-              { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.id}`)}>Review</button><button className="link-button compact-action" type="button" onClick={() => showToast("Quote edit workflow opened")}>Edit</button><button className="link-button compact-action" type="button" onClick={() => showToast("Quote upload workflow opened")}>Upload</button><button className="link-button compact-action" type="button" onClick={() => showToast("Order details started")}>Create Order</button></div> }
+              { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.id}`)}>Review</button></div> }
             ]}
             rows={filteredQuotes.filter(row => row.customPrice || row.approvalRequired)}
           />
@@ -873,7 +923,7 @@ export function SalesModule({ setRoute, showToast }) {
           title="Approvals"
           description="Pricing, margin, promo, contract, and quote approval queue."
           action={
-            <div className="module-toolbar">
+            <TabToolbar>
               <SearchBox value={approvalQuery} onChange={setApprovalQuery} placeholder="Search approvals" />
               <label className="inline-search">
                 <Icon name="workflow" className="button-icon" />
@@ -881,7 +931,7 @@ export function SalesModule({ setRoute, showToast }) {
                   {["All statuses", "Approval Required", "Ready to Send", "Draft", "Sent"].map(status => <option key={status}>{status}</option>)}
                 </select>
               </label>
-            </div>
+            </TabToolbar>
           }
         >
           <DataTable
@@ -902,7 +952,7 @@ export function SalesModule({ setRoute, showToast }) {
           title="Contracts"
           description="Contract term, MSA, order form, ramp, install terms, and renewal tracking."
           action={
-            <div className="module-toolbar">
+            <TabToolbar>
               <SearchBox value={contractQuery} onChange={setContractQuery} placeholder="Search contracts" />
               <label className="inline-search">
                 <Icon name="workflow" className="button-icon" />
@@ -910,7 +960,7 @@ export function SalesModule({ setRoute, showToast }) {
                   {["All statuses", "Open", "Ready", "Review"].map(status => <option key={status}>{status}</option>)}
                 </select>
               </label>
-            </div>
+            </TabToolbar>
           }
         >
           <DataTable
@@ -945,6 +995,28 @@ export function SalesModule({ setRoute, showToast }) {
             <label>Product interest<select>{opportunities.map(item => <option key={item.id}>{item.name}</option>)}</select></label>
             <label>Estimated MRC<input placeholder="$0" /></label>
             <label>Owner<input placeholder="Sales owner" /></label>
+          </form>
+        </Modal>
+      )}
+      {newLeadModal && (
+        <Modal
+          title="New lead"
+          subtitle="Create telecom lead"
+          onClose={() => setNewLeadModal(false)}
+          actions={(
+            <>
+              <button className="button" type="button" onClick={() => { setNewLeadModal(false); showToast("Lead saved"); }}>Save</button>
+              <button className="ghost-button" type="button" onClick={() => setNewLeadModal(false)}>Cancel</button>
+            </>
+          )}
+        >
+          <form className="modal-form">
+            <label>Account Name<input placeholder="Prospect account" /></label>
+            <label>Contact Name<input placeholder="Primary contact" /></label>
+            <label>Source<select><option>Partner referral</option><option>Website</option><option>Outbound</option></select></label>
+            <label>Product Interest<input placeholder="Fiber, wireless, SD-WAN, voice" /></label>
+            <label>Estimated Value<input placeholder="$0" /></label>
+            <label>Notes<textarea placeholder="What services could be obtained, timeline, and qualification notes." /></label>
           </form>
         </Modal>
       )}

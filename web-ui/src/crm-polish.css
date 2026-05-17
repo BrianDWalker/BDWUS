@@ -25,7 +25,7 @@ body,
   min-height: var(--app-nav-height);
   height: auto;
   display: grid;
-  grid-template-columns: minmax(180px, 0.75fr) minmax(0, 2.15fr) minmax(260px, 0.9fr);
+  grid-template-columns: minmax(180px, 0.8fr) minmax(0, 2.2fr) minmax(220px, 0.9fr);
   align-items: center;
   gap: 12px;
   padding: 10px 18px;
@@ -55,15 +55,20 @@ body,
 .topnav-center {
   justify-content: center;
   gap: 4px;
-  flex-wrap: wrap;
-  overflow: visible;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   white-space: normal;
+  scrollbar-width: none;
+}
+
+.topnav-center::-webkit-scrollbar {
+  display: none;
 }
 
 .topnav-right {
   justify-content: flex-end;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .topnav-brand {
@@ -126,6 +131,7 @@ body,
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .topnav-nav-button .button-icon {
@@ -445,16 +451,17 @@ body,
 
 @media (max-width: 1180px) {
   :root {
-    --app-nav-height: 58px;
+    --app-nav-height: 60px;
   }
 
   .app-topnav {
-    grid-template-columns: 1fr auto;
-    padding: 0 12px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding: 8px 12px;
   }
 
   .topnav-center {
-    display: none;
+    justify-content: flex-start;
+    overflow-x: auto;
   }
 
   .topnav-brand-copy span {
@@ -462,7 +469,7 @@ body,
   }
 
   .topnav-search-shell {
-    display: none;
+    width: clamp(130px, 18vw, 190px);
   }
 }
 
