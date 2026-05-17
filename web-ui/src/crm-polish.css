@@ -19,23 +19,23 @@ body,
 }
 
 .app-topnav {
-  position: fixed;
+  position: sticky;
   inset: 0 0 auto 0;
   z-index: 1000;
   min-height: var(--app-nav-height);
-  height: var(--app-nav-height);
+  height: auto;
   display: grid;
-  grid-template-columns: minmax(190px, 0.75fr) minmax(360px, 2.1fr) minmax(250px, 0.9fr);
+  grid-template-columns: minmax(180px, 0.75fr) minmax(0, 2.15fr) minmax(260px, 0.9fr);
   align-items: center;
   gap: 12px;
-  padding: 0 18px;
+  padding: 10px 18px;
   background: linear-gradient(180deg, #081627 0%, #0d1d31 100%);
   border-bottom: 1px solid rgba(148, 163, 184, 0.18);
   box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
 }
 
 .content {
-  padding-top: calc(var(--app-nav-height) + 20px) !important;
+  padding-top: 16px !important;
   padding-inline: clamp(14px, 2vw, 24px);
   min-width: 0;
 }
@@ -55,19 +55,15 @@ body,
 .topnav-center {
   justify-content: center;
   gap: 4px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-  white-space: nowrap;
-}
-
-.topnav-center::-webkit-scrollbar {
-  display: none;
+  flex-wrap: wrap;
+  overflow: visible;
+  white-space: normal;
 }
 
 .topnav-right {
   justify-content: flex-end;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .topnav-brand {
@@ -262,6 +258,7 @@ body,
   align-items: flex-start;
   gap: 14px;
   padding-block: 2px;
+  flex-wrap: wrap;
 }
 
 .topbar-title {
@@ -281,6 +278,11 @@ body,
 .topbar-actions {
   gap: 8px;
   justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.module-toolbar {
+  flex-wrap: wrap;
 }
 
 .button,
@@ -382,6 +384,7 @@ body,
 .button-cluster,
 .modal-actions {
   gap: 7px;
+  flex-wrap: wrap;
 }
 
 .record-actions .ghost-button:nth-of-type(n+3),

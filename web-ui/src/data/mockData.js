@@ -47,6 +47,13 @@ export const topNavSections = [
     routes: ["dashboard"]
   },
   {
+    id: "knowledge",
+    label: "Knowledge",
+    icon: "knowledge",
+    route: "knowledge",
+    routes: ["knowledge"]
+  },
+  {
     id: "sales",
     label: "Sales",
     icon: "sales",
@@ -191,6 +198,27 @@ export const leads = [
   { id: "LEAD-441", customerId: "CUST-1001", account: "Apex Health", source: "Partner referral", stage: "Qualified", product: "Fiber 500", estValue: 74200, owner: "Tia Brooks" },
   { id: "LEAD-446", customerId: "CUST-1002", account: "Brightstar Retail", source: "Website", stage: "Discovery", product: "Cloud Voice", estValue: 51800, owner: "Sam Malik" },
   { id: "LEAD-452", customerId: "CUST-1004", account: "Summit Manufacturing", source: "Outbound", stage: "Needs analysis", product: "SD-WAN", estValue: 146900, owner: "Ari Fox" }
+];
+
+export const knowledgeDocuments = [
+  { id: "KNOW-1", title: "Fiber provisioning playbook", category: "Process", audience: "Sales, Operations, Support", updated: "2026-05-13", owner: "Operations", summary: "End-to-end provisioning steps for fiber installs, handoffs, and escalation checkpoints." },
+  { id: "KNOW-2", title: "Wireless package pricing guide", category: "Pricing", audience: "Sales, Product", updated: "2026-05-12", owner: "Product", summary: "Current rate cards, approval thresholds, and discount guardrails for wireless bundles." },
+  { id: "KNOW-3", title: "Customer onboarding checklist", category: "Customer-facing", audience: "Sales, Customer Service", updated: "2026-05-09", owner: "Customer Success", summary: "What teams need before kickoff, including contacts, services, and delivery dependencies." },
+  { id: "KNOW-4", title: "Troubleshooting guide - DIA", category: "Support", audience: "Support, Network", updated: "2026-05-11", owner: "Network", summary: "Common symptoms, diagnostics, and service-impact questions for DIA incidents." },
+  { id: "KNOW-5", title: "Sales qualification framework", category: "Playbook", audience: "Sales", updated: "2026-05-08", owner: "Sales Operations", summary: "How to qualify a lead, capture needs, and hand off to the opportunity stage." }
+];
+
+export const knowledgeTopics = [
+  { id: "TOPIC-1", name: "Provisioning", description: "Steps, dependencies, and approval gates for service turn-up." },
+  { id: "TOPIC-2", name: "Pricing", description: "Current pricing guidance, exceptions, and margin guardrails." },
+  { id: "TOPIC-3", name: "Support", description: "Troubleshooting, escalation paths, and customer communications." },
+  { id: "TOPIC-4", name: "Training", description: "Playbooks, onboarding, and role-based enablement materials." }
+];
+
+export const contracts = [
+  { id: "CON-1042", customerId: "CUST-1001", opportunityId: "OPP-812", quoteId: "Q-2048", title: "Apex Health master services agreement", status: "Ready", signedDate: "2026-05-12" },
+  { id: "CON-1088", customerId: "CUST-1004", opportunityId: "OPP-827", quoteId: "Q-2052", title: "Summit Manufacturing expansion contract", status: "Review", signedDate: "2026-05-09" },
+  { id: "CON-1115", customerId: "CUST-1002", opportunityId: "OPP-833", quoteId: "Q-2061", title: "Brightstar retail continuity agreement", status: "Open", signedDate: "2026-05-08" }
 ];
 
 export const opportunities = [
