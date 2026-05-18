@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import App from "./App";
 import { Shell } from "./components/Shell";
-import { SalesLeadDetail, SalesModule, SalesOpportunityDetail, SalesQuoteDetail } from "./components/SalesDatabaseCRM";
+import { SalesContractDetail, SalesLeadDetail, SalesModule, SalesOpportunityDetail, SalesQuoteDetail } from "./components/SalesDatabaseCRM";
 
 const routeAliases = { pricing: "product-pricing", products: "product-pricing", quotes: "sales" };
 
@@ -40,7 +40,7 @@ function isIntegratedSalesRoute(route) {
   if (route === "sales") return true;
   if (!route.startsWith("details/")) return false;
   const [, type] = route.split("/");
-  return ["lead", "opportunity", "quote"].includes(type);
+  return ["lead", "opportunity", "quote", "contract"].includes(type);
 }
 
 function IntegratedSalesRoute({ route, setRoute, showToast }) {
@@ -49,6 +49,7 @@ function IntegratedSalesRoute({ route, setRoute, showToast }) {
   const [, type, id] = route.split("/");
   if (type === "opportunity") return <SalesOpportunityDetail id={id} setRoute={setRoute} showToast={showToast} />;
   if (type === "quote") return <SalesQuoteDetail id={id} setRoute={setRoute} showToast={showToast} />;
+  if (type === "contract") return <SalesContractDetail id={id} setRoute={setRoute} showToast={showToast} />;
   if (type === "lead") return <SalesLeadDetail id={id} setRoute={setRoute} showToast={showToast} />;
 
   return <SalesModule setRoute={setRoute} showToast={showToast} />;

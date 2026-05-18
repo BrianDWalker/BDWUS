@@ -4,6 +4,7 @@ import json
 import os
 import re
 import uuid
+import threading
 from datetime import datetime, date, timezone
 from decimal import Decimal
 from pathlib import Path
@@ -21,6 +22,8 @@ billing_router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 SQL_DIR = Path(__file__).resolve().parents[2] / "sql"
 SCHEMA_FILE = SQL_DIR / "sales_schema.sql"
+SCHEMA_READY = False
+SCHEMA_LOCK = threading.Lock()
 
 
 def utc_now() -> datetime:
@@ -67,6 +70,16 @@ def fetch_all(sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
         conn.close()
 
 
+def fetch_all_on_cursor(cursor, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
+    rows = cursor.execute(sql, params).fetchall()
+    return [row_to_dict(cursor, row) for row in rows]
+
+
+def fetch_one_on_cursor(cursor, sql: str, params: tuple[Any, ...] = ()) -> dict[str, Any] | None:
+    rows = fetch_all_on_cursor(cursor, sql, params)
+    return rows[0] if rows else None
+
+
 def fetch_one(sql: str, params: tuple[Any, ...] = ()) -> dict[str, Any] | None:
     rows = fetch_all(sql, params)
     return rows[0] if rows else None
@@ -100,15 +113,22 @@ def split_batches(script: str) -> list[str]:
 
 
 def ensure_sales_storage() -> None:
-    script = SCHEMA_FILE.read_text(encoding="utf-8")
-    conn = get_sql_connection()
-    try:
-        cursor = conn.cursor()
-        for batch in split_batches(script):
-            cursor.execute(batch)
-        conn.commit()
-    finally:
-        conn.close()
+    global SCHEMA_READY
+    if SCHEMA_READY:
+        return
+    with SCHEMA_LOCK:
+        if SCHEMA_READY:
+            return
+        script = SCHEMA_FILE.read_text(encoding="utf-8")
+        conn = get_sql_connection()
+        try:
+            cursor = conn.cursor()
+            for batch in split_batches(script):
+                cursor.execute(batch)
+            conn.commit()
+            SCHEMA_READY = True
+        finally:
+            conn.close()
 
 
 def table_has_rows(table_name: str) -> bool:
@@ -855,6 +875,36 @@ def sales_dashboard():
     ensure_sales_storage()
     seed_if_empty()
     return fetch_one("SELECT TOP 1 * FROM ms.vSalesModuleDashboard") or {}
+
+
+@router.get("/bootstrap")
+def sales_bootstrap():
+    ensure_sales_storage()
+    seed_if_empty()
+    conn = get_sql_connection()
+    try:
+        cursor = conn.cursor()
+        bootstrap = {
+            "dashboard": fetch_one_on_cursor(cursor, "SELECT TOP 1 * FROM ms.vSalesModuleDashboard") or {},
+            "leads": fetch_all_on_cursor(cursor, "SELECT * FROM ms.vLeadDetail ORDER BY CreatedAtUtc DESC"),
+            "accounts": fetch_all_on_cursor(cursor, "SELECT * FROM ms.Accounts WHERE IsDeleted = 0 ORDER BY CreatedAtUtc DESC"),
+            "opportunities": fetch_all_on_cursor(cursor, "SELECT * FROM ms.vOpportunityDetail ORDER BY CreatedAtUtc DESC"),
+            "quotes": fetch_all_on_cursor(cursor, "SELECT * FROM ms.vQuoteDetail ORDER BY CreatedAtUtc DESC"),
+            "customPricing": fetch_all_on_cursor(cursor, "SELECT * FROM ms.CustomPricingRequests WHERE IsDeleted = 0 ORDER BY CreatedAtUtc DESC"),
+            "approvals": fetch_all_on_cursor(cursor, "SELECT * FROM ms.Approvals ORDER BY CreatedAtUtc DESC"),
+            "contracts": fetch_all_on_cursor(cursor, "SELECT * FROM ms.vContractDetail ORDER BY CreatedAtUtc DESC"),
+            "billingCustomers": fetch_all_on_cursor(cursor, "SELECT * FROM billing.vCustomerLookup ORDER BY CustomerNumber"),
+            "billingProducts": fetch_all_on_cursor(cursor, "SELECT * FROM billing.Products WHERE IsDeleted = 0 ORDER BY ProductName"),
+            "billingProductHierarchy": fetch_all_on_cursor(cursor, "SELECT * FROM billing.vProductBillingHierarchy ORDER BY DisplayOrder, ProductName"),
+            "billingCodes": fetch_all_on_cursor(cursor, "SELECT * FROM billing.BillingCodes WHERE IsDeleted = 0 ORDER BY Code"),
+            "billingElements": fetch_all_on_cursor(cursor, "SELECT * FROM billing.BillingElements WHERE IsDeleted = 0 ORDER BY ElementName"),
+            "offers": fetch_all_on_cursor(cursor, "SELECT * FROM billing.Offers WHERE IsDeleted = 0 ORDER BY OfferName"),
+            "promotions": fetch_all_on_cursor(cursor, "SELECT * FROM billing.Promotions WHERE IsDeleted = 0 ORDER BY PromotionName"),
+            "ratePlans": fetch_all_on_cursor(cursor, "SELECT * FROM billing.RatePlans WHERE IsDeleted = 0 ORDER BY PlanName"),
+        }
+        return bootstrap
+    finally:
+        conn.close()
 
 
 @router.get("/leads")

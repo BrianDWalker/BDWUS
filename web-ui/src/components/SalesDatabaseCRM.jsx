@@ -12,28 +12,40 @@ import {
   createOpportunityProduct,
   createCustomPricing,
   createQuote,
+  createQuoteLineItem,
   convertLead,
   deleteLead,
   deleteOpportunity,
   deleteOpportunityProduct,
   deleteCustomPricing,
   deleteQuoteLineItem,
-  getSalesDashboard,
+  deleteContractFile,
+  getContract,
+  getSalesBootstrap,
   getLead,
   getOpportunity,
   getQuote,
   listAccounts,
   listApprovals,
   listBillingCustomers,
+  listBillingCodes,
+  listBillingElements,
+  listBillingProductHierarchy,
+  listBillingProducts,
+  listContractFiles,
+  listContractHistory,
   listContracts,
   listCustomPricing,
+  listOffers,
   listLeads,
   listLeadActivities,
   listOpportunities,
   listOpportunityNotes,
   listOpportunityProducts,
+  listPromotions,
   listQuoteLineItems,
   priceQuote,
+  listRatePlans,
   rejectApproval,
   requestChangesApproval,
   submitCustomPricing,
@@ -44,12 +56,15 @@ import {
   updateCustomPricing,
   updateQuote,
   updateQuoteLineItem,
+  createContractFile,
+  updateContract,
   listQuotes
 } from "../utils/salesApi";
 
 const salesTabs = ["Leads", "Opportunities", "Accounts", "Custom Pricing", "Approvals", "Contracts"];
 const opportunityTabs = ["Overview", "Products/Services", "Pricing", "Quotes", "Activity/Notes", "Approvals", "Contracts"];
 const quoteTabs = ["Summary", "Line Items", "Pricing", "Approvals", "Contract"];
+const contractTabs = ["Overview", "Files", "History", "Terms"];
 const leadTabs = ["Qualification", "Customer Info", "Activity"];
 
 const owners = ["Sarah Johnson", "Tia Brooks", "Sam Malik", "Ari Fox", "Maya Ortiz"];
@@ -76,6 +91,28 @@ function firstArray(value) {
     }
   }
   return [];
+}
+
+function textArray(value) {
+  return firstArray(value).join(", ");
+}
+
+function parseTextArray(value) {
+  if (Array.isArray(value)) return value;
+  return String(value ?? "")
+    .split(",")
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function parseJsonField(value, fallback = {}) {
+  if (!value && value !== 0) return fallback;
+  if (typeof value === "object") return value;
+  try {
+    return JSON.parse(String(value));
+  } catch {
+    return fallback;
+  }
 }
 
 function pageDate(value) {
@@ -244,44 +281,40 @@ function useSalesData() {
     approvals: [],
     contracts: [],
     billingCustomers: [],
+    billingProducts: [],
+    billingProductHierarchy: [],
+    billingCodes: [],
+    billingElements: [],
+    offers: [],
+    promotions: [],
+    ratePlans: [],
     dashboard: {}
   });
 
   async function refresh() {
     try {
       setState(current => ({ ...current, loading: true, error: "" }));
-      const responses = await Promise.allSettled([
-        getSalesDashboard(),
-        listLeads(),
-        listAccounts(),
-        listOpportunities(),
-        listQuotes(),
-        listCustomPricing(),
-        listApprovals(),
-        listContracts(),
-        listBillingCustomers()
-      ]);
-      const [dashboardResult, leadsResult, accountsResult, opportunitiesResult, quotesResult, customPricingResult, approvalsResult, contractsResult, billingCustomersResult] = responses;
-      const warnings = responses
-        .map((result, index) => {
-          if (result.status === "fulfilled") return "";
-          const labels = ["dashboard", "leads", "accounts", "opportunities", "quotes", "custom pricing", "approvals", "contracts", "billing customers"];
-          return `Could not load ${labels[index]} (${result.reason?.message || "request failed"})`;
-        })
-        .filter(Boolean);
+      const bootstrap = await getSalesBootstrap();
       setState({
         loading: false,
         error: "",
-        warnings,
-        dashboard: dashboardResult.status === "fulfilled" ? dashboardResult.value : {},
-        leads: leadsResult.status === "fulfilled" ? leadsResult.value : [],
-        accounts: accountsResult.status === "fulfilled" ? accountsResult.value : [],
-        opportunities: opportunitiesResult.status === "fulfilled" ? opportunitiesResult.value : [],
-        quotes: quotesResult.status === "fulfilled" ? quotesResult.value : [],
-        customPricing: customPricingResult.status === "fulfilled" ? customPricingResult.value : [],
-        approvals: approvalsResult.status === "fulfilled" ? approvalsResult.value : [],
-        contracts: contractsResult.status === "fulfilled" ? contractsResult.value : [],
-        billingCustomers: billingCustomersResult.status === "fulfilled" ? billingCustomersResult.value : []
+        warnings: [],
+        dashboard: bootstrap.dashboard || {},
+        leads: bootstrap.leads || [],
+        accounts: bootstrap.accounts || [],
+        opportunities: bootstrap.opportunities || [],
+        quotes: bootstrap.quotes || [],
+        customPricing: bootstrap.customPricing || [],
+        approvals: bootstrap.approvals || [],
+        contracts: bootstrap.contracts || [],
+        billingCustomers: bootstrap.billingCustomers || [],
+        billingProducts: bootstrap.billingProducts || [],
+        billingProductHierarchy: bootstrap.billingProductHierarchy || [],
+        billingCodes: bootstrap.billingCodes || [],
+        billingElements: bootstrap.billingElements || [],
+        offers: bootstrap.offers || [],
+        promotions: bootstrap.promotions || [],
+        ratePlans: bootstrap.ratePlans || []
       });
     } catch (error) {
       setState(current => ({ ...current, loading: false, error: error.message || "Unable to load sales data." }));
@@ -353,7 +386,6 @@ export function SalesModule({ setRoute, showToast }) {
   const [approveModal, setApproveModal] = useState(null);
   const [activityModal, setActivityModal] = useState(null);
   const [serviceabilityModal, setServiceabilityModal] = useState(false);
-  const [selectedContract, setSelectedContract] = useState(null);
 
   const leads = state.leads || [];
   const accounts = state.accounts || [];
@@ -364,6 +396,13 @@ export function SalesModule({ setRoute, showToast }) {
   const contracts = state.contracts || [];
   const dashboard = state.dashboard || {};
   const warnings = state.warnings || [];
+  const billingProducts = state.billingProducts || [];
+  const billingProductHierarchy = state.billingProductHierarchy || [];
+  const billingCodes = state.billingCodes || [];
+  const billingElements = state.billingElements || [];
+  const offers = state.offers || [];
+  const promotions = state.promotions || [];
+  const ratePlans = state.ratePlans || [];
 
   const filteredLeads = leads.filter(item => matchAny(item, query, [r => fieldValue(r, "LeadNumber"), r => fieldValue(r, "AccountNameResolved", "AccountName"), r => fieldValue(r, "ProductInterest"), r => fieldValue(r, "OwnerName")]) && (stage === "All stages" || fieldValue(item, "Qualification", "Status") === stage));
   const filteredOpps = opportunities.filter(item => matchAny(item, query, [r => fieldValue(r, "OpportunityNumber"), r => fieldValue(r, "OpportunityName"), r => fieldValue(r, "AccountNameResolved"), r => fieldValue(r, "ProductSummary"), r => fieldValue(r, "OwnerName")]) && (stage === "All stages" || fieldValue(item, "Stage") === stage) && (owner === "All owners" || fieldValue(item, "OwnerName") === owner));
@@ -427,7 +466,7 @@ export function SalesModule({ setRoute, showToast }) {
     { key: "OpportunityName", label: "Opportunity" },
     { key: "QuoteNumber", label: "Quote" },
     { key: "Status", label: "Status" },
-    { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId}`)}>Open Quote</button><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/opportunity/${row.OpportunityId}`)}>Open Opportunity</button><button className="link-button compact-action" type="button" onClick={() => setSelectedContract(row)}>Open Contract</button></div> }
+    { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/contract/${row.ContractId}`)}>Open Contract</button><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId}`)}>Open Quote</button><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/opportunity/${row.OpportunityId}`)}>Open Opportunity</button></div> }
   ];
 
   return (
@@ -462,7 +501,7 @@ export function SalesModule({ setRoute, showToast }) {
       )}
       {tab === "Custom Pricing" && (
         <Panel title="Custom Pricing" description="Review custom pricing requests and quote overrides." action={<Toolbar><button className="button" type="button" onClick={() => setSelectedCustomPricing({ Status: "Draft", RequestedBy: "Admin" })}>New Request</button><SearchBox value={query} onChange={setQuery} placeholder="Search custom pricing" /><label className="inline-search"><Icon name="workflow" className="button-icon" /><select value={status} onChange={event => setStatus(event.target.value)}>{["All statuses", "Draft", "Submitted", "Approved", "Rejected"].map(option => <option key={option}>{option}</option>)}</select></label></Toolbar>}>
-          {loading ? <TableLoadingState columns={[{ key: "RequestNumber", label: "Request" }, { key: "Status", label: "Status" }, { key: "RequestedBy", label: "Requested By" }, { key: "Reason", label: "Reason" }]} /> : <SalesTable columns={[{ key: "RequestNumber", label: "Request" }, { key: "Status", label: "Status" }, { key: "RequestedBy", label: "Requested By" }, { key: "Reason", label: "Reason" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId || quotes[0]?.QuoteId}`)}>Review</button><button className="link-button compact-action" type="button" onClick={() => setSelectedCustomPricing(row)}>Edit</button><button className="link-button compact-action" type="button" onClick={async () => { await deleteCustomPricing(row.CustomPricingRequestId); refresh(); }}>Delete</button><button className="link-button compact-action" type="button" onClick={async () => { await submitCustomPricing(row.CustomPricingRequestId, { requestedBy: "Admin" }); refresh(); }}>Submit</button></div> }]} rows={filteredCustomPricing} />}
+          {loading ? <TableLoadingState columns={[{ key: "RequestNumber", label: "Request" }, { key: "Status", label: "Status" }, { key: "RequestedBy", label: "Requested By" }, { key: "Reason", label: "Reason" }]} /> : <SalesTable columns={[{ key: "RequestNumber", label: "Request" }, { key: "Status", label: "Status" }, { key: "RequestedBy", label: "Requested By" }, { key: "Reason", label: "Reason" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setSelectedCustomPricing(row)}>Review</button></div> }]} rows={filteredCustomPricing} />}
         </Panel>
       )}
       {tab === "Approvals" && (
@@ -677,7 +716,7 @@ function LeadConvertModal({ lead, onClose, onSave }) {
 }
 
 function ActivityModal({ context, onClose, onSave }) {
-  const [values, setValues] = useState({ activityType: "Call", outcome: "Connected", notes: "", nextStep: "" });
+  const [values, setValues] = useState({ activityDate: new Date().toISOString().slice(0, 10), activityType: "Call", outcome: "Connected", notes: "", nextStep: "" });
   return (
     <Modal
       title={context.type === "opportunity" ? "Log opportunity activity" : "Log activity"}
@@ -691,6 +730,7 @@ function ActivityModal({ context, onClose, onSave }) {
       )}
     >
       <form className="modal-form">
+        <label>Activity Date<input type="date" value={values.activityDate} onChange={event => setValues(current => ({ ...current, activityDate: event.target.value }))} /></label>
         <label>Activity Type<select value={values.activityType} onChange={event => setValues(current => ({ ...current, activityType: event.target.value }))}><option>Call</option><option>Text</option><option>Email</option><option>Meeting</option></select></label>
         <label>Outcome<input value={values.outcome} onChange={event => setValues(current => ({ ...current, outcome: event.target.value }))} /></label>
         <label>Notes<textarea value={values.notes} onChange={event => setValues(current => ({ ...current, notes: event.target.value }))} /></label>
@@ -752,15 +792,27 @@ export function SalesLeadDetail({ id, setRoute, showToast }) {
           subtitle="Qualification, status, estimated value, products, and services."
           fields={[
             { key: "AccountName", label: "Account Name" },
+            { key: "ContactName", label: "Contact Name" },
+            { key: "CustomerNumber", label: "Customer Number" },
             { key: "Qualification", label: "Qualification" },
             { key: "Status", label: "Status" },
             { key: "EstimatedValue", label: "Estimated Value" },
             { key: "ProductInterest", label: "Product Interest" },
+            { key: "ServiceNeedsJson", label: "Service Needs", type: "textarea" },
+            { key: "CustomerInfoJson", label: "Customer Info", type: "textarea" },
             { key: "Notes", label: "Notes", type: "textarea" }
           ]}
-          values={lead}
+          values={{
+            ...lead,
+            ServiceNeedsJson: textArray(lead.ServiceNeedsJson),
+            CustomerInfoJson: JSON.stringify(parseJsonField(lead.CustomerInfoJson, {}), null, 2)
+          }}
           onSave={async values => {
-            await updateLead(id, values);
+            await updateLead(id, {
+              ...values,
+              serviceNeeds: parseTextArray(values.ServiceNeedsJson),
+              customerInfo: parseJsonField(values.CustomerInfoJson, {}),
+            });
             setLead(await getLead(id));
             showToast("Lead updated");
             setEditModal(false);
@@ -779,11 +831,20 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
   const [products, setProducts] = useState([]);
   const [notes, setNotes] = useState([]);
   const [quoteRows, setQuoteRows] = useState([]);
+  const [contracts, setContracts] = useState([]);
+  const [billingProducts, setBillingProducts] = useState([]);
+  const [billingHierarchy, setBillingHierarchy] = useState([]);
+  const [billingCodes, setBillingCodes] = useState([]);
+  const [billingElements, setBillingElements] = useState([]);
+  const [offers, setOffers] = useState([]);
+  const [promotions, setPromotions] = useState([]);
+  const [ratePlans, setRatePlans] = useState([]);
   const [tab, setTab] = useState("Overview");
   const [editModal, setEditModal] = useState(false);
   const [activityModal, setActivityModal] = useState(false);
-  const [productModal, setProductModal] = useState(false);
-  const [noteModal, setNoteModal] = useState(false);
+  const [productModal, setProductModal] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [noteModal, setNoteModal] = useState(null);
   const [quoteModal, setQuoteModal] = useState(false);
   const [serviceabilityModal, setServiceabilityModal] = useState(false);
 
@@ -791,7 +852,15 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
     getOpportunity(id).then(setOpportunity);
     listOpportunityProducts(id).then(setProducts);
     listOpportunityNotes(id).then(setNotes);
-    listQuotes().then(rows => setQuoteRows(rows.filter(row => row.OpportunityId === id)));
+    listQuotes().then(rows => setQuoteRows(rows.filter(row => String(row.OpportunityId) === String(id))));
+    listContracts().then(rows => setContracts(rows.filter(row => String(row.OpportunityId) === String(id))));
+    listBillingProducts().then(setBillingProducts);
+    listBillingProductHierarchy().then(setBillingHierarchy);
+    listBillingCodes().then(setBillingCodes);
+    listBillingElements().then(setBillingElements);
+    listOffers().then(setOffers);
+    listPromotions().then(setPromotions);
+    listRatePlans().then(setRatePlans);
   }, [id]);
 
   if (!opportunity) {
@@ -812,7 +881,7 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
         title={opportunity.OpportunityName}
         status={opportunity.Stage}
         subtitle={`${opportunity.AccountNameResolved || opportunity.AccountName} · ${money(opportunity.EstimatedValue)} · ${opportunity.OwnerName}`}
-        actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setActivityModal(true)}>Log Activity</button><button className="button" type="button" onClick={() => setEditModal(true)}>Edit Details</button><button className="button" type="button" onClick={() => setProductModal(true)}>Add Service</button><button className="button" type="button" onClick={() => setQuoteModal(true)}>Generate Quote</button><button className="button" type="button" onClick={() => setServiceabilityModal(true)}>Run Address Check</button></div>}
+        actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setActivityModal(true)}>Log Activity</button><button className="button" type="button" onClick={() => setNoteModal({ noteType: "General" })}>Add Note</button><button className="button" type="button" onClick={() => setEditModal(true)}>Edit Details</button><button className="button" type="button" onClick={() => { setSelectedProduct(null); setProductModal(true); }}>Add Service</button><button className="button" type="button" onClick={() => setQuoteModal(true)}>Generate Quote</button><button className="button" type="button" onClick={() => setServiceabilityModal(true)}>Run Address Check</button></div>}
       />
       <SummaryStrip items={[
         { label: "Account", value: opportunity.AccountNameResolved || opportunity.AccountName, note: opportunity.AccountNumberResolved || opportunity.AccountNumber },
@@ -822,12 +891,26 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
       ]} />
       <Tabs tabs={opportunityTabs} active={tab} onChange={setTab} />
       {tab === "Overview" && <Panel title="Opportunity overview" description="SQL-backed opportunity record."><div className="field-grid"><div className="mini-stat"><span>Account</span><strong>{opportunity.AccountNameResolved || opportunity.AccountName}</strong><small>{opportunity.Region}</small></div><div className="mini-stat"><span>Stage</span><strong>{opportunity.Stage}</strong><small>{opportunity.Status}</small></div><div className="mini-stat"><span>Value</span><strong>{money(opportunity.EstimatedValue)}</strong><small>{opportunity.MarginPct}% margin</small></div></div></Panel>}
-      {tab === "Products/Services" && <Panel title="Products and services" description="Add or remove products and services."><DataTable columns={[{ key: "ProductName", label: "Product" }, { key: "BillingCode", label: "Billing Code" }, { key: "Quantity", label: "Qty" }, { key: "Mrc", label: "MRC", render: row => money(row.Mrc) }, { key: "Nrc", label: "NRC", render: row => money(row.Nrc) }, { key: "Cost", label: "Cost", render: row => money(row.Cost) }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => deleteOpportunityProduct(id, row.OpportunityProductId).then(() => listOpportunityProducts(id).then(setProducts))}>Remove</button></div> }]} rows={products} /></Panel>}
-      {tab === "Pricing" && <Panel title="Pricing" description="Pricing inputs and workflow."><DataTable columns={[{ key: "field", label: "Field" }, { key: "value", label: "Value" }]} rows={[{ id: 1, field: "Margin", value: `${opportunity.MarginPct || 0}%` }, { id: 2, field: "Serviceability", value: opportunity.ServiceSummary }, { id: 3, field: "Status", value: opportunity.ApprovalStatus }]} /></Panel>}
-      {tab === "Quotes" && <Panel title="Quotes" description="Quotes generated from this opportunity."><DataTable columns={[{ key: "QuoteNumber", label: "Quote" }, { key: "Status", label: "Status" }, { key: "TotalMrc", label: "MRC", render: row => money(row.TotalMrc) }, { key: "ApprovalStatus", label: "Approval" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId}`)}>Open Quote</button></div> }]} rows={quoteRows} /></Panel>}
-      {tab === "Activity/Notes" && <Panel title="Notes" description="Opportunity notes."><DataTable columns={[{ key: "NoteType", label: "Type" }, { key: "Note", label: "Note" }, { key: "CreatedBy", label: "Created By" }, { key: "CreatedAtUtc", label: "Created" }]} rows={notes} /></Panel>}
+      {tab === "Products/Services" && <Panel title="Products and services" description="Add, edit, or remove products and services." action={<Toolbar><button className="button" type="button" onClick={() => { setSelectedProduct(null); setProductModal(true); }}>Add Service</button></Toolbar>}><DataTable columns={[{ key: "ProductName", label: "Product" }, { key: "BillingCode", label: "Billing Code" }, { key: "Quantity", label: "Qty" }, { key: "Mrc", label: "MRC", render: row => money(row.Mrc) }, { key: "Nrc", label: "NRC", render: row => money(row.Nrc) }, { key: "Cost", label: "Cost", render: row => money(row.Cost) }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => { setSelectedProduct(row); setProductModal(true); }}>Edit</button><button className="link-button compact-action" type="button" onClick={async () => { await deleteOpportunityProduct(id, row.OpportunityProductId); setProducts(await listOpportunityProducts(id)); showToast("Service removed"); }}>Remove</button></div> }]} rows={products} /></Panel>}
+      {tab === "Pricing" && (
+        <>
+          <Panel title="Pricing" description="Pricing inputs, hierarchy, and reference billing data.">
+            <div className="field-grid">
+              <div className="mini-stat"><span>Margin</span><strong>{`${Number(opportunity.MarginPct || 0).toFixed(1)}%`}</strong><small>{opportunity.ApprovalStatus || "Open"}</small></div>
+              <div className="mini-stat"><span>Serviceability</span><strong>{opportunity.ServiceSummary || "Review"}</strong><small>{opportunity.LocationCount || 0} locations</small></div>
+              <div className="mini-stat"><span>Offers</span><strong>{offers.length}</strong><small>{promotions.length} promotions</small></div>
+              <div className="mini-stat"><span>Billing Codes</span><strong>{billingCodes.length}</strong><small>{billingElements.length} elements</small></div>
+            </div>
+          </Panel>
+          <Panel title="Product hierarchy" description="Reference hierarchy from billing data.">
+            <DataTable columns={[{ key: "ProductName", label: "Product" }, { key: "ProductCode", label: "Code" }, { key: "BillingCode", label: "Billing Code" }, { key: "HierarchyPath", label: "Hierarchy Path" }, { key: "DisplayOrder", label: "Order" }]} rows={billingHierarchy} />
+          </Panel>
+        </>
+      )}
+      {tab === "Quotes" && <Panel title="Quotes" description="Quotes generated from this opportunity." action={<Toolbar><button className="button" type="button" onClick={() => setQuoteModal(true)}>Generate Quote</button></Toolbar>}><DataTable columns={[{ key: "QuoteNumber", label: "Quote" }, { key: "Status", label: "Status" }, { key: "TotalMrc", label: "MRC", render: row => money(row.TotalMrc) }, { key: "ApprovalStatus", label: "Approval" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId}`)}>Open Quote</button></div> }]} rows={quoteRows} /></Panel>}
+      {tab === "Activity/Notes" && <Panel title="Notes and activity" description="Opportunity notes, call logs, and follow-ups." action={<Toolbar><button className="button" type="button" onClick={() => setActivityModal(true)}>Log Activity</button><button className="button" type="button" onClick={() => setNoteModal({ noteType: "General" })}>Add Note</button></Toolbar>}><DataTable columns={[{ key: "NoteType", label: "Type" }, { key: "Note", label: "Note" }, { key: "CreatedBy", label: "Created By" }, { key: "CreatedAtUtc", label: "Created" }]} rows={notes} /></Panel>}
       {tab === "Approvals" && <Panel title="Approvals" description="Approval routing is view-only by default."><DataTable columns={[{ key: "step", label: "Step" }, { key: "status", label: "Status" }, { key: "owner", label: "Owner" }]} rows={[{ id: 1, step: "Pricing", status: opportunity.ApprovalStatus || "Draft", owner: opportunity.OwnerName }, { id: 2, step: "Sales Manager", status: "Pending", owner: "Sales Manager" }, { id: 3, step: "Finance", status: "Pending", owner: "Finance" }]} /></Panel>}
-      {tab === "Contracts" && <Panel title="Contracts" description="Contracts generated from approved quotes."><DataTable columns={[{ key: "ContractNumber", label: "Contract" }, { key: "Status", label: "Status" }, { key: "ContractName", label: "Name" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId}`)}>Open Quote</button></div> }]} rows={[]} /></Panel>}
+      {tab === "Contracts" && <Panel title="Contracts" description="Contracts generated from approved quotes."><DataTable columns={[{ key: "ContractNumber", label: "Contract" }, { key: "Status", label: "Status" }, { key: "ContractName", label: "Name" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/contract/${row.ContractId}`)}>Open Contract</button><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId}`)}>Open Quote</button></div> }]} rows={contracts} /></Panel>}
 
       {editModal && (
         <DataDialog
@@ -849,23 +932,66 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
       )}
       {productModal && (
         <DataDialog
-          open={productModal}
-          onClose={() => setProductModal(false)}
-          title="Add service"
-          subtitle="Attach product/service to opportunity."
+          open={Boolean(productModal)}
+          onClose={() => { setProductModal(null); setSelectedProduct(null); }}
+          title={selectedProduct ? "Edit service" : "Add service"}
+          subtitle="Attach product and billing details to the opportunity."
           fields={[
             { key: "productName", label: "Product Name" },
-            { key: "billingCode", label: "Billing Code" },
+            { key: "billingCode", label: "Billing Code", type: "select", options: billingCodes.map(item => item.Code).filter(Boolean) },
             { key: "quantity", label: "Quantity" },
             { key: "mrc", label: "MRC" },
             { key: "nrc", label: "NRC" },
-            { key: "cost", label: "Cost" }
+            { key: "cost", label: "Cost" },
+            { key: "marginPct", label: "Margin %" }
           ]}
-          values={{ productName: "", billingCode: "", quantity: 1, mrc: 0, nrc: 0, cost: 0 }}
-          onSave={async values => { await createOpportunityProduct(id, values); setProducts(await listOpportunityProducts(id)); showToast("Service added"); setProductModal(false); }}
+          values={selectedProduct ? {
+            productName: selectedProduct.ProductName,
+            billingCode: selectedProduct.BillingCode,
+            quantity: selectedProduct.Quantity,
+            mrc: selectedProduct.Mrc,
+            nrc: selectedProduct.Nrc,
+            cost: selectedProduct.Cost,
+            marginPct: selectedProduct.MarginPct
+          } : { productName: "", billingCode: billingCodes[0]?.Code || "", quantity: 1, mrc: 0, nrc: 0, cost: 0, marginPct: opportunity.MarginPct || 30 }}
+          onSave={async values => {
+            if (selectedProduct) {
+              await updateOpportunityProduct(id, selectedProduct.OpportunityProductId, values);
+            } else {
+              await createOpportunityProduct(id, values);
+            }
+            setProducts(await listOpportunityProducts(id));
+            showToast(selectedProduct ? "Service updated" : "Service added");
+            setProductModal(null);
+            setSelectedProduct(null);
+          }}
         />
       )}
-      {noteModal && <></>}
+      {noteModal && (
+        <DataDialog
+          open={Boolean(noteModal)}
+          onClose={() => setNoteModal(null)}
+          title={noteModal.noteType === "Activity" ? "Log activity" : "Add note"}
+          subtitle="Persist notes and call activity to Azure SQL."
+          fields={[
+            { key: "noteType", label: "Type", type: "select", options: ["General", "Activity", "Pricing", "Approval", "Customer"] },
+            { key: "note", label: "Note", type: "textarea" },
+            { key: "createdBy", label: "Created By" }
+          ]}
+          values={{ noteType: noteModal.noteType || "General", note: "", createdBy: "Admin" }}
+          onSave={async values => {
+            const payload = {
+              noteType: values.noteType,
+              note: values.note,
+              createdBy: values.createdBy
+            };
+            await createOpportunityNote(id, payload);
+            setNotes(await listOpportunityNotes(id));
+            showToast("Note saved");
+            setNoteModal(null);
+          }}
+        />
+      )}
       {quoteModal && (
         <DataDialog
           open={quoteModal}
@@ -903,23 +1029,21 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
           onSave={async values => { await checkServiceability({ opportunityId: id, customerNumber: opportunity.AccountNumberResolved || opportunity.AccountNumber, ...values }); showToast("Serviceability checked"); setServiceabilityModal(false); }}
         />
       )}
-      {selectedContract && (
-        <Modal
-          title={`Contract ${selectedContract.ContractNumber}`}
-          subtitle="Open PDF of contract and related records."
-          onClose={() => setSelectedContract(null)}
-          actions={(
-            <>
-              <button className="button" type="button" onClick={() => { showToast("Contract PDF opened"); setSelectedContract(null); }}>Open PDF</button>
-              <button className="ghost-button" type="button" onClick={() => setSelectedContract(null)}>Close</button>
-            </>
-          )}
-        >
-          <p>{selectedContract.ContractName}</p>
-          <p>Opportunity: {selectedContract.OpportunityName}</p>
-          <p>Quote: {selectedContract.QuoteNumber}</p>
-          <p>Status: {selectedContract.Status}</p>
-        </Modal>
+      {activityModal && (
+        <ActivityModal
+          context={{ type: "opportunity" }}
+          onClose={() => setActivityModal(false)}
+          onSave={async values => {
+            await createOpportunityNote(id, {
+              noteType: "Activity",
+              note: `${values.activityType} | Outcome: ${values.outcome} | ${values.notes}${values.nextStep ? ` | Next step: ${values.nextStep}` : ""}`,
+              createdBy: "Admin"
+            });
+            setNotes(await listOpportunityNotes(id));
+            showToast("Activity logged");
+            setActivityModal(false);
+          }}
+        />
       )}
     </>
   );
@@ -928,15 +1052,23 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
 export function SalesQuoteDetail({ id, setRoute, showToast }) {
   const [quote, setQuote] = useState(null);
   const [lineItems, setLineItems] = useState([]);
+  const [contracts, setContracts] = useState([]);
+  const [billingProducts, setBillingProducts] = useState([]);
+  const [billingCodes, setBillingCodes] = useState([]);
   const [tab, setTab] = useState("Summary");
   const [editModal, setEditModal] = useState(false);
   const [priceModal, setPriceModal] = useState(false);
   const [approvalModal, setApprovalModal] = useState(false);
   const [contractModal, setContractModal] = useState(false);
+  const [lineItemModal, setLineItemModal] = useState(null);
+  const [selectedLineItem, setSelectedLineItem] = useState(null);
 
   useEffect(() => {
     getQuote(id).then(setQuote);
     listQuoteLineItems(id).then(setLineItems);
+    listContracts().then(rows => setContracts(rows.filter(row => String(row.QuoteId) === String(id))));
+    listBillingProducts().then(setBillingProducts);
+    listBillingCodes().then(setBillingCodes);
   }, [id]);
 
   if (!quote) {
@@ -966,11 +1098,11 @@ export function SalesQuoteDetail({ id, setRoute, showToast }) {
         { label: "Line Items", value: lineItems.length, note: "Products and services" }
       ]} />
       <Tabs tabs={quoteTabs} active={tab} onChange={setTab} />
-      {tab === "Summary" && <Panel title="Quote summary" description="Commercial quote details."><DataTable columns={[{ key: "field", label: "Field" }, { key: "value", label: "Value" }]} rows={[{ id: 1, field: "Account", value: quote.AccountName }, { id: 2, field: "Opportunity", value: quote.OpportunityName }, { id: 3, field: "Status", value: quote.Status }, { id: 4, field: "Approval", value: quote.ApprovalStatus }]} /></Panel>}
-      {tab === "Line Items" && <Panel title="Line items" description="Products and services pulled from the opportunity."><DataTable columns={[{ key: "ProductName", label: "Product" }, { key: "BillingCode", label: "Billing Code" }, { key: "Quantity", label: "Qty" }, { key: "Mrc", label: "MRC", render: row => money(row.Mrc) }, { key: "Nrc", label: "NRC", render: row => money(row.Nrc) }, { key: "Cost", label: "Cost", render: row => money(row.Cost) }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={async () => { await deleteQuoteLineItem(id, row.QuoteLineItemId); setLineItems(await listQuoteLineItems(id)); }}>Remove</button></div> }]} rows={lineItems} /></Panel>}
-      {tab === "Pricing" && <Panel title="Pricing" description="Quote pricing and results."><div className="field-grid"><div className="mini-stat"><span>Total MRC</span><strong>{money(quote.TotalMrc)}</strong></div><div className="mini-stat"><span>Total NRC</span><strong>{money(quote.TotalNrc)}</strong></div><div className="mini-stat"><span>Margin</span><strong>{Number(quote.MarginPct || 0).toFixed(1)}%</strong></div><div className="mini-stat"><span>Approval</span><strong>{quote.ApprovalStatus}</strong></div></div></Panel>}
+      {tab === "Summary" && <Panel title="Quote summary" description="Commercial quote details." action={<Toolbar><button className="button" type="button" onClick={() => setLineItemModal({})}>Add Line Item</button></Toolbar>}><DataTable columns={[{ key: "field", label: "Field" }, { key: "value", label: "Value" }]} rows={[{ id: 1, field: "Account", value: quote.AccountName }, { id: 2, field: "Opportunity", value: quote.OpportunityName }, { id: 3, field: "Status", value: quote.Status }, { id: 4, field: "Approval", value: quote.ApprovalStatus }]} /></Panel>}
+      {tab === "Line Items" && <Panel title="Line items" description="Products and services pulled from the opportunity." action={<Toolbar><button className="button" type="button" onClick={() => { setSelectedLineItem(null); setLineItemModal({}); }}>Add Line Item</button></Toolbar>}><DataTable columns={[{ key: "ProductName", label: "Product" }, { key: "BillingCode", label: "Billing Code" }, { key: "Quantity", label: "Qty" }, { key: "Mrc", label: "MRC", render: row => money(row.Mrc) }, { key: "Nrc", label: "NRC", render: row => money(row.Nrc) }, { key: "Cost", label: "Cost", render: row => money(row.Cost) }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => { setSelectedLineItem(row); setLineItemModal(row); }}>Edit</button><button className="link-button compact-action" type="button" onClick={async () => { await deleteQuoteLineItem(id, row.QuoteLineItemId); setLineItems(await listQuoteLineItems(id)); showToast("Line item removed"); }}>Remove</button></div> }]} rows={lineItems} /></Panel>}
+      {tab === "Pricing" && <Panel title="Pricing" description="Quote pricing and results."><div className="field-grid"><div className="mini-stat"><span>Total MRC</span><strong>{money(quote.TotalMrc)}</strong></div><div className="mini-stat"><span>Total NRC</span><strong>{money(quote.TotalNrc)}</strong></div><div className="mini-stat"><span>Margin</span><strong>{Number(quote.MarginPct || 0).toFixed(1)}%</strong></div><div className="mini-stat"><span>Approval</span><strong>{quote.ApprovalStatus}</strong></div></div><Panel title="Billing references" description="Products and codes for pricing decisions."><DataTable columns={[{ key: "ProductName", label: "Product" }, { key: "ProductCode", label: "Code" }, { key: "BillingCode", label: "Billing Code" }]} rows={billingProducts} /></Panel></Panel>}
       {tab === "Approvals" && <Panel title="Approvals" description="Approval route for this quote."><DataTable columns={[{ key: "step", label: "Step" }, { key: "status", label: "Status" }, { key: "owner", label: "Owner" }]} rows={[{ id: 1, step: "Pricing", status: quote.ApprovalStatus, owner: "Pricing Desk" }, { id: 2, step: "Finance", status: quote.ApprovalStatus === "Approved" ? "Approved" : "Pending", owner: "Finance" }]} /></Panel>}
-      {tab === "Contract" && <Panel title="Contract" description="Contract generation after approval."><p>If approved, the backend will create a contract record automatically. Use the Contracts tab to review files and history.</p></Panel>}
+      {tab === "Contract" && <Panel title="Contract" description="Contract generation after approval."><DataTable columns={[{ key: "ContractNumber", label: "Contract" }, { key: "Status", label: "Status" }, { key: "ContractName", label: "Name" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/contract/${row.ContractId}`)}>Open Contract</button></div> }]} rows={contracts} /><p>If approved, the backend will create a contract record automatically. Use the Contracts tab to review files and history.</p></Panel>}
 
       {editModal && (
         <DataDialog
@@ -1037,6 +1169,196 @@ export function SalesQuoteDetail({ id, setRoute, showToast }) {
         >
           <p>This starts the order flow from the quote.</p>
         </Modal>
+      )}
+      {lineItemModal && (
+        <DataDialog
+          open={Boolean(lineItemModal)}
+          onClose={() => { setLineItemModal(null); setSelectedLineItem(null); }}
+          title={selectedLineItem ? "Edit line item" : "Add line item"}
+          subtitle="Attach product, billing, and pricing detail to the quote."
+          fields={[
+            { key: "productName", label: "Product Name", type: "select", options: billingProducts.map(item => item.ProductName).filter(Boolean) },
+            { key: "serviceName", label: "Service Name" },
+            { key: "billingCode", label: "Billing Code", type: "select", options: billingCodes.map(item => item.Code).filter(Boolean) },
+            { key: "lineType", label: "Line Type", type: "select", options: ["Recurring", "One-time", "Discount", "Tax", "Fee"] },
+            { key: "quantity", label: "Quantity" },
+            { key: "mrc", label: "MRC" },
+            { key: "nrc", label: "NRC" },
+            { key: "cost", label: "Cost" },
+            { key: "marginPct", label: "Margin %" },
+            { key: "discountPct", label: "Discount %" },
+            { key: "notes", label: "Notes", type: "textarea" }
+          ]}
+          values={selectedLineItem ? {
+            productName: selectedLineItem.ProductName,
+            serviceName: selectedLineItem.ServiceName,
+            billingCode: selectedLineItem.BillingCode,
+            lineType: selectedLineItem.LineType,
+            quantity: selectedLineItem.Quantity,
+            mrc: selectedLineItem.Mrc,
+            nrc: selectedLineItem.Nrc,
+            cost: selectedLineItem.Cost,
+            marginPct: selectedLineItem.MarginPct,
+            discountPct: selectedLineItem.DiscountPct,
+            notes: selectedLineItem.Notes
+          } : {
+            productName: billingProducts[0]?.ProductName || "",
+            serviceName: "",
+            billingCode: billingCodes[0]?.Code || "",
+            lineType: "Recurring",
+            quantity: 1,
+            mrc: 0,
+            nrc: 0,
+            cost: 0,
+            marginPct: quote.MarginPct || 30,
+            discountPct: quote.DiscountPct || 0,
+            notes: ""
+          }}
+          onSave={async values => {
+            if (selectedLineItem) {
+              await updateQuoteLineItem(id, selectedLineItem.QuoteLineItemId, values);
+            } else {
+              await createQuoteLineItem(id, values);
+            }
+            setLineItems(await listQuoteLineItems(id));
+            showToast(selectedLineItem ? "Line item updated" : "Line item added");
+            setLineItemModal(null);
+            setSelectedLineItem(null);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+export function SalesContractDetail({ id, setRoute, showToast }) {
+  const [contract, setContract] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [tab, setTab] = useState("Overview");
+  const [editModal, setEditModal] = useState(false);
+  const [fileModal, setFileModal] = useState(false);
+
+  useEffect(() => {
+    getContract(id).then(setContract);
+    listContractFiles(id).then(setFiles);
+    listContractHistory(id).then(setHistory);
+  }, [id]);
+
+  if (!contract) {
+    return (
+      <div className="content-shell">
+        <PageHeader title="Contract" description="Loading contract from Azure SQL..." />
+        <Panel title="Loading contract workspace" description="The page frame is ready while the record loads.">
+          <LoadingBars rows={4} />
+        </Panel>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <RecordHeader
+        breadcrumb={["Sales", "Contracts", contract.ContractNumber]}
+        title={contract.ContractName}
+        status={contract.Status}
+        subtitle={`${contract.AccountName || contract.OpportunityName || "Contract"} · ${contract.QuoteNumber || "No quote"} · ${contract.ContractNumber}`}
+        actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setFileModal(true)}>Upload File</button><button className="button" type="button" onClick={() => setEditModal(true)}>Edit Details</button><button className="button" type="button" onClick={() => contract.OpportunityId && setRoute(`details/opportunity/${contract.OpportunityId}`)}>Open Opportunity</button><button className="button" type="button" onClick={() => contract.QuoteId && setRoute(`details/quote/${contract.QuoteId}`)}>Open Quote</button></div>}
+      />
+      <SummaryStrip items={[
+        { label: "Opportunity", value: contract.OpportunityName || "N/A", note: contract.OpportunityNumber || contract.OpportunityId },
+        { label: "Quote", value: contract.QuoteNumber || "N/A", note: contract.Status },
+        { label: "Files", value: files.length, note: "Uploaded metadata" },
+        { label: "History", value: history.length, note: "Tracked events" }
+      ]} />
+      <Tabs tabs={contractTabs} active={tab} onChange={setTab} />
+      {tab === "Overview" && (
+        <Panel title="Contract overview" description="Linked commercial records and contract terms.">
+          <div className="field-grid">
+            <div className="mini-stat"><span>Account</span><strong>{contract.AccountName || "N/A"}</strong><small>Azure SQL contract</small></div>
+            <div className="mini-stat"><span>Opportunity</span><strong>{contract.OpportunityName || "N/A"}</strong><small>{contract.FileCount || 0} files</small></div>
+            <div className="mini-stat"><span>Quote</span><strong>{contract.QuoteNumber || "N/A"}</strong><small>{contract.Status}</small></div>
+            <div className="mini-stat"><span>Signed</span><strong>{pageDate(contract.SignedDate) || "Pending"}</strong><small>{contract.ContractNumber}</small></div>
+          </div>
+        </Panel>
+      )}
+      {tab === "Files" && (
+        <Panel title="Contract files" description="Upload and remove contract file metadata." action={<Toolbar><button className="button" type="button" onClick={() => setFileModal(true)}>Upload File</button></Toolbar>}>
+          <DataTable columns={[
+            { key: "FileName", label: "File" },
+            { key: "FileType", label: "Type" },
+            { key: "StorageUrl", label: "Storage URL" },
+            { key: "CreatedAtUtc", label: "Uploaded" },
+            { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => row.StorageUrl && window.open(row.StorageUrl, "_blank", "noopener,noreferrer")}>Open</button><button className="link-button compact-action" type="button" onClick={async () => { await deleteContractFile(id, row.ContractFileId); setFiles(await listContractFiles(id)); showToast("File metadata removed"); }}>Remove</button></div> }
+          ]} rows={files} />
+        </Panel>
+      )}
+      {tab === "History" && (
+        <Panel title="Contract history" description="Audit trail for contract activity.">
+          <DataTable columns={[
+            { key: "EventType", label: "Event" },
+            { key: "Notes", label: "Notes" },
+            { key: "CreatedBy", label: "Created By" },
+            { key: "CreatedAtUtc", label: "Created" }
+          ]} rows={history} />
+        </Panel>
+      )}
+      {tab === "Terms" && (
+        <Panel title="Terms" description="Contract terms stored in Azure SQL.">
+          <pre className="code-block">{JSON.stringify(parseJsonField(contract.TermsJson, {}), null, 2)}</pre>
+        </Panel>
+      )}
+      {editModal && (
+        <DataDialog
+          open={editModal}
+          onClose={() => setEditModal(false)}
+          title="Edit contract"
+          subtitle="Update contract name, status, and terms."
+          fields={[
+            { key: "ContractName", label: "Contract Name" },
+            { key: "Status", label: "Status" },
+            { key: "OpportunityId", label: "Opportunity ID" },
+            { key: "QuoteId", label: "Quote ID" },
+            { key: "SignedDate", label: "Signed Date" },
+            { key: "TermsJson", label: "Terms", type: "textarea" }
+          ]}
+          values={{
+            ...contract,
+            TermsJson: JSON.stringify(parseJsonField(contract.TermsJson, {}), null, 2)
+          }}
+          onSave={async values => {
+            await updateContract(id, {
+              ...values,
+              terms: parseJsonField(values.TermsJson, {})
+            });
+            setContract(await getContract(id));
+            showToast("Contract updated");
+            setEditModal(false);
+          }}
+        />
+      )}
+      {fileModal && (
+        <DataDialog
+          open={fileModal}
+          onClose={() => setFileModal(false)}
+          title="Upload contract file metadata"
+          subtitle="Store file metadata now; document storage can be wired later."
+          fields={[
+            { key: "fileName", label: "File Name" },
+            { key: "fileType", label: "File Type" },
+            { key: "storageUrl", label: "Storage URL" },
+            { key: "fileSizeBytes", label: "File Size (Bytes)" },
+            { key: "notes", label: "Notes", type: "textarea" }
+          ]}
+          values={{ fileName: "Contract.pdf", fileType: "application/pdf", storageUrl: "", fileSizeBytes: 0, notes: "" }}
+          onSave={async values => {
+            await createContractFile(id, values);
+            setFiles(await listContractFiles(id));
+            setHistory(await listContractHistory(id));
+            showToast("File metadata saved");
+            setFileModal(false);
+          }}
+        />
       )}
     </>
   );

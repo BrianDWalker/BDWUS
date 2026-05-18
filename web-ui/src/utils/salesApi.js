@@ -22,6 +22,7 @@ async function requestJson(path, options = {}) {
 }
 
 export const getSalesDashboard = () => requestJson("/api/sales/dashboard");
+export const getSalesBootstrap = () => requestJson("/api/sales/bootstrap");
 
 export const listLeads = params => requestJson(`/api/sales/leads${params ? `?${new URLSearchParams(params)}` : ""}`);
 export const getLead = id => requestJson(`/api/sales/leads/${id}`);
@@ -95,4 +96,3 @@ export const listOffers = () => requestJson("/api/billing/offers");
 export const listPromotions = () => requestJson("/api/billing/promotions");
 export const listRatePlans = () => requestJson("/api/billing/rate-plans");
 export const checkServiceability = payload => requestJson("/api/sales/serviceability/check", { method: "POST", body: JSON.stringify(payload) });
-
