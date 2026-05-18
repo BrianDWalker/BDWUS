@@ -24,6 +24,10 @@ SQL_DIR = Path(__file__).resolve().parents[2] / "sql"
 SCHEMA_FILE = SQL_DIR / "sales_schema.sql"
 SCHEMA_READY = False
 SCHEMA_LOCK = threading.Lock()
+BOOTSTRAP_CACHE: dict[str, Any] | None = None
+BOOTSTRAP_CACHE_AT: datetime | None = None
+BOOTSTRAP_CACHE_LOCK = threading.Lock()
+BOOTSTRAP_CACHE_TTL_SECONDS = 30
 
 
 def utc_now() -> datetime:
@@ -91,6 +95,7 @@ def execute(sql: str, params: tuple[Any, ...] = ()) -> None:
         cursor = conn.cursor()
         cursor.execute(sql, params)
         conn.commit()
+        invalidate_bootstrap_cache()
     finally:
         conn.close()
 
@@ -129,6 +134,30 @@ def ensure_sales_storage() -> None:
             SCHEMA_READY = True
         finally:
             conn.close()
+
+
+def invalidate_bootstrap_cache() -> None:
+    global BOOTSTRAP_CACHE, BOOTSTRAP_CACHE_AT
+    with BOOTSTRAP_CACHE_LOCK:
+        BOOTSTRAP_CACHE = None
+        BOOTSTRAP_CACHE_AT = None
+
+
+def get_cached_bootstrap() -> dict[str, Any] | None:
+    with BOOTSTRAP_CACHE_LOCK:
+        if BOOTSTRAP_CACHE is None or BOOTSTRAP_CACHE_AT is None:
+            return None
+        age = (utc_now() - BOOTSTRAP_CACHE_AT).total_seconds()
+        if age > BOOTSTRAP_CACHE_TTL_SECONDS:
+            return None
+        return BOOTSTRAP_CACHE
+
+
+def set_cached_bootstrap(bootstrap: dict[str, Any]) -> None:
+    global BOOTSTRAP_CACHE, BOOTSTRAP_CACHE_AT
+    with BOOTSTRAP_CACHE_LOCK:
+        BOOTSTRAP_CACHE = bootstrap
+        BOOTSTRAP_CACHE_AT = utc_now()
 
 
 def table_has_rows(table_name: str) -> bool:
@@ -870,6 +899,10 @@ def build_pricing_context_from_quote(quote: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def active_lead_filter_sql() -> str:
+    return "Status IN ('Open', 'Active')"
+
+
 @router.get("/dashboard")
 def sales_dashboard():
     ensure_sales_storage()
@@ -881,12 +914,15 @@ def sales_dashboard():
 def sales_bootstrap():
     ensure_sales_storage()
     seed_if_empty()
+    cached = get_cached_bootstrap()
+    if cached is not None:
+        return cached
     conn = get_sql_connection()
     try:
         cursor = conn.cursor()
         bootstrap = {
             "dashboard": fetch_one_on_cursor(cursor, "SELECT TOP 1 * FROM ms.vSalesModuleDashboard") or {},
-            "leads": fetch_all_on_cursor(cursor, "SELECT * FROM ms.vLeadDetail ORDER BY CreatedAtUtc DESC"),
+            "leads": fetch_all_on_cursor(cursor, f"SELECT * FROM ms.vLeadDetail WHERE {active_lead_filter_sql()} ORDER BY CreatedAtUtc DESC"),
             "accounts": fetch_all_on_cursor(cursor, "SELECT * FROM ms.Accounts WHERE IsDeleted = 0 ORDER BY CreatedAtUtc DESC"),
             "opportunities": fetch_all_on_cursor(cursor, "SELECT * FROM ms.vOpportunityDetail ORDER BY CreatedAtUtc DESC"),
             "quotes": fetch_all_on_cursor(cursor, "SELECT * FROM ms.vQuoteDetail ORDER BY CreatedAtUtc DESC"),
@@ -902,6 +938,7 @@ def sales_bootstrap():
             "promotions": fetch_all_on_cursor(cursor, "SELECT * FROM billing.Promotions WHERE IsDeleted = 0 ORDER BY PromotionName"),
             "ratePlans": fetch_all_on_cursor(cursor, "SELECT * FROM billing.RatePlans WHERE IsDeleted = 0 ORDER BY PlanName"),
         }
+        set_cached_bootstrap(bootstrap)
         return bootstrap
     finally:
         conn.close()
@@ -913,6 +950,8 @@ def list_leads(q: str | None = None, status: str | None = None):
     seed_if_empty()
     query = "SELECT * FROM ms.vLeadDetail WHERE 1=1"
     params: list[Any] = []
+    if not status or status == "All":
+        query += f" AND {active_lead_filter_sql()}"
     if q:
         query += " AND (LeadNumber LIKE ? OR AccountName LIKE ? OR ProductInterest LIKE ? OR OwnerName LIKE ?)"
         like = f"%{q}%"
@@ -1065,6 +1104,7 @@ def convert_lead(lead_id: uuid.UUID, payload: dict[str, Any]):
             ),
         )
         conn.commit()
+        invalidate_bootstrap_cache()
         return get_view_row("ms.vOpportunityDetail", "OpportunityId", opportunity_id)
     except Exception:
         conn.rollback()

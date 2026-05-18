@@ -62,10 +62,13 @@ import {
 } from "../utils/salesApi";
 
 const salesTabs = ["Leads", "Opportunities", "Accounts", "Custom Pricing", "Approvals", "Contracts"];
-const opportunityTabs = ["Overview", "Products/Services", "Pricing", "Quotes", "Activity/Notes", "Approvals", "Contracts"];
+const opportunityTabs = ["Overview", "Products/Services", "Pricing", "Quotes", "Activity", "Notes", "Approvals", "Contracts"];
 const quoteTabs = ["Summary", "Line Items", "Pricing", "Approvals", "Contract"];
 const contractTabs = ["Overview", "Files", "History", "Terms"];
-const leadTabs = ["Qualification", "Customer Info", "Activity"];
+const leadTabs = ["Qualification & Customer Info", "Activity"];
+const leadCloseStatuses = ["Closed Loss", "Closed No Sale", "Cancel Lead"];
+const leadVisibleStatuses = new Set(["Open", "Active"]);
+const detailTopActions = ["Back", "Close"];
 
 const owners = ["Sarah Johnson", "Tia Brooks", "Sam Malik", "Ari Fox", "Maya Ortiz"];
 const stages = ["Open", "Discovery", "Solutioning", "Quote", "Approval", "Closed Won", "Closed Lost"];
@@ -146,7 +149,7 @@ function Modal({ title, subtitle, children, actions, onClose }) {
 
 function Tabs({ tabs, active, onChange }) {
   return (
-    <div className="record-tabs" role="tablist">
+    <div className="record-tabs sales-record-tabs" role="tablist">
       {tabs.map(tab => (
         <button type="button" key={tab} className={tab === active ? "active" : ""} onClick={() => onChange(tab)}>{tab}</button>
       ))}
@@ -163,8 +166,17 @@ function SearchBox({ value, onChange, placeholder }) {
   );
 }
 
-function Toolbar({ children }) {
-  return <div className="module-toolbar sales-tab-toolbar">{children}</div>;
+function Toolbar({ children, className = "" }) {
+  return <div className={`module-toolbar sales-tab-toolbar ${className}`.trim()}>{children}</div>;
+}
+
+function ActionButton({ icon, children, className = "button", ...props }) {
+  return (
+    <button className={className} type="button" {...props}>
+      {icon ? <Icon name={icon} className="button-icon" /> : null}
+      <span>{children}</span>
+    </button>
+  );
 }
 
 function RecordHeader({ breadcrumb, title, status, subtitle, actions, meta }) {
@@ -196,6 +208,10 @@ function SummaryStrip({ items }) {
       ))}
     </section>
   );
+}
+
+function detailBack(setRoute) {
+  setRoute("sales");
 }
 
 function LoadingBars({ rows = 3 }) {
@@ -373,6 +389,7 @@ export function SalesModule({ setRoute, showToast }) {
   const loading = state.loading;
   const [tab, setTab] = useState("Leads");
   const [query, setQuery] = useState("");
+  const [leadStatus, setLeadStatus] = useState("All statuses");
   const [stage, setStage] = useState("All stages");
   const [owner, setOwner] = useState("All owners");
   const [segment, setSegment] = useState("All segments");
@@ -404,7 +421,14 @@ export function SalesModule({ setRoute, showToast }) {
   const promotions = state.promotions || [];
   const ratePlans = state.ratePlans || [];
 
-  const filteredLeads = leads.filter(item => matchAny(item, query, [r => fieldValue(r, "LeadNumber"), r => fieldValue(r, "AccountNameResolved", "AccountName"), r => fieldValue(r, "ProductInterest"), r => fieldValue(r, "OwnerName")]) && (stage === "All stages" || fieldValue(item, "Qualification", "Status") === stage));
+  const filteredLeads = leads.filter(item => {
+    const rowStatus = String(fieldValue(item, "Status")).trim();
+    const rowQualification = String(fieldValue(item, "Qualification")).trim();
+    const isVisible = leadVisibleStatuses.has(rowStatus) || leadVisibleStatuses.has(rowQualification);
+    return isVisible
+      && matchAny(item, query, [r => fieldValue(r, "LeadNumber"), r => fieldValue(r, "AccountNameResolved", "AccountName"), r => fieldValue(r, "ProductInterest"), r => fieldValue(r, "OwnerName")])
+      && (leadStatus === "All statuses" || rowStatus === leadStatus);
+  });
   const filteredOpps = opportunities.filter(item => matchAny(item, query, [r => fieldValue(r, "OpportunityNumber"), r => fieldValue(r, "OpportunityName"), r => fieldValue(r, "AccountNameResolved"), r => fieldValue(r, "ProductSummary"), r => fieldValue(r, "OwnerName")]) && (stage === "All stages" || fieldValue(item, "Stage") === stage) && (owner === "All owners" || fieldValue(item, "OwnerName") === owner));
   const filteredAccounts = accounts.filter(item => matchAny(item, query, [r => fieldValue(r, "AccountNumber"), r => fieldValue(r, "AccountName"), r => fieldValue(r, "Segment"), r => fieldValue(r, "Region")]) && (segment === "All segments" || fieldValue(item, "Segment") === segment));
   const filteredQuotes = quotes.filter(item => matchAny(item, query, [r => fieldValue(r, "QuoteNumber"), r => fieldValue(r, "AccountName"), r => fieldValue(r, "OpportunityName")]) && (status === "All statuses" || fieldValue(item, "Status") === status));
@@ -474,9 +498,15 @@ export function SalesModule({ setRoute, showToast }) {
       <PageHeader
         title="Sales"
         description="Database-backed telecom sales, pricing, approvals, and contracts."
-        actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setNewLead(true)}>New Lead</button><button className="button" type="button" onClick={() => setNewOpportunity(true)}>New Opportunity</button></div>}
+        actions={<div className="module-toolbar sales-header-actions"><ActionButton icon="leads" onClick={() => setNewLead(true)}>New Lead</ActionButton><ActionButton icon="opportunities" onClick={() => setNewOpportunity(true)}>New Opportunity</ActionButton></div>}
       />
-      <WorkQueue loading={loading} warnings={queueWarnings} leads={leads} quotes={quotes} approvals={approvals} contracts={contracts} setRoute={setRoute} />
+      {queueWarnings.length ? (
+        <Panel title="Sales sync status" description="Azure SQL connectivity and workspace loading status." className="sales-warning-panel">
+          <div className="sales-warning-stack">
+            {queueWarnings.map(warning => <div key={warning} className="sales-warning-item">{warning}</div>)}
+          </div>
+        </Panel>
+      ) : null}
       <SummaryStrip items={[
         { label: "Leads", value: loading ? "..." : leads.length, note: "SQL-backed records" },
         { label: "Opportunities", value: loading ? "..." : opportunities.length, note: "Pipeline records" },
@@ -485,7 +515,7 @@ export function SalesModule({ setRoute, showToast }) {
       ]} />
       <Tabs tabs={salesTabs} active={tab} onChange={setTab} />
       {tab === "Leads" && (
-        <Panel title="Leads" description="Lead qualification, activities, and conversion." action={<Toolbar><SearchBox value={query} onChange={setQuery} placeholder="Search leads" /><label className="inline-search"><Icon name="workflow" className="button-icon" /><select value={stage} onChange={event => setStage(event.target.value)}>{["All stages", "Open", "Qualified", "Converted"].map(option => <option key={option}>{option}</option>)}</select></label></Toolbar>}>
+        <Panel title="Leads" description="Lead qualification, activities, and conversion." action={<Toolbar><SearchBox value={query} onChange={setQuery} placeholder="Search leads" /><label className="inline-search"><Icon name="workflow" className="button-icon" /><select value={leadStatus} onChange={event => setLeadStatus(event.target.value)}>{["All statuses", "Open", "Active"].map(option => <option key={option}>{option}</option>)}</select></label></Toolbar>}>
           {loading ? <TableLoadingState columns={leadColumns} /> : <SalesTable columns={leadColumns} rows={filteredLeads} />}
         </Panel>
       )}
@@ -500,7 +530,7 @@ export function SalesModule({ setRoute, showToast }) {
         </Panel>
       )}
       {tab === "Custom Pricing" && (
-        <Panel title="Custom Pricing" description="Review custom pricing requests and quote overrides." action={<Toolbar><button className="button" type="button" onClick={() => setSelectedCustomPricing({ Status: "Draft", RequestedBy: "Admin" })}>New Request</button><SearchBox value={query} onChange={setQuery} placeholder="Search custom pricing" /><label className="inline-search"><Icon name="workflow" className="button-icon" /><select value={status} onChange={event => setStatus(event.target.value)}>{["All statuses", "Draft", "Submitted", "Approved", "Rejected"].map(option => <option key={option}>{option}</option>)}</select></label></Toolbar>}>
+        <Panel title="Custom Pricing" description="Review custom pricing requests and quote overrides." action={<Toolbar><SearchBox value={query} onChange={setQuery} placeholder="Search custom pricing" /><label className="inline-search"><Icon name="workflow" className="button-icon" /><select value={status} onChange={event => setStatus(event.target.value)}>{["All statuses", "Draft", "Submitted", "Approved", "Rejected"].map(option => <option key={option}>{option}</option>)}</select></label></Toolbar>}>
           {loading ? <TableLoadingState columns={[{ key: "RequestNumber", label: "Request" }, { key: "Status", label: "Status" }, { key: "RequestedBy", label: "Requested By" }, { key: "Reason", label: "Reason" }]} /> : <SalesTable columns={[{ key: "RequestNumber", label: "Request" }, { key: "Status", label: "Status" }, { key: "RequestedBy", label: "Requested By" }, { key: "Reason", label: "Reason" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setSelectedCustomPricing(row)}>Review</button></div> }]} rows={filteredCustomPricing} />}
         </Panel>
       )}
@@ -740,13 +770,58 @@ function ActivityModal({ context, onClose, onSave }) {
   );
 }
 
+function LeadCloseModal({ onClose, onSave }) {
+  return (
+    <Modal
+      title="Close lead"
+      subtitle="Select the final lead status before closing it in Azure SQL."
+      onClose={onClose}
+      actions={(
+        <button className="ghost-button" type="button" onClick={onClose}>Cancel</button>
+      )}
+    >
+      <div className="sales-close-options">
+        {leadCloseStatuses.map(status => (
+          <button key={status} className="sales-close-option" type="button" onClick={() => onSave(status)}>
+            <strong>{status}</strong>
+            <span>Update the lead status and remove it from the active sales view.</span>
+          </button>
+        ))}
+      </div>
+    </Modal>
+  );
+}
+
+function OpportunityCloseModal({ onClose, onSave }) {
+  return (
+    <Modal
+      title="Close opportunity"
+      subtitle="Set the final opportunity status in Azure SQL."
+      onClose={onClose}
+      actions={(
+        <button className="ghost-button" type="button" onClick={onClose}>Cancel</button>
+      )}
+    >
+      <div className="sales-close-options">
+        {["Closed Won", "Closed Lost", "Closed Cancelled"].map(status => (
+          <button key={status} className="sales-close-option" type="button" onClick={() => onSave(status)}>
+            <strong>{status}</strong>
+            <span>Persist the opportunity outcome and keep the record for reporting.</span>
+          </button>
+        ))}
+      </div>
+    </Modal>
+  );
+}
+
 export function SalesLeadDetail({ id, setRoute, showToast }) {
   const [lead, setLead] = useState(null);
   const [activities, setActivities] = useState([]);
-  const [tab, setTab] = useState("Qualification");
+  const [tab, setTab] = useState("Qualification & Customer Info");
   const [editModal, setEditModal] = useState(false);
   const [activityModal, setActivityModal] = useState(false);
   const [convertModal, setConvertModal] = useState(false);
+  const [closeModal, setCloseModal] = useState(false);
 
   useEffect(() => {
     getLead(id).then(setLead);
@@ -771,7 +846,7 @@ export function SalesLeadDetail({ id, setRoute, showToast }) {
         title={lead.AccountName}
         status={lead.Status}
         subtitle={`${lead.Source} · ${lead.ProductInterest} · ${money(lead.EstimatedValue)} · ${lead.OwnerName}`}
-        actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setActivityModal(true)}>Log Activity</button><button className="button" type="button" onClick={() => setEditModal(true)}>Edit Lead</button><button className="button" type="button" onClick={() => setConvertModal(true)}>Convert</button></div>}
+        actions={<div className="module-toolbar sales-header-actions"><ActionButton icon="workflow" onClick={() => detailBack(setRoute)}>Back</ActionButton><ActionButton icon="close" onClick={() => setCloseModal(true)}>Close</ActionButton><ActionButton icon="leads" onClick={() => setConvertModal(true)}>Convert</ActionButton></div>}
       />
       <SummaryStrip items={[
         { label: "Qualification", value: lead.Qualification || "Open", note: "Lead status" },
@@ -780,9 +855,65 @@ export function SalesLeadDetail({ id, setRoute, showToast }) {
         { label: "Activity Count", value: activities.length, note: "Logged interactions" }
       ]} />
       <Tabs tabs={leadTabs} active={tab} onChange={setTab} />
-      {tab === "Qualification" && <Panel title="Lead overview" description="Core lead details and general qualification status."><div className="field-grid"><div className="mini-stat"><span>Account</span><strong>{lead.AccountName}</strong><small>{lead.CustomerNumber}</small></div><div className="mini-stat"><span>Source</span><strong>{lead.Source}</strong><small>{lead.Qualification}</small></div><div className="mini-stat"><span>Interest</span><strong>{lead.ProductInterest}</strong><small>{firstArray(lead.ServiceNeedsJson).join(", ")}</small></div></div></Panel>}
-      {tab === "Customer Info" && <Panel title="Customer information" description="General customer information and services that could be obtained."><DataTable columns={[{ key: "field", label: "Field" }, { key: "value", label: "Value" }]} rows={[{ id: 1, field: "Customer Number", value: lead.CustomerNumber }, { id: 2, field: "Customer Name", value: lead.CustomerName }, { id: 3, field: "Region", value: lead.Region }, { id: 4, field: "Billing Profile", value: lead.BillingProfile }, { id: 5, field: "Customer Type", value: lead.CustomerType }]} /></Panel>}
-      {tab === "Activity" && <Panel title="Activity" description="Lead touchpoints and follow-ups."><DataTable columns={[{ key: "ActivityDate", label: "Date", render: row => pageDate(row.ActivityDate) }, { key: "ActivityType", label: "Type" }, { key: "Outcome", label: "Outcome" }, { key: "Notes", label: "Notes" }, { key: "NextStep", label: "Next Step" }]} rows={activities} /></Panel>}
+      {tab === "Qualification & Customer Info" && (
+        <Panel
+          title="Lead overview"
+          description="Core lead details, customer context, and service needs."
+          action={<Toolbar><ActionButton icon="workflow" onClick={() => setEditModal(true)}>Edit</ActionButton></Toolbar>}
+        >
+          <div className="sales-detail-summary">
+            <div className="sales-detail-card">
+              <span>Lead status</span>
+              <strong>{lead.Qualification || "Open"}</strong>
+              <small>{lead.Status || "Open"}</small>
+            </div>
+            <div className="sales-detail-card">
+              <span>Customer</span>
+              <strong>{lead.CustomerName || lead.AccountName}</strong>
+              <small>{lead.CustomerNumber || "No customer number"}</small>
+            </div>
+            <div className="sales-detail-card">
+              <span>Products</span>
+              <strong>{lead.ProductInterest || "N/A"}</strong>
+              <small>{firstArray(lead.ServiceNeedsJson).join(", ") || "Service needs not captured yet"}</small>
+            </div>
+            <div className="sales-detail-card">
+              <span>Value</span>
+              <strong>{money(lead.EstimatedValue)}</strong>
+              <small>{lead.OwnerName}</small>
+            </div>
+          </div>
+          <div className="sales-detail-grid">
+            <div className="sales-detail-panel">
+              <h3>Qualification</h3>
+              <dl className="sales-detail-dl">
+                <div><dt>Status</dt><dd>{lead.Status}</dd></div>
+                <div><dt>Qualification</dt><dd>{lead.Qualification}</dd></div>
+                <div><dt>Source</dt><dd>{lead.Source}</dd></div>
+                <div><dt>Owner</dt><dd>{lead.OwnerName}</dd></div>
+              </dl>
+            </div>
+            <div className="sales-detail-panel">
+              <h3>Customer information</h3>
+              <dl className="sales-detail-dl">
+                <div><dt>Customer Number</dt><dd>{lead.CustomerNumber}</dd></div>
+                <div><dt>Region</dt><dd>{lead.Region || "N/A"}</dd></div>
+                <div><dt>Billing Profile</dt><dd>{lead.BillingProfile || "N/A"}</dd></div>
+                <div><dt>Customer Type</dt><dd>{lead.CustomerType || "N/A"}</dd></div>
+              </dl>
+            </div>
+          </div>
+        </Panel>
+      )}
+      {tab === "Activity" && (
+        <Panel
+          title="Activity"
+          description="Lead touchpoints and follow-ups."
+          action={<Toolbar><ActionButton icon="activity" onClick={() => setActivityModal(true)}>Log Activity</ActionButton></Toolbar>}
+        >
+          <DataTable columns={[{ key: "ActivityDate", label: "Date", render: row => pageDate(row.ActivityDate) }, { key: "ActivityType", label: "Type" }, { key: "Outcome", label: "Outcome" }, { key: "Notes", label: "Notes" }, { key: "NextStep", label: "Next Step" }]} rows={activities} />
+        </Panel>
+      )}
 
       {editModal && (
         <DataDialog
@@ -822,6 +953,19 @@ export function SalesLeadDetail({ id, setRoute, showToast }) {
 
       {activityModal && <ActivityModal context={{ type: "lead" }} onClose={() => setActivityModal(false)} onSave={async values => { await createLeadActivity(id, values); setActivities(await listLeadActivities(id)); showToast("Lead activity logged"); setActivityModal(false); }} />}
       {convertModal && <LeadConvertModal lead={lead} onClose={() => setConvertModal(false)} onSave={async values => { await convertLead(id, values); showToast("Lead converted"); setConvertModal(false); setRoute("sales"); }} />}
+      {closeModal && (
+        <LeadCloseModal
+          onClose={() => setCloseModal(false)}
+          onSave={async status => {
+            await updateLead(id, { status, qualification: status });
+            const updated = await getLead(id);
+            setLead(updated);
+            showToast(`Lead marked ${status}`);
+            setCloseModal(false);
+            setRoute("sales");
+          }}
+        />
+      )}
     </>
   );
 }
@@ -846,7 +990,9 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [noteModal, setNoteModal] = useState(null);
   const [quoteModal, setQuoteModal] = useState(false);
+  const [quoteMode, setQuoteMode] = useState("Custom");
   const [serviceabilityModal, setServiceabilityModal] = useState(false);
+  const [closeModal, setCloseModal] = useState(false);
 
   useEffect(() => {
     getOpportunity(id).then(setOpportunity);
@@ -862,6 +1008,20 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
     listPromotions().then(setPromotions);
     listRatePlans().then(setRatePlans);
   }, [id]);
+
+  const hierarchyRows = products.map(product => {
+    const billingProduct = billingProducts.find(item => item.ProductName === product.ProductName || item.BillingCode === product.BillingCode);
+    const billingCode = billingCodes.find(item => item.Code === product.BillingCode);
+    const billingElement = billingElements.find(item => String(item.BillingCode) === String(product.BillingCode) || String(item.BillingCode) === String(billingCode?.Code));
+    return {
+      ...product,
+      productType: billingProduct?.Category || billingProduct?.ServiceCategory || "Service",
+      billingName: billingCode?.Description || billingElement?.ElementName || "Billing reference",
+      totalValue: Number(product.Mrc || 0) + Number(product.Nrc || 0)
+    };
+  });
+  const activityRows = notes.filter(item => String(item.NoteType || "").toLowerCase() === "activity");
+  const generalNotes = notes.filter(item => String(item.NoteType || "").toLowerCase() !== "activity");
 
   if (!opportunity) {
     return (
@@ -881,7 +1041,7 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
         title={opportunity.OpportunityName}
         status={opportunity.Stage}
         subtitle={`${opportunity.AccountNameResolved || opportunity.AccountName} · ${money(opportunity.EstimatedValue)} · ${opportunity.OwnerName}`}
-        actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setActivityModal(true)}>Log Activity</button><button className="button" type="button" onClick={() => setNoteModal({ noteType: "General" })}>Add Note</button><button className="button" type="button" onClick={() => setEditModal(true)}>Edit Details</button><button className="button" type="button" onClick={() => { setSelectedProduct(null); setProductModal(true); }}>Add Service</button><button className="button" type="button" onClick={() => setQuoteModal(true)}>Generate Quote</button><button className="button" type="button" onClick={() => setServiceabilityModal(true)}>Run Address Check</button></div>}
+        actions={<div className="module-toolbar sales-header-actions"><ActionButton icon="workflow" onClick={() => detailBack(setRoute)}>Back</ActionButton><ActionButton icon="close" onClick={() => setCloseModal(true)}>Close</ActionButton><ActionButton icon="orders" onClick={() => setRoute("orders")}>Order</ActionButton></div>}
       />
       <SummaryStrip items={[
         { label: "Account", value: opportunity.AccountNameResolved || opportunity.AccountName, note: opportunity.AccountNumberResolved || opportunity.AccountNumber },
@@ -890,25 +1050,147 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
         { label: "Quotes", value: quoteRows.length, note: "Linked quotes" }
       ]} />
       <Tabs tabs={opportunityTabs} active={tab} onChange={setTab} />
-      {tab === "Overview" && <Panel title="Opportunity overview" description="SQL-backed opportunity record."><div className="field-grid"><div className="mini-stat"><span>Account</span><strong>{opportunity.AccountNameResolved || opportunity.AccountName}</strong><small>{opportunity.Region}</small></div><div className="mini-stat"><span>Stage</span><strong>{opportunity.Stage}</strong><small>{opportunity.Status}</small></div><div className="mini-stat"><span>Value</span><strong>{money(opportunity.EstimatedValue)}</strong><small>{opportunity.MarginPct}% margin</small></div></div></Panel>}
-      {tab === "Products/Services" && <Panel title="Products and services" description="Add, edit, or remove products and services." action={<Toolbar><button className="button" type="button" onClick={() => { setSelectedProduct(null); setProductModal(true); }}>Add Service</button></Toolbar>}><DataTable columns={[{ key: "ProductName", label: "Product" }, { key: "BillingCode", label: "Billing Code" }, { key: "Quantity", label: "Qty" }, { key: "Mrc", label: "MRC", render: row => money(row.Mrc) }, { key: "Nrc", label: "NRC", render: row => money(row.Nrc) }, { key: "Cost", label: "Cost", render: row => money(row.Cost) }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => { setSelectedProduct(row); setProductModal(true); }}>Edit</button><button className="link-button compact-action" type="button" onClick={async () => { await deleteOpportunityProduct(id, row.OpportunityProductId); setProducts(await listOpportunityProducts(id)); showToast("Service removed"); }}>Remove</button></div> }]} rows={products} /></Panel>}
+      {tab === "Overview" && (
+        <Panel
+          title="Opportunity overview"
+          description="SQL-backed opportunity record."
+          action={<Toolbar><ActionButton icon="workflow" onClick={() => setEditModal(true)}>Edit</ActionButton></Toolbar>}
+        >
+          <div className="sales-overview-grid">
+            <div className="sales-overview-main">
+              <div className="sales-overview-hero">
+                <div className="sales-overview-hero-copy">
+                  <span>Commercial snapshot</span>
+                  <h3>{opportunity.AccountNameResolved || opportunity.AccountName}</h3>
+                  <p>{opportunity.ServiceSummary || opportunity.ProductSummary || "Opportunity summary captured in Azure SQL."}</p>
+                </div>
+                <div className="sales-overview-hero-stats">
+                  <div>
+                    <span>Stage</span>
+                    <strong>{opportunity.Stage}</strong>
+                  </div>
+                  <div>
+                    <span>Value</span>
+                    <strong>{money(opportunity.EstimatedValue)}</strong>
+                  </div>
+                  <div>
+                    <span>Margin</span>
+                    <strong>{`${Number(opportunity.MarginPct || 0).toFixed(1)}%`}</strong>
+                  </div>
+                  <div>
+                    <span>Approval</span>
+                    <strong>{opportunity.ApprovalStatus || "Draft"}</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="sales-overview-grid-columns">
+                <div className="sales-overview-card">
+                  <span>Account</span>
+                  <strong>{opportunity.AccountNameResolved || opportunity.AccountName}</strong>
+                  <small>{opportunity.AccountNumberResolved || opportunity.AccountNumber}</small>
+                </div>
+                <div className="sales-overview-card">
+                  <span>Owner</span>
+                  <strong>{opportunity.OwnerName}</strong>
+                  <small>{opportunity.CloseDate ? pageDate(opportunity.CloseDate) : "No close date"}</small>
+                </div>
+                <div className="sales-overview-card">
+                  <span>Serviceability</span>
+                  <strong>{opportunity.ServiceSummary || "Review"}</strong>
+                  <small>{opportunity.LocationCount || 0} locations</small>
+                </div>
+                <div className="sales-overview-card">
+                  <span>Linked Quote</span>
+                  <strong>{quoteRows[0]?.QuoteNumber || "None"}</strong>
+                  <small>{quoteRows[0]?.ApprovalStatus || "No quote yet"}</small>
+                </div>
+              </div>
+            </div>
+            <div className="sales-overview-side">
+              <div className="sales-overview-card sales-overview-note">
+                <span>Recent notes</span>
+                <strong>{generalNotes[0]?.NoteType || "Notes"}</strong>
+                <p>{generalNotes[0]?.Note || "No notes captured yet."}</p>
+              </div>
+              <div className="sales-overview-card sales-overview-note">
+                <span>Recent activity</span>
+                <strong>{activityRows[0]?.ActivityType || "Activity"}</strong>
+                <p>{activityRows[0]?.Notes || "No activity logged yet."}</p>
+              </div>
+            </div>
+          </div>
+        </Panel>
+      )}
+      {tab === "Products/Services" && (
+        <Panel
+          title="Products and services"
+          description="Add, edit, or remove products and services."
+          action={<Toolbar><ActionButton icon="products" onClick={() => { setSelectedProduct(null); setProductModal(true); }}>Add Service</ActionButton></Toolbar>}
+        >
+          <DataTable columns={[{ key: "ProductName", label: "Product" }, { key: "BillingCode", label: "Billing Code" }, { key: "Quantity", label: "Qty" }, { key: "Mrc", label: "MRC", render: row => money(row.Mrc) }, { key: "Nrc", label: "NRC", render: row => money(row.Nrc) }, { key: "Cost", label: "Cost", render: row => money(row.Cost) }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => { setSelectedProduct(row); setProductModal(true); }}>Edit</button><button className="link-button compact-action" type="button" onClick={async () => { await deleteOpportunityProduct(id, row.OpportunityProductId); setProducts(await listOpportunityProducts(id)); showToast("Service removed"); }}>Remove</button></div> }]} rows={products} />
+        </Panel>
+      )}
       {tab === "Pricing" && (
         <>
-          <Panel title="Pricing" description="Pricing inputs, hierarchy, and reference billing data.">
-            <div className="field-grid">
-              <div className="mini-stat"><span>Margin</span><strong>{`${Number(opportunity.MarginPct || 0).toFixed(1)}%`}</strong><small>{opportunity.ApprovalStatus || "Open"}</small></div>
-              <div className="mini-stat"><span>Serviceability</span><strong>{opportunity.ServiceSummary || "Review"}</strong><small>{opportunity.LocationCount || 0} locations</small></div>
-              <div className="mini-stat"><span>Offers</span><strong>{offers.length}</strong><small>{promotions.length} promotions</small></div>
-              <div className="mini-stat"><span>Billing Codes</span><strong>{billingCodes.length}</strong><small>{billingElements.length} elements</small></div>
+          <Panel title="Pricing" description="Pricing inputs, hierarchy, and reference billing data." action={<Toolbar><ActionButton icon="service" onClick={() => setServiceabilityModal(true)}>Run Address Check</ActionButton></Toolbar>}>
+            <div className="sales-pricing-grid">
+              <div className="sales-pricing-card">
+                <span>Pricing summary</span>
+                <strong>{money(opportunity.EstimatedValue)}</strong>
+                <small>{`${Number(opportunity.MarginPct || 0).toFixed(1)}% margin · ${opportunity.LocationCount || 0} locations`}</small>
+              </div>
+              <div className="sales-pricing-card">
+                <span>Billing codes</span>
+                <strong>{billingCodes.length}</strong>
+                <small>{billingElements.length} billing elements</small>
+              </div>
+              <div className="sales-pricing-card">
+                <span>Offers / Promotions</span>
+                <strong>{offers.length}</strong>
+                <small>{promotions.length} promotions · {ratePlans.length} rate plans</small>
+              </div>
+              <div className="sales-pricing-card">
+                <span>Serviceability</span>
+                <strong>{opportunity.ServiceSummary || "Review"}</strong>
+                <small>Use serviceability checks for address qualification.</small>
+              </div>
             </div>
           </Panel>
-          <Panel title="Product hierarchy" description="Reference hierarchy from billing data.">
-            <DataTable columns={[{ key: "ProductName", label: "Product" }, { key: "ProductCode", label: "Code" }, { key: "BillingCode", label: "Billing Code" }, { key: "HierarchyPath", label: "Hierarchy Path" }, { key: "DisplayOrder", label: "Order" }]} rows={billingHierarchy} />
+          <Panel title="Product hierarchy" description="Reference hierarchy from billing data and opportunity services.">
+            <div className="sales-pivot-table">
+              <div className="sales-pivot-head">
+                <span>Product Type</span>
+                <span>Product</span>
+                <span>Billing Code</span>
+                <span>Billing Name</span>
+                <span>Quantity</span>
+                <span>Total Price</span>
+                <span>Actions</span>
+              </div>
+              {hierarchyRows.length ? hierarchyRows.map(row => (
+                <div key={`${row.OpportunityProductId}-${row.ProductName}`} className="sales-pivot-row">
+                  <div className="pivot-cell pivot-emphasis">{row.productType}</div>
+                  <div className="pivot-cell">
+                    <strong>{row.ProductName}</strong>
+                    <small>{row.ServiceId ? "Service linked" : "Opportunity product"}</small>
+                  </div>
+                  <div className="pivot-cell">{row.BillingCode}</div>
+                  <div className="pivot-cell">{row.billingName}</div>
+                  <div className="pivot-cell">{row.Quantity}</div>
+                  <div className="pivot-cell">{money(row.totalValue)}</div>
+                  <div className="pivot-cell pivot-actions">
+                    <ActionButton className="link-button compact-action" icon="pricing" onClick={() => { setQuoteMode("dynamic"); setQuoteModal(true); }}>Dynamic Pricing</ActionButton>
+                    <ActionButton className="link-button compact-action" icon="workflow" onClick={() => { setQuoteMode("custom"); setQuoteModal(true); }}>Custom Quote</ActionButton>
+                  </div>
+                </div>
+              )) : <div className="empty-state">Add products and services to build the hierarchy.</div>}
+            </div>
           </Panel>
         </>
       )}
-      {tab === "Quotes" && <Panel title="Quotes" description="Quotes generated from this opportunity." action={<Toolbar><button className="button" type="button" onClick={() => setQuoteModal(true)}>Generate Quote</button></Toolbar>}><DataTable columns={[{ key: "QuoteNumber", label: "Quote" }, { key: "Status", label: "Status" }, { key: "TotalMrc", label: "MRC", render: row => money(row.TotalMrc) }, { key: "ApprovalStatus", label: "Approval" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId}`)}>Open Quote</button></div> }]} rows={quoteRows} /></Panel>}
-      {tab === "Activity/Notes" && <Panel title="Notes and activity" description="Opportunity notes, call logs, and follow-ups." action={<Toolbar><button className="button" type="button" onClick={() => setActivityModal(true)}>Log Activity</button><button className="button" type="button" onClick={() => setNoteModal({ noteType: "General" })}>Add Note</button></Toolbar>}><DataTable columns={[{ key: "NoteType", label: "Type" }, { key: "Note", label: "Note" }, { key: "CreatedBy", label: "Created By" }, { key: "CreatedAtUtc", label: "Created" }]} rows={notes} /></Panel>}
+      {tab === "Quotes" && <Panel title="Quotes" description="Quotes generated from this opportunity."><DataTable columns={[{ key: "QuoteNumber", label: "Quote" }, { key: "Status", label: "Status" }, { key: "TotalMrc", label: "MRC", render: row => money(row.TotalMrc) }, { key: "ApprovalStatus", label: "Approval" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId}`)}>Open Quote</button></div> }]} rows={quoteRows} /></Panel>}
+      {tab === "Activity" && <Panel title="Activity" description="Opportunity call logs and follow-ups." action={<Toolbar><ActionButton icon="activity" onClick={() => setActivityModal(true)}>Log Activity</ActionButton></Toolbar>}><DataTable columns={[{ key: "ActivityDate", label: "Date", render: row => pageDate(row.CreatedAtUtc || row.ActivityDate) }, { key: "ActivityType", label: "Type", render: row => row.NoteType === "Activity" ? "Activity" : row.NoteType }, { key: "Outcome", label: "Outcome", render: row => row.NoteType === "Activity" ? "Logged" : "" }, { key: "Notes", label: "Notes", render: row => row.Note || row.Notes }, { key: "CreatedBy", label: "Created By" }]} rows={activityRows} /></Panel>}
+      {tab === "Notes" && <Panel title="Notes" description="Opportunity notes and follow-up details." action={<Toolbar><ActionButton icon="workflow" onClick={() => setNoteModal({ noteType: "General" })}>Add Note</ActionButton></Toolbar>}><DataTable columns={[{ key: "NoteType", label: "Type" }, { key: "Note", label: "Note" }, { key: "CreatedBy", label: "Created By" }, { key: "CreatedAtUtc", label: "Created" }]} rows={generalNotes} /></Panel>}
       {tab === "Approvals" && <Panel title="Approvals" description="Approval routing is view-only by default."><DataTable columns={[{ key: "step", label: "Step" }, { key: "status", label: "Status" }, { key: "owner", label: "Owner" }]} rows={[{ id: 1, step: "Pricing", status: opportunity.ApprovalStatus || "Draft", owner: opportunity.OwnerName }, { id: 2, step: "Sales Manager", status: "Pending", owner: "Sales Manager" }, { id: 3, step: "Finance", status: "Pending", owner: "Finance" }]} /></Panel>}
       {tab === "Contracts" && <Panel title="Contracts" description="Contracts generated from approved quotes."><DataTable columns={[{ key: "ContractNumber", label: "Contract" }, { key: "Status", label: "Status" }, { key: "ContractName", label: "Name" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/contract/${row.ContractId}`)}>Open Contract</button><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId}`)}>Open Quote</button></div> }]} rows={contracts} /></Panel>}
 
@@ -996,8 +1278,8 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
         <DataDialog
           open={quoteModal}
           onClose={() => setQuoteModal(false)}
-          title="Generate quote"
-          subtitle="Create a quote with pricing from selected products and services."
+          title={quoteMode === "dynamic" ? "Dynamic pricing" : "Custom quote"}
+          subtitle={quoteMode === "dynamic" ? "Reprice the selected services and persist the result." : "Create a quote from the current opportunity services."}
           fields={[
             { key: "quoteNumber", label: "Quote Number" },
             { key: "targetMarginPct", label: "Target Margin" },
@@ -1009,6 +1291,19 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
             showToast("Quote created");
             setQuoteModal(false);
             setTab("Quotes");
+          }}
+        />
+      )}
+      {closeModal && (
+        <OpportunityCloseModal
+          onClose={() => setCloseModal(false)}
+          onSave={async status => {
+            await updateOpportunity(id, { status, stage: status, approvalStatus: status });
+            const updated = await getOpportunity(id);
+            setOpportunity(updated);
+            showToast(`Opportunity marked ${status}`);
+            setCloseModal(false);
+            setRoute("sales");
           }}
         />
       )}
