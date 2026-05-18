@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import App from "./App";
 import { Shell } from "./components/Shell";
-import { SalesLeadDetail, SalesModule, SalesOpportunityDetail, SalesQuoteDetail } from "./components/SalesCRM";
+import { SalesLeadDetail, SalesModule, SalesOpportunityDetail, SalesQuoteDetail } from "./components/SalesDatabaseCRM";
 
 const routeAliases = { pricing: "product-pricing", products: "product-pricing", quotes: "sales" };
 

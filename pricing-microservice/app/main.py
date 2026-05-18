@@ -28,6 +28,7 @@ from app.services.assistant import (
     list_ui_overrides,
     reject_change_request,
 )
+from app.services.sales import billing_router, init_sales, router as sales_router
 from app.services.quotes import (
     create_quote,
     get_opportunity_details,
@@ -53,10 +54,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(sales_router)
+app.include_router(billing_router)
+
 
 @app.on_event("startup")
 def startup_assistant_storage():
     ensure_ai_storage()
+    init_sales()
 
 
 @app.get("/")
@@ -83,6 +88,22 @@ def health_assistant():
         "sqlServer": SQL_SERVER,
         "sqlDatabase": SQL_DATABASE,
         "assistantStorage": "ready",
+    }
+
+
+@app.get("/health/sales")
+def health_sales():
+    from app.services.sales import sales_dashboard
+
+    dashboard = sales_dashboard()
+    return {
+        "status": "healthy",
+        "sqlServer": SQL_SERVER,
+        "sqlDatabase": SQL_DATABASE,
+        "salesStorage": "ready",
+        "leadCount": dashboard.get("LeadCount", 0),
+        "opportunityCount": dashboard.get("OpportunityCount", 0),
+        "quoteCount": dashboard.get("QuoteCount", 0),
     }
 
 

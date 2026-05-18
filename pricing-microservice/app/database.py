@@ -9,10 +9,12 @@ from azure.identity import DefaultAzureCredential
 
 SQL_SERVER = os.getenv("SQL_SERVER", "bdwus.database.windows.net")
 SQL_DATABASE = os.getenv("SQL_DATABASE", "BDWUS_MS")
-SQL_USERNAME = os.getenv("SQL_USERNAME")
+SQL_USERNAME = os.getenv("SQL_USER") or os.getenv("SQL_USERNAME")
 SQL_PASSWORD = os.getenv("SQL_PASSWORD")
 ODBC_DRIVER = os.getenv("ODBC_DRIVER", "ODBC Driver 18 for SQL Server")
 SQL_COPT_SS_ACCESS_TOKEN = 1256
+SQL_ENCRYPT = os.getenv("SQL_ENCRYPT", "true").lower() in {"1", "true", "yes"}
+SQL_TRUST_SERVER_CERTIFICATE = os.getenv("SQL_TRUST_SERVER_CERTIFICATE", "false").lower() in {"1", "true", "yes"}
 
 # Connection pool settings
 MAX_RETRIES = int(os.getenv("SQL_MAX_RETRIES", "3"))
@@ -33,8 +35,8 @@ def get_sql_connection() -> pyodbc.Connection:
             f"Database={SQL_DATABASE};"
             f"Uid={SQL_USERNAME};"
             f"Pwd={SQL_PASSWORD};"
-            "Encrypt=yes;"
-            "TrustServerCertificate=no;"
+            f"Encrypt={'yes' if SQL_ENCRYPT else 'no'};"
+            f"TrustServerCertificate={'yes' if SQL_TRUST_SERVER_CERTIFICATE else 'no'};"
             "Connection Timeout=30;"
         )
         connect_kwargs = {}
@@ -46,8 +48,8 @@ def get_sql_connection() -> pyodbc.Connection:
             f"Driver={{{ODBC_DRIVER}}};"
             f"Server=tcp:{SQL_SERVER},1433;"
             f"Database={SQL_DATABASE};"
-            "Encrypt=yes;"
-            "TrustServerCertificate=no;"
+            f"Encrypt={'yes' if SQL_ENCRYPT else 'no'};"
+            f"TrustServerCertificate={'yes' if SQL_TRUST_SERVER_CERTIFICATE else 'no'};"
             "Connection Timeout=30;"
         )
         connect_kwargs = {SQL_COPT_SS_ACCESS_TOKEN: token_struct}
