@@ -163,6 +163,7 @@ function useSalesData() {
   const [state, setState] = useState({
     loading: true,
     error: "",
+    warnings: [],
     leads: [],
     accounts: [],
     opportunities: [],
@@ -177,29 +178,38 @@ function useSalesData() {
   async function refresh() {
     try {
       setState(current => ({ ...current, loading: true, error: "" }));
-      const [dashboard, leads, accounts, opportunities, quotes, customPricing, approvals, contracts, billingCustomers] = await Promise.all([
-        import("../utils/salesApi").then(m => m.getSalesDashboard()),
-        import("../utils/salesApi").then(m => m.listLeads()),
-        import("../utils/salesApi").then(m => m.listAccounts()),
-        import("../utils/salesApi").then(m => m.listOpportunities()),
-        import("../utils/salesApi").then(m => m.listQuotes()),
-        import("../utils/salesApi").then(m => m.listCustomPricing()),
-        import("../utils/salesApi").then(m => m.listApprovals()),
-        import("../utils/salesApi").then(m => m.listContracts()),
-        import("../utils/salesApi").then(m => m.listBillingCustomers())
+      const responses = await Promise.allSettled([
+        getSalesDashboard(),
+        listLeads(),
+        listAccounts(),
+        listOpportunities(),
+        listQuotes(),
+        listCustomPricing(),
+        listApprovals(),
+        listContracts(),
+        listBillingCustomers()
       ]);
+      const [dashboardResult, leadsResult, accountsResult, opportunitiesResult, quotesResult, customPricingResult, approvalsResult, contractsResult, billingCustomersResult] = responses;
+      const warnings = responses
+        .map((result, index) => {
+          if (result.status === "fulfilled") return "";
+          const labels = ["dashboard", "leads", "accounts", "opportunities", "quotes", "custom pricing", "approvals", "contracts", "billing customers"];
+          return `Could not load ${labels[index]} (${result.reason?.message || "request failed"})`;
+        })
+        .filter(Boolean);
       setState({
         loading: false,
         error: "",
-        dashboard,
-        leads,
-        accounts,
-        opportunities,
-        quotes,
-        customPricing,
-        approvals,
-        contracts,
-        billingCustomers
+        warnings,
+        dashboard: dashboardResult.status === "fulfilled" ? dashboardResult.value : {},
+        leads: leadsResult.status === "fulfilled" ? leadsResult.value : [],
+        accounts: accountsResult.status === "fulfilled" ? accountsResult.value : [],
+        opportunities: opportunitiesResult.status === "fulfilled" ? opportunitiesResult.value : [],
+        quotes: quotesResult.status === "fulfilled" ? quotesResult.value : [],
+        customPricing: customPricingResult.status === "fulfilled" ? customPricingResult.value : [],
+        approvals: approvalsResult.status === "fulfilled" ? approvalsResult.value : [],
+        contracts: contractsResult.status === "fulfilled" ? contractsResult.value : [],
+        billingCustomers: billingCustomersResult.status === "fulfilled" ? billingCustomersResult.value : []
       });
     } catch (error) {
       setState(current => ({ ...current, loading: false, error: error.message || "Unable to load sales data." }));
@@ -280,6 +290,7 @@ export function SalesModule({ setRoute, showToast }) {
   const approvals = state.approvals || [];
   const contracts = state.contracts || [];
   const dashboard = state.dashboard || {};
+  const warnings = state.warnings || [];
 
   const filteredLeads = leads.filter(item => matchAny(item, query, [r => fieldValue(r, "LeadNumber"), r => fieldValue(r, "AccountNameResolved", "AccountName"), r => fieldValue(r, "ProductInterest"), r => fieldValue(r, "OwnerName")]) && (stage === "All stages" || fieldValue(item, "Qualification", "Status") === stage));
   const filteredOpps = opportunities.filter(item => matchAny(item, query, [r => fieldValue(r, "OpportunityNumber"), r => fieldValue(r, "OpportunityName"), r => fieldValue(r, "AccountNameResolved"), r => fieldValue(r, "ProductSummary"), r => fieldValue(r, "OwnerName")]) && (stage === "All stages" || fieldValue(item, "Stage") === stage) && (owner === "All owners" || fieldValue(item, "OwnerName") === owner));
@@ -357,6 +368,13 @@ export function SalesModule({ setRoute, showToast }) {
         description="Database-backed telecom sales, pricing, approvals, and contracts."
         actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setNewLead(true)}>New Lead</button><button className="button" type="button" onClick={() => setNewOpportunity(true)}>New Opportunity</button></div>}
       />
+      {warnings.length ? (
+        <Panel title="Load warnings" description="Some supporting datasets could not be loaded, but the Sales module is available.">
+          <ul className="warning-list">
+            {warnings.map(warning => <li key={warning}>{warning}</li>)}
+          </ul>
+        </Panel>
+      ) : null}
       <SummaryStrip items={[
         { label: "Pipeline", value: money(dashboard.PipelineValue || 0), note: "SQL-backed opportunities" },
         { label: "Quotes", value: quotes.length, note: "Pricing records" },
