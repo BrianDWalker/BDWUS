@@ -161,6 +161,76 @@ function SummaryStrip({ items }) {
   );
 }
 
+function LoadingBars({ rows = 3 }) {
+  return (
+    <div className="sales-loading-list" aria-label="Loading">
+      {Array.from({ length: rows }).map((_, index) => (
+        <div className="sales-loading-row" key={index}>
+          <div className="sales-loading-line short"></div>
+          <div className="sales-loading-line"></div>
+          <div className="sales-loading-line medium"></div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WorkQueue({ loading, warnings, leads, quotes, approvals, contracts, setRoute }) {
+  const queueItems = [
+    {
+      title: "Leads to qualify",
+      body: loading ? "Loading open leads from Azure SQL..." : `${leads.filter(item => (item.Status || item.status || item.Qualification || "") !== "Converted").length} open leads`,
+      action: loading ? null : () => setRoute(`details/lead/${leads[0]?.LeadId || leads[0]?.LeadID || leads[0]?.id}`)
+    },
+    {
+      title: "Approvals waiting",
+      body: loading ? "Loading approval queue..." : `${approvals.filter(item => String(item.Status || "").toLowerCase() === "pending").length} pending approvals`,
+      action: loading ? null : () => setRoute(`details/quote/${approvals[0]?.EntityId || quotes[0]?.QuoteId || quotes[0]?.QuoteID || quotes[0]?.id}`)
+    },
+    {
+      title: "Contracts in play",
+      body: loading ? "Loading contract activity..." : `${contracts.length} active contracts`,
+      action: loading ? null : () => setRoute(`details/opportunity/${contracts[0]?.OpportunityId || contracts[0]?.OpportunityID || contracts[0]?.opportunityId}`)
+    }
+  ];
+
+  return (
+    <Panel title="Work Queue" description="Open commercial work, approvals, and follow-ups." className="sales-work-queue">
+      {loading ? (
+        <LoadingBars rows={3} />
+      ) : (
+        <div className="sales-work-queue-list">
+          {queueItems.map(item => (
+            <button key={item.title} className="sales-work-queue-item" type="button" onClick={() => item.action?.()}>
+              <div>
+                <strong>{item.title}</strong>
+                <span>{item.body}</span>
+              </div>
+              <Icon name="chevronRight" className="button-icon" />
+            </button>
+          ))}
+        </div>
+      )}
+      {warnings.length ? (
+        <div className="sales-warning-stack">
+          {warnings.map(warning => <div key={warning} className="sales-warning-item">{warning}</div>)}
+        </div>
+      ) : null}
+    </Panel>
+  );
+}
+
+function TableLoadingState({ columns }) {
+  return (
+    <div className="sales-table-loading">
+      <div className="sales-table-loading-head">
+        {columns.map(column => <div key={column.key}>{column.label}</div>)}
+      </div>
+      <LoadingBars rows={4} />
+    </div>
+  );
+}
+
 function useSalesData() {
   const [state, setState] = useState({
     loading: true,
@@ -267,6 +337,7 @@ function SalesTable({ columns, rows }) {
 
 export function SalesModule({ setRoute, showToast }) {
   const { state, refresh } = useSalesData();
+  const loading = state.loading;
   const [tab, setTab] = useState("Leads");
   const [query, setQuery] = useState("");
   const [stage, setStage] = useState("All stages");
@@ -300,12 +371,8 @@ export function SalesModule({ setRoute, showToast }) {
   const filteredQuotes = quotes.filter(item => matchAny(item, query, [r => fieldValue(r, "QuoteNumber"), r => fieldValue(r, "AccountName"), r => fieldValue(r, "OpportunityName")]) && (status === "All statuses" || fieldValue(item, "Status") === status));
   const filteredApprovals = approvals.filter(item => matchAny(item, query, [r => fieldValue(r, "EntityType"), r => fieldValue(r, "StepName"), r => fieldValue(r, "Status")]) && (status === "All statuses" || fieldValue(item, "Status") === status));
   const filteredContracts = contracts.filter(item => matchAny(item, query, [r => fieldValue(r, "ContractNumber"), r => fieldValue(r, "ContractName"), r => fieldValue(r, "AccountName"), r => fieldValue(r, "OpportunityName")]) && (status === "All statuses" || fieldValue(item, "Status") === status));
-
-  if (state.loading) return <div className="content-shell"><PageHeader title="Sales" description="Loading database-backed sales data..." /></div>;
-
-  if (state.error) {
-    return <div className="content-shell"><PageHeader title="Sales" description="Unable to load sales data." /><Panel title="Error"><p>{state.error}</p></Panel></div>;
-  }
+  const filteredCustomPricing = customPricing.filter(row => matchAny(row, query, [r => fieldValue(r, "RequestNumber"), r => fieldValue(r, "Status"), r => fieldValue(r, "RequestedBy"), r => fieldValue(r, "Reason")]) && (status === "All statuses" || fieldValue(row, "Status") === status));
+  const queueWarnings = loading ? ["Loading sales data from Azure SQL..."] : state.error ? [state.error] : state.warnings;
 
   const leadColumns = [
     { key: "LeadNumber", label: "Lead" },
@@ -370,48 +437,42 @@ export function SalesModule({ setRoute, showToast }) {
         description="Database-backed telecom sales, pricing, approvals, and contracts."
         actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setNewLead(true)}>New Lead</button><button className="button" type="button" onClick={() => setNewOpportunity(true)}>New Opportunity</button></div>}
       />
-      {warnings.length ? (
-        <Panel title="Load warnings" description="Some supporting datasets could not be loaded, but the Sales module is available.">
-          <ul className="warning-list">
-            {warnings.map(warning => <li key={warning}>{warning}</li>)}
-          </ul>
-        </Panel>
-      ) : null}
+      <WorkQueue loading={loading} warnings={queueWarnings} leads={leads} quotes={quotes} approvals={approvals} contracts={contracts} setRoute={setRoute} />
       <SummaryStrip items={[
-        { label: "Pipeline", value: money(dashboard.PipelineValue || 0), note: "SQL-backed opportunities" },
-        { label: "Quotes", value: quotes.length, note: "Pricing records" },
-        { label: "Approvals", value: approvals.length, note: "Approval queue" },
-        { label: "Contracts", value: contracts.length, note: "Active agreements" }
+        { label: "Leads", value: loading ? "..." : leads.length, note: "SQL-backed records" },
+        { label: "Opportunities", value: loading ? "..." : opportunities.length, note: "Pipeline records" },
+        { label: "Quotes", value: loading ? "..." : quotes.length, note: "Pricing records" },
+        { label: "Contracts", value: loading ? "..." : contracts.length, note: "Active agreements" }
       ]} />
       <Tabs tabs={salesTabs} active={tab} onChange={setTab} />
       {tab === "Leads" && (
         <Panel title="Leads" description="Lead qualification, activities, and conversion." action={<Toolbar><SearchBox value={query} onChange={setQuery} placeholder="Search leads" /><label className="inline-search"><Icon name="workflow" className="button-icon" /><select value={stage} onChange={event => setStage(event.target.value)}>{["All stages", "Open", "Qualified", "Converted"].map(option => <option key={option}>{option}</option>)}</select></label></Toolbar>}>
-          <SalesTable columns={leadColumns} rows={filteredLeads} />
+          {loading ? <TableLoadingState columns={leadColumns} /> : <SalesTable columns={leadColumns} rows={filteredLeads} />}
         </Panel>
       )}
       {tab === "Opportunities" && (
         <Panel title="Opportunities" description="Opportunity detail, products, services, pricing, and approvals." action={<Toolbar><SearchBox value={query} onChange={setQuery} placeholder="Search opportunities" /><label className="inline-search"><Icon name="workflow" className="button-icon" /><select value={stage} onChange={event => setStage(event.target.value)}>{["All stages", ...stages].map(option => <option key={option}>{option}</option>)}</select></label><label className="inline-search"><Icon name="customers" className="button-icon" /><select value={owner} onChange={event => setOwner(event.target.value)}>{["All owners", ...owners].map(option => <option key={option}>{option}</option>)}</select></label></Toolbar>}>
-          <SalesTable columns={oppColumns} rows={filteredOpps} />
+          {loading ? <TableLoadingState columns={oppColumns} /> : <SalesTable columns={oppColumns} rows={filteredOpps} />}
         </Panel>
       )}
       {tab === "Accounts" && (
         <Panel title="Accounts" description="Customer records and account growth motions." action={<Toolbar><SearchBox value={query} onChange={setQuery} placeholder="Search accounts" /><label className="inline-search"><Icon name="workflow" className="button-icon" /><select value={segment} onChange={event => setSegment(event.target.value)}>{["All segments", "Enterprise", "SMB", "MidMarket"].map(option => <option key={option}>{option}</option>)}</select></label></Toolbar>}>
-          <SalesTable columns={accountColumns} rows={filteredAccounts} />
+          {loading ? <TableLoadingState columns={accountColumns} /> : <SalesTable columns={accountColumns} rows={filteredAccounts} />}
         </Panel>
       )}
       {tab === "Custom Pricing" && (
         <Panel title="Custom Pricing" description="Review custom pricing requests and quote overrides." action={<Toolbar><button className="button" type="button" onClick={() => setSelectedCustomPricing({ Status: "Draft", RequestedBy: "Admin" })}>New Request</button><SearchBox value={query} onChange={setQuery} placeholder="Search custom pricing" /><label className="inline-search"><Icon name="workflow" className="button-icon" /><select value={status} onChange={event => setStatus(event.target.value)}>{["All statuses", "Draft", "Submitted", "Approved", "Rejected"].map(option => <option key={option}>{option}</option>)}</select></label></Toolbar>}>
-          <SalesTable columns={[{ key: "RequestNumber", label: "Request" }, { key: "Status", label: "Status" }, { key: "RequestedBy", label: "Requested By" }, { key: "Reason", label: "Reason" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId || quotes[0]?.QuoteId}`)}>Review</button><button className="link-button compact-action" type="button" onClick={() => setSelectedCustomPricing(row)}>Edit</button><button className="link-button compact-action" type="button" onClick={async () => { await deleteCustomPricing(row.CustomPricingRequestId); refresh(); }}>Delete</button><button className="link-button compact-action" type="button" onClick={async () => { await submitCustomPricing(row.CustomPricingRequestId, { requestedBy: "Admin" }); refresh(); }}>Submit</button></div> }]} rows={customPricing.filter(row => matchAny(row, query, [r => fieldValue(r, "RequestNumber"), r => fieldValue(r, "Status"), r => fieldValue(r, "RequestedBy"), r => fieldValue(r, "Reason")]) && (status === "All statuses" || fieldValue(row, "Status") === status))} />
+          {loading ? <TableLoadingState columns={[{ key: "RequestNumber", label: "Request" }, { key: "Status", label: "Status" }, { key: "RequestedBy", label: "Requested By" }, { key: "Reason", label: "Reason" }]} /> : <SalesTable columns={[{ key: "RequestNumber", label: "Request" }, { key: "Status", label: "Status" }, { key: "RequestedBy", label: "Requested By" }, { key: "Reason", label: "Reason" }, { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${row.QuoteId || quotes[0]?.QuoteId}`)}>Review</button><button className="link-button compact-action" type="button" onClick={() => setSelectedCustomPricing(row)}>Edit</button><button className="link-button compact-action" type="button" onClick={async () => { await deleteCustomPricing(row.CustomPricingRequestId); refresh(); }}>Delete</button><button className="link-button compact-action" type="button" onClick={async () => { await submitCustomPricing(row.CustomPricingRequestId, { requestedBy: "Admin" }); refresh(); }}>Submit</button></div> }]} rows={filteredCustomPricing} />}
         </Panel>
       )}
       {tab === "Approvals" && (
         <Panel title="Approvals" description="Quote, pricing, and contract approvals." action={<Toolbar><SearchBox value={query} onChange={setQuery} placeholder="Search approvals" /><label className="inline-search"><Icon name="workflow" className="button-icon" /><select value={status} onChange={event => setStatus(event.target.value)}>{["All statuses", "Pending", "Approved", "Rejected", "Changes Requested"].map(option => <option key={option}>{option}</option>)}</select></label></Toolbar>}>
-          <SalesTable columns={approvalColumns} rows={filteredApprovals} />
+          {loading ? <TableLoadingState columns={approvalColumns} /> : <SalesTable columns={approvalColumns} rows={filteredApprovals} />}
         </Panel>
       )}
       {tab === "Contracts" && (
         <Panel title="Contracts" description="Contract files, history, and linked commercial records." action={<Toolbar><SearchBox value={query} onChange={setQuery} placeholder="Search contracts" /><label className="inline-search"><Icon name="workflow" className="button-icon" /><select value={status} onChange={event => setStatus(event.target.value)}>{["All statuses", "Open", "Generated", "Review", "Ready"].map(option => <option key={option}>{option}</option>)}</select></label></Toolbar>}>
-          <SalesTable columns={contractColumns} rows={filteredContracts} />
+          {loading ? <TableLoadingState columns={contractColumns} /> : <SalesTable columns={contractColumns} rows={filteredContracts} />}
         </Panel>
       )}
 
@@ -652,7 +713,16 @@ export function SalesLeadDetail({ id, setRoute, showToast }) {
     listLeadActivities(id).then(setActivities);
   }, [id]);
 
-  if (!lead) return <Panel title="Loading lead..." description="Fetching from Azure SQL." />;
+  if (!lead) {
+    return (
+      <div className="content-shell">
+        <PageHeader title="Lead" description="Loading lead from Azure SQL..." />
+        <Panel title="Loading lead workspace" description="The page frame is ready while the record loads.">
+          <LoadingBars rows={4} />
+        </Panel>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -724,7 +794,16 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
     listQuotes().then(rows => setQuoteRows(rows.filter(row => row.OpportunityId === id)));
   }, [id]);
 
-  if (!opportunity) return <Panel title="Loading opportunity..." description="Fetching from Azure SQL." />;
+  if (!opportunity) {
+    return (
+      <div className="content-shell">
+        <PageHeader title="Opportunity" description="Loading opportunity from Azure SQL..." />
+        <Panel title="Loading opportunity workspace" description="The page frame is ready while the record loads.">
+          <LoadingBars rows={4} />
+        </Panel>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -860,7 +939,16 @@ export function SalesQuoteDetail({ id, setRoute, showToast }) {
     listQuoteLineItems(id).then(setLineItems);
   }, [id]);
 
-  if (!quote) return <Panel title="Loading quote..." description="Fetching from Azure SQL." />;
+  if (!quote) {
+    return (
+      <div className="content-shell">
+        <PageHeader title="Quote" description="Loading quote from Azure SQL..." />
+        <Panel title="Loading quote workspace" description="The page frame is ready while the record loads.">
+          <LoadingBars rows={4} />
+        </Panel>
+      </div>
+    );
+  }
 
   return (
     <>

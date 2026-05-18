@@ -122,6 +122,89 @@
 .sales-tab-toolbar .inline-search select {
   width: 100%;
 }
+.sales-work-queue {
+  display: grid;
+  gap: 12px;
+}
+.sales-work-queue-list {
+  display: grid;
+  gap: 10px;
+}
+.sales-work-queue-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 13px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(248, 250, 252, 0.96);
+  color: var(--text);
+  text-align: left;
+}
+.sales-work-queue-item strong {
+  display: block;
+  font-family: "Space Grotesk", sans-serif;
+}
+.sales-work-queue-item span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.sales-warning-stack {
+  display: grid;
+  gap: 8px;
+}
+.sales-warning-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 700;
+}
+.sales-loading-list {
+  display: grid;
+  gap: 10px;
+}
+.sales-loading-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.03);
+}
+.sales-loading-line {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(148,163,184,0.16), rgba(148,163,184,0.42), rgba(148,163,184,0.16));
+  background-size: 200% 100%;
+  animation: sales-shimmer 1.2s ease-in-out infinite;
+}
+.sales-loading-line.short { width: 38%; }
+.sales-loading-line.medium { width: 64%; }
+.sales-table-loading {
+  display: grid;
+  gap: 12px;
+}
+.sales-table-loading-head {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.sales-table-loading-head div {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.empty-state {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px dashed rgba(15, 23, 42, 0.14);
+  color: var(--muted);
+}
 .sales-crm-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -225,4 +308,9 @@
   .sales-crm-modal header,
   .sales-crm-modal footer,
   .sales-crm-quote-document-header { flex-direction: column; align-items: stretch; }
+}
+
+@keyframes sales-shimmer {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
 }

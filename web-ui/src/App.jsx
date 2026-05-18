@@ -561,63 +561,85 @@ function DetailButton({ type, id, setRoute, children = "Details" }) {
 }
 
 function Dashboard({ setRoute }) {
-  const mrr = sum(customers, customer => customer.mrr);
+  const activeOpps = opportunities.slice(0, 4);
+  const approvalsDue = quotes.filter(quote => quote.status === "Approval").slice(0, 4);
+  const roleCards = [
+    { label: "Sales", description: "Leads, opportunities, pricing, contracts", route: "sales", icon: "sales" },
+    { label: "Customer Service", description: "Cases, service issues, and follow-up", route: "customer-service", icon: "serviceDesk" },
+    { label: "Billing", description: "Accounts, invoices, and service charges", route: "billing", icon: "billing" },
+    { label: "Network", description: "Serviceability and delivery coordination", route: "network", icon: "network" }
+  ];
   return (
     <>
       <PageHeader
         title="Home"
-        description="A front door for the telecom workday: commercial momentum, customer health, service risk, and billing exposure."
+        description="A role-based workspace for the telecom workday: assigned work, approvals, active opportunities, and recent activity."
+        actions={<button className="button" type="button" onClick={() => setRoute("sales")}>Open Sales</button>}
       />
-      <section className="home-hero">
-        <div className="home-radar">
-          <div className="radar-ring ring-one"></div>
-          <div className="radar-ring ring-two"></div>
-          <div className="radar-ring ring-three"></div>
-          <button className="radar-node sales-node" type="button" onClick={() => setRoute("sales")}>Sales</button>
-          <button className="radar-node care-node" type="button" onClick={() => setRoute("customer-service")}>Care</button>
-          <button className="radar-node billing-node" type="button" onClick={() => setRoute("billing")}>Billing</button>
-          <button className="radar-node network-node-home" type="button" onClick={() => setRoute("network")}>Network</button>
-          <strong>Northstar</strong>
-        </div>
-        <div className="home-focus">
-          <span>Morning operating brief</span>
-          <h2>{formatMoney(mrr)} managed recurring revenue</h2>
-          <p>{tickets.filter(ticket => ["Urgent", "High"].includes(ticket.priority)).length} customer escalations, {orders.length} open orders, and {networkEvents.length} active network events are connected to customer and billing context.</p>
-        </div>
-      </section>
       <section className="overview-grid">
-        <MetricCard label="Customers" value={customers.length} delta="Accounts with billing, service, and care context" />
-        <MetricCard label="Open orders" value={orders.length} delta="Sales-originated fulfillment queue" />
-        <MetricCard label="Invoice exposure" value={formatMoney(sum(invoices, invoice => invoice.amount))} delta="Current searchable ledger" />
-        <MetricCard label="Report templates" value={reportDefinitions.length} delta="Operational report library" />
+        <MetricCard label="Assigned work" value={tickets.length + orders.length} delta="Tasks across service and fulfillment" />
+        <MetricCard label="Open opportunities" value={opportunities.length} delta="Commercial work in motion" />
+        <MetricCard label="Pending approvals" value={quotes.filter(quote => quote.status === "Approval").length} delta="Pricing and exception queue" />
+        <MetricCard label="Active contracts" value={contracts.length} delta="Commercial agreements in force" />
       </section>
       <section className="dashboard-canvas">
-        <Panel title="Workstream pulse" description="Where the platform is asking for attention today." className="canvas-panel">
+        <Panel title="Role workspace" description="Jump straight into the right work area for your day." className="canvas-panel">
           <div className="ops-map">
-            {[
-              ["sales", "Sales", "Leads, opportunities, customers", "sales"],
-              ["pricing", "Pricing", "Custom desk and product pricing", "pricing"],
-              ["products", "Products", "P&L, owners, lifecycle", "products"],
-              ["customer-service", "Care", "Tickets, outages, billing inquiries", "serviceDesk"],
-              ["billing", "Billing", "Accounts, services, offers, adjustments", "billing"],
-              ["orders", "Orders", "Place, modify, research", "orders"],
-              ["reports", "Reports", "Parameters, pagination, export", "reports"]
-            ].map(([id, label, text, icon]) => (
-              <button className="ops-node" type="button" key={id} onClick={() => setRoute(id)}>
-                <Icon name={icon} className="button-icon" />
-                <strong>{label}</strong>
-                <span>{text}</span>
+            {roleCards.map(card => (
+              <button className="ops-node" type="button" key={card.route} onClick={() => setRoute(card.route)}>
+                <Icon name={card.icon} className="button-icon" />
+                <strong>{card.label}</strong>
+                <span>{card.description}</span>
               </button>
             ))}
           </div>
         </Panel>
-        <Panel title="Action stream" description="Customer, network, and revenue items ordered by urgency." className="queue-panel">
+        <Panel title="Assigned work" description="Open actions that need follow-up today." className="queue-panel">
           <div className="timeline">
-            {tickets.slice(0, 3).map(ticket => (
-              <div className="timeline-item" key={ticket.id}>
+            {[
+              ...tickets.slice(0, 2).map(ticket => ({
+                id: ticket.id,
+                title: customerName(ticket.customerId),
+                body: `${ticket.type} · ${ticket.ageHours}h`,
+                status: ticket.priority,
+                tone: ticket.priority === "Urgent" ? "warn" : "blue"
+              })),
+              ...orders.slice(0, 2).map(order => ({
+                id: order.id,
+                title: customerName(order.customerId),
+                body: `${order.orderType} · ${order.status}`,
+                status: order.status,
+                tone: order.status === "At Risk" ? "warn" : "blue"
+              }))
+            ].map(item => (
+              <div className="timeline-item" key={item.id}>
                 <span className="timeline-dot"></span>
-                <div><strong>{customerName(ticket.customerId)}</strong><div className="small-muted">{ticket.type} · {ticket.ageHours}h</div></div>
-                <StatusTag tone={ticket.priority === "Urgent" ? "warn" : "blue"}>{ticket.priority}</StatusTag>
+                <div><strong>{item.title}</strong><div className="small-muted">{item.body}</div></div>
+                <StatusTag tone={item.tone}>{item.status}</StatusTag>
+              </div>
+            ))}
+          </div>
+        </Panel>
+        <Panel title="Approvals needing action" description="Pricing and quote reviews that are ready for decision." className="queue-panel">
+          <div className="timeline">
+            {approvalsDue.length ? approvalsDue.map(quote => (
+              <div className="timeline-item" key={quote.id}>
+                <span className="timeline-dot"></span>
+                <div><strong>{quote.account}</strong><div className="small-muted">{quote.productPackage} · {quote.owner}</div></div>
+                <button className="link-button compact-action" type="button" onClick={() => setRoute(`details/quote/${quote.id}`)}>Review</button>
+              </div>
+            )) : (
+              <div className="empty-state">No approval items are waiting right now.</div>
+            )}
+          </div>
+        </Panel>
+        <Panel title="Recent activity" description="A short feed of customer and operations updates." className="queue-panel">
+          <div className="timeline">
+            {networkEvents.slice(0, 3).map(event => (
+              <div className="timeline-item" key={event.id}>
+                <span className="timeline-dot"></span>
+                <div><strong>{event.title}</strong><div className="small-muted">{event.area} · {event.updatedAt}</div></div>
+                <StatusTag tone={event.status === "Open" ? "warn" : "blue"}>{event.status}</StatusTag>
               </div>
             ))}
           </div>
