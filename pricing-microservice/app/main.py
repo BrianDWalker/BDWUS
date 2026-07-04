@@ -1,10 +1,10 @@
 import os
+from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from uuid import UUID
 
-from app.database import SQL_DATABASE, SQL_SERVER
+from app.database import SQL_DATABASE, SQL_SERVER, get_sql_connection
 from app.models import (
     AssistantApprovalRequest,
     AssistantChatRequest,
@@ -19,20 +19,19 @@ from app.models import (
     QuoteCreateResponse,
     QuoteReviseRequest,
 )
-from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
 from app.services.assistant import (
     approve_change_request,
     chat,
     ensure_ai_storage,
+    get_change_request,
     get_github_branches,
     get_github_commits,
     get_github_file,
     get_github_tree,
-    get_change_request,
     list_ui_overrides,
     reject_change_request,
 )
-from app.services.sales import billing_router, init_sales, router as sales_router
+from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
 from app.services.quotes import (
     create_quote,
     get_opportunity_details,
@@ -42,18 +41,33 @@ from app.services.quotes import (
     reprice_opportunity,
     revise_quote,
 )
+from app.services.sales import billing_router, init_sales, router as sales_router, sales_dashboard
+
+
+SERVICE_NAME = os.getenv("PLATFORM_API_SERVICE_NAME", "BDWUS Platform API")
+SERVICE_VERSION = os.getenv("PLATFORM_API_VERSION", "5.0.0")
+DEFAULT_ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
 
 
 app = FastAPI(
-    title="Billing Pricing Microservice",
-    version="4.0.0",
-    description="Quote pricing API backed by Azure SQL using billing-style query history data.",
+    title=SERVICE_NAME,
+    version=SERVICE_VERSION,
+    description="Telecom platform API for pricing, assistant workflows, sales storage, and Azure SQL-backed portal services.",
 )
 
+
+def parse_allowed_origins() -> list[str]:
+    raw = os.getenv("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS)
+    if raw.strip() == "*":
+        return ["*"]
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+allowed_origins = parse_allowed_origins()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=False if allowed_origins == ["*"] else True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -71,18 +85,68 @@ def startup_assistant_storage():
 @app.get("/")
 def root():
     return {
-        "service": "Billing Pricing Microservice",
-        "version": "4.0.0",
+        "service": SERVICE_NAME,
+        "version": SERVICE_VERSION,
         "status": "ok",
         "sqlServer": SQL_SERVER,
         "sqlDatabase": SQL_DATABASE,
         "billingContextObject": BILLING_CONTEXT_OBJECT,
+        "modules": {
+            "assistant": True,
+            "sales": True,
+            "pricing": True,
+            "billing": True,
+        },
     }
 
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "service": SERVICE_NAME,
+        "version": SERVICE_VERSION,
+        "allowedOrigins": allowed_origins,
+    }
+
+
+@app.get("/health/ready")
+def ready():
+    checks = {
+        "sql": False,
+        "pricingContext": False,
+        "assistantStorage": False,
+        "salesStorage": False,
+    }
+    details = {
+        "sqlServer": SQL_SERVER,
+        "sqlDatabase": SQL_DATABASE,
+        "billingContextObject": BILLING_CONTEXT_OBJECT,
+    }
+
+    conn = get_sql_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 AS Healthy")
+        cursor.fetchone()
+        checks["sql"] = True
+
+        cursor.execute(f"SELECT TOP 1 1 AS Healthy FROM {BILLING_CONTEXT_OBJECT}")
+        checks["pricingContext"] = cursor.fetchone() is not None
+
+        cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ai' AND TABLE_NAME = 'ChangeRequests'")
+        checks["assistantStorage"] = cursor.fetchone() is not None
+
+        cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ms' AND TABLE_NAME = 'Leads'")
+        checks["salesStorage"] = cursor.fetchone() is not None
+    finally:
+        conn.close()
+
+    return {
+        "status": "healthy" if all(checks.values()) else "degraded",
+        "checks": checks,
+        "details": details,
+    }
 
 
 @app.get("/health/assistant")
@@ -97,8 +161,6 @@ def health_assistant():
 
 @app.get("/health/sales")
 def health_sales():
-    from app.services.sales import sales_dashboard
-
     dashboard = sales_dashboard()
     return {
         "status": "healthy",
@@ -113,8 +175,6 @@ def health_sales():
 
 @app.get("/health/pricing-context")
 def health_pricing_context():
-    from app.database import get_sql_connection
-
     conn = get_sql_connection()
     try:
         row = conn.cursor().execute(f"SELECT TOP 1 * FROM {BILLING_CONTEXT_OBJECT}").fetchone()
