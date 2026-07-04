@@ -1,0 +1,115 @@
+# Staging Config And Validation
+
+This document gives GitHub-only agents and CI enough context to validate the app without needing the local desktop environment.
+
+## Branch And App Targets
+
+Primary branch for this work:
+- `fc-gpt`
+
+Frontend:
+- Project directory: `web-ui`
+- Build command: `npm run build`
+- Vite env var for API base: `VITE_SALES_API_BASE_URL`
+- Fallback env var also supported: `VITE_AI_API_BASE_URL`
+- Current hard-coded fallback in `web-ui/src/utils/salesApi.js`: `https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io`
+
+Backend:
+- Project directory: `pricing-microservice`
+- FastAPI entry: `pricing-microservice/app/main.py`
+- Python dependencies: `pricing-microservice/requirements.txt`
+
+## Required Secrets Or Settings
+
+GitHub/Azure validation needs these values configured outside the repo:
+
+| Setting | Purpose |
+| --- | --- |
+| `VITE_SALES_API_BASE_URL` | Frontend API base URL for the FastAPI service |
+| Azure deployment credentials | Required by Azure deployment workflows |
+| Azure Container Registry settings | Required if backend images are built and pushed |
+| Azure SQL connection settings | Required by backend runtime and integration tests |
+| Azure OpenAI / Foundry settings | Required by assistant endpoints if used during validation |
+| GitHub token for assistant endpoints | Required by `/api/assistant/github/*` |
+
+Do not commit secret values. Commit only example names and documentation.
+
+## Minimum CI Checks
+
+Run these checks on pushes to `fc-gpt`:
+
+```bash
+cd web-ui
+npm ci
+npm run build
+```
+
+```bash
+cd pricing-microservice
+python -m pip install -r requirements.txt
+python -m compileall app
+```
+
+If a live staging URL is available, add smoke checks:
+
+```bash
+curl -fsS "$API_BASE_URL/health"
+curl -fsS "$API_BASE_URL/health/sales"
+curl -fsS "$API_BASE_URL/api/sales/bootstrap"
+curl -fsS "$API_BASE_URL/api/billing/customers"
+```
+
+## Manual Browser Validation
+
+After frontend deploy, verify these hash routes:
+
+| Route | Expected result |
+| --- | --- |
+| `#/dashboard` | Legacy dashboard loads |
+| `#/sales` | API-backed sales workspace loads |
+| `#/details/lead/{id}` | Lead detail opens from a real sales lead |
+| `#/details/opportunity/{id}` | Opportunity detail opens from a real opportunity |
+| `#/details/quote/{id}` | Quote detail opens from a real quote |
+| `#/details/contract/{id}` | Contract detail opens from a real contract |
+| `#/product-pricing` | Legacy product/pricing module loads |
+| `#/customer-360` | Legacy customer 360 module loads |
+| `#/billing` | Legacy billing module loads |
+| `#/orders` | Legacy orders module loads |
+| `#/reports` | Legacy reports module loads |
+| `#/administration` | Legacy admin module loads |
+
+For routes that still fall back to `App.jsx`, validate that they render and that any remaining mock-driven actions are clearly tracked in the PR notes.
+
+## Backend Smoke Matrix
+
+Use this matrix to avoid claiming full completion when only build checks have passed.
+
+| Area | Smoke test |
+| --- | --- |
+| Service boot | `GET /health` returns 200 |
+| SQL sales storage | `GET /health/sales` returns 200 and counts |
+| Pricing context | `GET /health/pricing-context` returns 200 in environments with the billing context table |
+| Sales bootstrap | `GET /api/sales/bootstrap` returns dashboard, records, and reference data |
+| Lead writes | Create lead, update lead, add activity, convert lead |
+| Opportunity writes | Add/update/delete opportunity product, add note |
+| Quote writes | Add/update/delete line item, price quote, submit approval |
+| Approval writes | Approve, reject, request changes |
+| Contract writes | Create/update contract, add/delete file metadata |
+| Billing references | Customers, products, hierarchy, codes, elements, offers, promotions, and rate plans all return arrays |
+
+## What Is Not Yet Proven By Existing Code
+
+The current backend does not expose full production endpoints for every legacy UI domain. Do not wire modules to guessed URLs.
+
+Known gaps before full mock removal:
+- Invoice workflow endpoints for billing actions.
+- Order/provisioning endpoints.
+- Ticket/customer-service endpoints.
+- Network/service-ops endpoints.
+- Reports endpoints.
+- Admin/RBAC persistence endpoints.
+
+Until those exist, keep those modules either:
+- explicitly mock-backed, or
+- partially migrated to the existing `/api/billing/*` and `/api/sales/*` endpoints with remaining gaps called out in the PR.
+
