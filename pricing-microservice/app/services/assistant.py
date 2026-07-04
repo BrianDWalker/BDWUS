@@ -286,7 +286,7 @@ You must return JSON only with this shape:
       "title": "short title",
       "summary": "what would change and why",
       "target": "page or component target",
-      "kind": "ui_override|ui_patch|note",
+      "kind": "ui_override|ui_patch|note|lead_create|github_update",
       "patch": { "overrides": [ { "targetKey": "...", "value": "..." } ] },
       "requiresApproval": true
     }
@@ -294,8 +294,36 @@ You must return JSON only with this shape:
 }
 
 Rules:
+- In knowledge mode, behave like a telecom knowledge search and answer assistant.
+- In agent mode, help create telecom leads. If the user gives enough information to create a lead, return a single `lead_create` proposal with a `leadDraft` object in `patch`.
 - In dev mode, propose changes instead of claiming anything was changed.
 - All UI edits require approval before they are applied.
+- For `lead_create`, include:
+  {
+    "leadDraft": {
+      "accountName": "...",
+      "contactName": "...",
+      "source": "...",
+      "qualification": "...",
+      "status": "...",
+      "estimatedValue": 0,
+      "ownerName": "...",
+      "productInterest": "...",
+      "serviceNeeds": ["..."],
+      "customerInfo": { ... },
+      "notes": "..."
+    }
+  }
+- In dev mode, if the user wants GitHub changes, return a `github_update` proposal with:
+  {
+    "github": {
+      "repository": "owner/repo",
+      "branch": "branch-name",
+      "filePath": "path/to/file",
+      "changeSummary": "...",
+      "instructions": ["...", "..."]
+    }
+  }
 - When the user asks to create a new page, include an override with targetKey "assistant.pages" and a value shaped like an object or array of page objects:
   {
     "id": "stable slug",
@@ -324,8 +352,36 @@ Rules:
 
 def offline_response(request: AssistantChatRequest, history: list[dict[str, Any]]) -> dict[str, Any]:
     message = request.message.strip()
-    needs_change = request.mode == "dev" or any(word in message.lower() for word in ["change", "rename", "move", "add", "remove", "update", "edit", "build"])
     proposals: list[dict[str, Any]] = []
+    if request.mode == "agent":
+      sales_defaults = request.context.salesDefaults or {}
+      lead_draft = {
+          "accountName": sales_defaults.get("accountName") or "New Telecom Account",
+          "contactName": sales_defaults.get("contactName") or "Primary Contact",
+          "source": sales_defaults.get("source") or "AI Agent",
+          "qualification": "Open",
+          "status": "Open",
+          "estimatedValue": sales_defaults.get("estimatedValue") or 0,
+          "ownerName": sales_defaults.get("ownerName") or request.userName or "AI Agent",
+          "productInterest": sales_defaults.get("productInterest") or "Fiber 500",
+          "serviceNeeds": sales_defaults.get("serviceNeeds") or ["Fiber 500"],
+          "customerInfo": sales_defaults.get("customerInfo") or {"createdBy": "ai-agent"},
+          "notes": f"Drafted from assistant request: {message}",
+      }
+      proposals.append({
+          "title": "Create telecom lead",
+          "summary": "Review and create a new lead directly in the telecom workflow.",
+          "target": "sales/leads",
+          "kind": "lead_create",
+          "patch": {"leadDraft": lead_draft},
+          "requiresApproval": True,
+      })
+      return {
+          "assistantMessage": "I drafted a lead creation action. Review it and approve to create the lead in the telecom workflow.",
+          "proposals": proposals,
+      }
+
+    needs_change = request.mode == "dev" or any(word in message.lower() for word in ["change", "rename", "move", "add", "remove", "update", "edit", "build"])
     if needs_change:
       page_requested = any(word in message.lower() for word in ["page", "screen", "tab", "route"])
       patch_overrides: list[dict[str, Any]] = [
@@ -334,6 +390,31 @@ def offline_response(request: AssistantChatRequest, history: list[dict[str, Any]
               "value": "Ask AI"
           }
       ]
+      if request.mode == "dev" and any(word in message.lower() for word in ["repo", "repository", "github", "branch", "file", "pull request", "pr"]):
+        proposals.append({
+            "title": "Prepare GitHub change request",
+            "summary": "Review a repository-targeted development change for a specific branch and file.",
+            "target": request.context.githubRepo or "GitHub repository",
+            "kind": "github_update",
+            "patch": {
+                "github": {
+                    "repository": request.context.githubRepo or "owner/repo",
+                    "branch": request.context.githubBranch or "feature/ai-change",
+                    "filePath": request.context.githubFilePath or "path/to/file",
+                    "changeSummary": message,
+                    "instructions": [
+                        "Open the target branch.",
+                        "Update the requested file with the approved change.",
+                        "Validate the change before committing."
+                    ],
+                }
+            },
+            "requiresApproval": True,
+        })
+        return {
+            "assistantMessage": "I prepared a GitHub-targeted change request with repository, branch, and file details for review.",
+            "proposals": proposals,
+        }
       if page_requested:
         slug = re.sub(r"[^a-z0-9]+", "-", message.lower()).strip("-") or "test-page"
         patch_overrides.append({

@@ -170,6 +170,13 @@ body,
   box-shadow: 0 34px 90px rgba(15, 23, 42, 0.28);
 }
 
+.assistant-modal-elevated {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(247, 250, 252, 0.98), #fff 28%);
+}
+
 .assistant-modal-header,
 .assistant-composer {
   padding: 14px 16px;
@@ -195,6 +202,10 @@ body,
   font-size: 12px;
 }
 
+.assistant-modal-header-elevated {
+  border-bottom: 0;
+}
+
 .assistant-close {
   width: 34px;
   height: 34px;
@@ -206,6 +217,117 @@ body,
 
 .assistant-mode-switch {
   padding: 10px 16px 0;
+}
+
+.assistant-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 16px 12px;
+}
+
+.assistant-hero b {
+  display: block;
+  font-size: 20px;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.assistant-hero p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.assistant-context-pills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assistant-context-pills span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.05);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.assistant-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 16px 12px;
+}
+
+.assistant-mode-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  text-align: left;
+}
+
+.assistant-mode-card.active {
+  border-color: rgba(15, 118, 110, 0.32);
+  background: rgba(15, 118, 110, 0.08);
+  box-shadow: 0 12px 30px rgba(15, 118, 110, 0.12);
+}
+
+.assistant-mode-card-copy strong {
+  display: block;
+  font-family: "Space Grotesk", sans-serif;
+}
+
+.assistant-mode-card-copy span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.assistant-mode-card b {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.05);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.assistant-input-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 16px 12px;
+}
+
+.assistant-input-strip label {
+  display: grid;
+  gap: 6px;
+}
+
+.assistant-input-strip label.wide {
+  grid-column: span 2;
+}
+
+.assistant-input-strip span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.assistant-input-strip input {
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.98);
+  font: inherit;
 }
 
 .assistant-mode-switch button {
@@ -308,6 +430,16 @@ body,
   color: #b45309;
 }
 
+.assistant-proposal-badge.lead_create {
+  background: rgba(16, 185, 129, 0.16);
+  color: #047857;
+}
+
+.assistant-proposal-badge.github_update {
+  background: rgba(99, 102, 241, 0.16);
+  color: #4338ca;
+}
+
 .assistant-proposal-patch {
   display: grid;
   gap: 8px;
@@ -359,6 +491,10 @@ body,
   display: grid;
   gap: 10px;
   border-bottom: 0;
+}
+
+.assistant-composer-elevated {
+  padding-top: 8px;
 }
 
 .assistant-composer label {
@@ -707,6 +843,15 @@ body,
 
   .assistant-body {
     grid-template-columns: 1fr;
+  }
+
+  .assistant-mode-grid,
+  .assistant-input-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .assistant-input-strip label.wide {
+    grid-column: auto;
   }
 }
 

@@ -175,8 +175,8 @@ class OpportunityDetailsResponse(BaseModel):
     quoteHistory: list[QuoteHistoryRecord]
 
 
-AssistantMode = Literal["knowledge", "dev"]
-AssistantProposalKind = Literal["ui_override", "ui_patch", "note"]
+AssistantMode = Literal["knowledge", "agent", "dev"]
+AssistantProposalKind = Literal["ui_override", "ui_patch", "note", "lead_create", "github_update"]
 
 
 class AssistantContext(BaseModel):
@@ -186,6 +186,10 @@ class AssistantContext(BaseModel):
     knowledgeDocuments: list[dict[str, Any]] = Field(default_factory=list)
     knowledgeTopics: list[dict[str, Any]] = Field(default_factory=list)
     selectedText: Optional[str] = None
+    githubRepo: Optional[str] = None
+    githubBranch: Optional[str] = None
+    githubFilePath: Optional[str] = None
+    salesDefaults: dict[str, Any] = Field(default_factory=dict)
 
 
 class AssistantChatRequest(BaseModel):
