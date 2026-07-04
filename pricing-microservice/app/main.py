@@ -32,6 +32,7 @@ from app.services.assistant import (
     reject_change_request,
 )
 from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
+from app.services.platform import router as platform_router
 from app.services.quotes import (
     create_quote,
     get_opportunity_details,
@@ -74,6 +75,7 @@ app.add_middleware(
 
 app.include_router(sales_router)
 app.include_router(billing_router)
+app.include_router(platform_router)
 
 
 @app.on_event("startup")
@@ -96,6 +98,7 @@ def root():
             "sales": True,
             "pricing": True,
             "billing": True,
+            "platform": True,
         },
     }
 
