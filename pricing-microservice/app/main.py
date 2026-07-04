@@ -33,6 +33,7 @@ from app.services.assistant import (
 )
 from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
 from app.services.ops import admin_router, billing_workflow_router, ensure_ops_storage, ops_router
+from app.services.ops_write import admin_write_router, billing_write_router, ops_write_router
 from app.services.platform import router as platform_router
 from app.services.quotes import (
     create_quote,
@@ -80,6 +81,9 @@ app.include_router(platform_router)
 app.include_router(ops_router)
 app.include_router(admin_router)
 app.include_router(billing_workflow_router)
+app.include_router(ops_write_router)
+app.include_router(admin_write_router)
+app.include_router(billing_write_router)
 
 
 @app.on_event("startup")
