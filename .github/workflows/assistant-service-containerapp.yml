@@ -1,0 +1,30 @@
+name: Deploy Assistant Service
+
+on:
+  push:
+    branches: [main, fc-gpt]
+    paths:
+      - 'assistant-service/**'
+      - '.github/workflows/assistant-service-containerapp.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - working-directory: ./assistant-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m compileall app
+      - working-directory: ./assistant-service
+        run: docker build -t assistant-service:ci .
+      - run: echo "Assistant service image built successfully. Add Azure deployment secrets to publish automatically."
