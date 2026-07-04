@@ -41,7 +41,7 @@ pip install -r requirements.txt
 ## Required environment variables
 ```bash
 export AZURE_SQL_SERVER='bdwus.database.windows.net'
-export AZURE_SQL_DATABASE='bdwus_ms'
+export AZURE_SQL_DATABASE='AZBDWUSP'
 export AZURE_SQL_USERNAME='CloudSA394d0849'
 export AZURE_SQL_PASSWORD='BDWUSPWD1!'
 ```
