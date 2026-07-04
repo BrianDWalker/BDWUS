@@ -25,6 +25,7 @@ from app.services.assistant import (
     chat,
     ensure_ai_storage,
     get_github_branches,
+    get_github_commits,
     get_github_file,
     get_github_tree,
     get_change_request,
@@ -233,5 +234,13 @@ def assistant_github_tree(repository: str, branch: str, path: str = ""):
 def assistant_github_file(repository: str, branch: str, path: str):
     try:
         return get_github_file(repository, branch, path)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get("/api/assistant/github/commits")
+def assistant_github_commits(repository: str, branch: str, limit: int = 5):
+    try:
+        return get_github_commits(repository, branch, limit)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error

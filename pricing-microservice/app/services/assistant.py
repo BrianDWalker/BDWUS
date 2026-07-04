@@ -527,7 +527,54 @@ def build_github_update_proposal(request: AssistantChatRequest, message: str) ->
     }
 
 
+def is_github_commit_question(request: AssistantChatRequest) -> bool:
+    message = request.message.lower()
+    return (
+        request.mode == "dev"
+        and bool(request.context.githubRepo)
+        and any(word in message for word in ["commit", "commits", "history", "recent changes", "latest change"])
+    )
+
+
+def github_commit_answer(request: AssistantChatRequest) -> dict[str, Any]:
+    branch = request.context.githubBranch or "fc-gpt"
+    try:
+      result = get_github_commits(request.context.githubRepo or "", branch, 5)
+    except ValueError as exc:
+      return {
+          "assistantMessage": f"I tried to check GitHub commits for `{request.context.githubRepo}` on `{branch}`, but GitHub returned an error: {exc}",
+          "proposals": [],
+      }
+    commits = result.get("commits") or []
+    if not commits:
+        return {
+            "assistantMessage": f"I checked `{result['repository']}` on `{result['branch']}`, but GitHub did not return any commits.",
+            "proposals": [],
+        }
+    latest = commits[0]
+    lines = [
+        f"The most recent commit on `{result['repository']}` branch `{result['branch']}` is:",
+        "",
+        f"- `{latest.get('shortSha')}` {latest.get('message')}",
+        f"- Author: {latest.get('author')}",
+        f"- Date: {latest.get('date')}",
+    ]
+    if latest.get("htmlUrl"):
+        lines.append(f"- GitHub: {latest.get('htmlUrl')}")
+    if len(commits) > 1:
+        lines.extend(["", "Recent commits:"])
+        for commit in commits[1:]:
+            lines.append(f"- `{commit.get('shortSha')}` {commit.get('message')} ({commit.get('author')}, {commit.get('date')})")
+    return {
+        "assistantMessage": "\n".join(lines),
+        "proposals": [],
+    }
+
+
 def call_model(request: AssistantChatRequest, history: list[dict[str, Any]]) -> dict[str, Any]:
+    if is_github_commit_question(request):
+      return github_commit_answer(request)
+
     client = openai_client()
     if client is None:
       return offline_response(request, history)
@@ -700,6 +747,36 @@ def get_github_file(repository: str, branch: str, path: str) -> dict[str, Any]:
         "sha": response.get("sha"),
         "size": response.get("size") or len(content),
         "content": content,
+    }
+
+
+def get_github_commits(repository: str, branch: str, limit: int = 5) -> dict[str, Any]:
+    normalized_repo = normalize_github_repository(repository)
+    normalized_branch = normalize_github_branch(branch)
+    per_page = max(1, min(limit, 20))
+    payload = github_request(
+        "GET",
+        github_api_path(
+            f"/repos/{normalized_repo}/commits",
+            {"sha": normalized_branch, "per_page": str(per_page)},
+        ),
+    )
+    commits = []
+    for item in payload if isinstance(payload, list) else []:
+        commit = item.get("commit") or {}
+        author = commit.get("author") or {}
+        commits.append({
+            "sha": item.get("sha"),
+            "shortSha": str(item.get("sha") or "")[:7],
+            "message": (commit.get("message") or "").splitlines()[0],
+            "author": author.get("name") or ((item.get("author") or {}).get("login")) or "Unknown",
+            "date": author.get("date"),
+            "htmlUrl": item.get("html_url"),
+        })
+    return {
+        "repository": normalized_repo,
+        "branch": normalized_branch,
+        "commits": commits,
     }
 
 
