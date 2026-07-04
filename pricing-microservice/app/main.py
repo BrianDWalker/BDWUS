@@ -32,6 +32,7 @@ from app.services.assistant import (
     reject_change_request,
 )
 from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
+from app.services.ops import admin_router, billing_workflow_router, ensure_ops_storage, ops_router
 from app.services.platform import router as platform_router
 from app.services.quotes import (
     create_quote,
@@ -76,12 +77,16 @@ app.add_middleware(
 app.include_router(sales_router)
 app.include_router(billing_router)
 app.include_router(platform_router)
+app.include_router(ops_router)
+app.include_router(admin_router)
+app.include_router(billing_workflow_router)
 
 
 @app.on_event("startup")
 def startup_assistant_storage():
     ensure_ai_storage()
     init_sales()
+    ensure_ops_storage()
 
 
 @app.get("/")
@@ -99,6 +104,9 @@ def root():
             "pricing": True,
             "billing": True,
             "platform": True,
+            "operations": True,
+            "administration": True,
+            "billingWorkflows": True,
         },
     }
 
@@ -120,6 +128,7 @@ def ready():
         "pricingContext": False,
         "assistantStorage": False,
         "salesStorage": False,
+        "opsStorage": False,
     }
     details = {
         "sqlServer": SQL_SERVER,
@@ -144,6 +153,9 @@ def ready():
 
             cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ms' AND TABLE_NAME = 'Leads'")
             checks["salesStorage"] = cursor.fetchone() is not None
+
+            cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ops' AND TABLE_NAME = 'Orders'")
+            checks["opsStorage"] = cursor.fetchone() is not None
         finally:
             conn.close()
     except Exception as exc:
