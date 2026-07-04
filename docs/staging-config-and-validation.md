@@ -38,6 +38,8 @@ Do not commit secret values. Commit only example names and documentation.
 
 Run these checks on pushes to `fc-gpt`:
 
+The `Platform Build Validation` GitHub Actions workflow is intentionally configured without push path filters so every commit on `fc-gpt` gets an attached validation run, including documentation-only handoff commits.
+
 ```bash
 cd web-ui
 npm ci

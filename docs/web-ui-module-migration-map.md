@@ -6,7 +6,8 @@ Current state:
 - Branch: `fc-gpt`
 - Runtime entry: `web-ui/src/main.jsx`
 - Router bridge: `web-ui/src/SalesAppRouter.jsx`
-- Legacy UI fallback: `web-ui/src/App.jsx`
+- Small app shell: `web-ui/src/App.jsx`
+- Legacy UI fallback: `web-ui/src/LegacyPortal.jsx`
 - API-backed sales UI: `web-ui/src/components/SalesDatabaseCRM.jsx`
 - API client: `web-ui/src/utils/salesApi.js`
 - Mock source still used by legacy modules: `web-ui/src/data/mockData.js`
@@ -23,13 +24,13 @@ Current state:
 | `#/details/quote/:id` | `SalesQuoteDetail` | Uses `/api/sales/quotes/*` |
 | `#/details/contract/:id` | `SalesContractDetail` | Uses `/api/sales/contracts/*` |
 
-Every other route falls back to `App.jsx`.
+Every other route falls back to `LegacyPortal.jsx` through the small `App.jsx` shell.
 
-## Legacy App.jsx Section Boundaries
+## LegacyPortal.jsx Section Boundaries
 
-Use these line ranges as the initial extraction map. Line numbers may drift after edits, so prefer function names over exact lines when patching.
+Use these function names as the initial extraction map. Prefer function names over exact lines when patching.
 
-| Area | Function(s) in `App.jsx` | Suggested target file |
+| Area | Function(s) in `LegacyPortal.jsx` | Suggested target file |
 | --- | --- | --- |
 | Shared route helpers | `currentHashRoute`, `useRoute`, `Toast` | `web-ui/src/routing/useRoute.js` or keep in router |
 | Shared UI helpers | `ToolbarButton`, `SearchBox`, `Modal`, `MenuModal`, `MiniStat`, `ActionButton`, `Tabs`, `Breadcrumb`, `RecordHeader`, `SummaryStrip`, `TimelineList`, `FilterRibbon`, `DetailButton` | `web-ui/src/components/AppPrimitives.jsx` |
@@ -45,7 +46,7 @@ Use these line ranges as the initial extraction map. Line numbers may drift afte
 | Administration | `AdministrationModule` | `web-ui/src/modules/admin/AdministrationModule.jsx` |
 | Reports | `ReportsModule` | `web-ui/src/modules/reports/ReportsModule.jsx` |
 | Detail router | `DetailPage` | `web-ui/src/routing/DetailPage.jsx` |
-| Top-level app | `App` | Keep as the route composition shell after extraction |
+| Top-level legacy app | `LegacyPortal` | Keep as the legacy route composition shell until each module is extracted |
 
 ## Existing Backend Endpoints
 
@@ -165,6 +166,7 @@ For the first extraction commit:
 - Keep imports from `mockData.js` local to each extracted module until the module is migrated.
 - Avoid changing CSS class names.
 - Run `npm run build` from `web-ui` after every module extraction.
+- Keep `web-ui/src/App.jsx` small; extract remaining legacy sections from `LegacyPortal.jsx`.
 
 For migration commits:
 - Add API functions to `web-ui/src/utils/salesApi.js`.

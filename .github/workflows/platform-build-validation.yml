@@ -3,11 +3,6 @@ name: Platform Build Validation
 on:
   push:
     branches: [main, fc-gpt]
-    paths:
-      - 'web-ui/**'
-      - 'pricing-microservice/**'
-      - 'assistant-service/**'
-      - '.github/workflows/platform-build-validation.yml'
   pull_request:
     branches: [main, fc-gpt]
   workflow_dispatch:
