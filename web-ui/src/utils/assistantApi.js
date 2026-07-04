@@ -1,6 +1,6 @@
-const DEFAULT_ASSISTANT_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
+const DEFAULT_ASSISTANT_API_BASE = (import.meta.env.VITE_AI_API_BASE_URL || window.location.origin || "").replace(/\/$/, "");
 
-export const assistantApiBase = (import.meta.env.VITE_AI_API_BASE_URL || DEFAULT_ASSISTANT_API_BASE).replace(/\/$/, "");
+export const assistantApiBase = DEFAULT_ASSISTANT_API_BASE;
 
 function assistantUrl(path) {
   return `${assistantApiBase}${path}`;
@@ -14,10 +14,18 @@ async function requestJson(path, options = {}) {
     },
     ...options
   });
+
   if (!response.ok) {
-    const message = await response.text().catch(() => "");
-    throw new Error(message || `Assistant request failed: ${response.status}`);
+    let detail = "";
+    try {
+      const payload = await response.json();
+      detail = payload.detail || payload.message || JSON.stringify(payload);
+    } catch {
+      detail = await response.text().catch(() => "");
+    }
+    throw new Error(detail || `Assistant request failed: ${response.status}`);
   }
+
   return response.json();
 }
 
