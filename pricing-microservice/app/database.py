@@ -8,7 +8,7 @@ from azure.identity import DefaultAzureCredential
 
 
 SQL_SERVER = os.getenv("SQL_SERVER", "bdwus.database.windows.net")
-SQL_DATABASE = os.getenv("SQL_DATABASE", "BDWUS_MS")
+SQL_DATABASE = os.getenv("SQL_DATABASE", "AZBDWUSP")
 ODBC_DRIVER = os.getenv("ODBC_DRIVER", "ODBC Driver 18 for SQL Server")
 SQL_COPT_SS_ACCESS_TOKEN = 1256
 

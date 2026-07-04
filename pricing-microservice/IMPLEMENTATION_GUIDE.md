@@ -42,7 +42,7 @@ cd /path/to/pricing-microservice
 
 # Set environment variables (required)
 export AZURE_SQL_SERVER="your-server.database.windows.net"
-export AZURE_SQL_DATABASE="BDWUS_MS"
+export AZURE_SQL_DATABASE="AZBDWUSP"
 export AZURE_SQL_USERNAME="your_username"
 export AZURE_SQL_PASSWORD="your_password"
 
@@ -293,7 +293,7 @@ Flow:
 ```bash
 # Azure SQL connection
 SQL_SERVER=your-server.database.windows.net
-SQL_DATABASE=BDWUS_MS
+SQL_DATABASE=AZBDWUSP
 
 # Billing schema configuration
 BILLING_CONTEXT_OBJECT=ms.vBillingPricingContext
@@ -310,7 +310,7 @@ BILLING_USAGE_EVENTS_OBJECT=billing.UsageEvents
 
 ```bash
 AZURE_SQL_SERVER=your-server.database.windows.net
-AZURE_SQL_DATABASE=BDWUS_MS
+AZURE_SQL_DATABASE=AZBDWUSP
 AZURE_SQL_USERNAME=username
 AZURE_SQL_PASSWORD=password
 ```
