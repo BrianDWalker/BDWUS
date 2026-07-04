@@ -194,7 +194,7 @@ def assistant_approve_change_request(change_request_id: UUID, request: Assistant
     try:
         return approve_change_request(change_request_id, request)
     except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.post("/api/assistant/change-requests/{change_request_id}/reject", response_model=AssistantChangeRequest)

@@ -2,8 +2,11 @@ import json
 import os
 import re
 import uuid
+import base64
 from datetime import datetime, timezone
 from typing import Any
+from urllib import error as urlerror
+from urllib import request as urlrequest
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import OpenAI
@@ -18,6 +21,7 @@ from app.models import (
     AssistantProposal,
     AssistantUiOverride,
 )
+from app.services.sales import create_lead as create_sales_lead, ensure_sales_storage
 
 
 AI_SCHEMA = os.getenv("AI_SCHEMA", "ai")
@@ -36,6 +40,8 @@ AI_API_KEY = os.getenv("AZURE_AI_FOUNDRY_API_KEY") or os.getenv("AZURE_OPENAI_AP
 AI_AUTH_MODE = os.getenv("AI_AUTH_MODE", "auto").lower()
 AI_SCOPE = os.getenv("AZURE_AI_FOUNDRY_SCOPE", "https://ai.azure.com/.default")
 AI_OFFLINE = os.getenv("AI_ASSISTANT_OFFLINE", "false").lower() in {"1", "true", "yes"}
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com").rstrip("/")
 
 MAX_HISTORY_MESSAGES = int(os.getenv("AI_ASSISTANT_MAX_HISTORY_MESSAGES", "8"))
 
@@ -97,6 +103,24 @@ def extract_json_object(text: str) -> dict[str, Any]:
         if start >= 0 and end > start:
             return json.loads(cleaned[start : end + 1])
     raise ValueError("Assistant response did not contain valid JSON.")
+
+
+def extract_text_from_output_items(items: list[Any]) -> str:
+    parts: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        if isinstance(item.get("text"), str):
+            parts.append(item["text"])
+        content = item.get("content")
+        if isinstance(content, list):
+            for entry in content:
+                if not isinstance(entry, dict):
+                    continue
+                text_value = entry.get("text")
+                if isinstance(text_value, str):
+                    parts.append(text_value)
+    return "\n".join(part for part in parts if part).strip()
 
 
 def safe_json(value: Any) -> str:
@@ -321,7 +345,9 @@ Rules:
       "branch": "branch-name",
       "filePath": "path/to/file",
       "changeSummary": "...",
-      "instructions": ["...", "..."]
+      "instructions": ["...", "..."],
+      "commitMessage": "...",
+      "content": "full file content or replacement content to write"
     }
   }
 - When the user asks to create a new page, include an override with targetKey "assistant.pages" and a value shaped like an object or array of page objects:
@@ -354,28 +380,7 @@ def offline_response(request: AssistantChatRequest, history: list[dict[str, Any]
     message = request.message.strip()
     proposals: list[dict[str, Any]] = []
     if request.mode == "agent":
-      sales_defaults = request.context.salesDefaults or {}
-      lead_draft = {
-          "accountName": sales_defaults.get("accountName") or "New Telecom Account",
-          "contactName": sales_defaults.get("contactName") or "Primary Contact",
-          "source": sales_defaults.get("source") or "AI Agent",
-          "qualification": "Open",
-          "status": "Open",
-          "estimatedValue": sales_defaults.get("estimatedValue") or 0,
-          "ownerName": sales_defaults.get("ownerName") or request.userName or "AI Agent",
-          "productInterest": sales_defaults.get("productInterest") or "Fiber 500",
-          "serviceNeeds": sales_defaults.get("serviceNeeds") or ["Fiber 500"],
-          "customerInfo": sales_defaults.get("customerInfo") or {"createdBy": "ai-agent"},
-          "notes": f"Drafted from assistant request: {message}",
-      }
-      proposals.append({
-          "title": "Create telecom lead",
-          "summary": "Review and create a new lead directly in the telecom workflow.",
-          "target": "sales/leads",
-          "kind": "lead_create",
-          "patch": {"leadDraft": lead_draft},
-          "requiresApproval": True,
-      })
+      proposals.append(build_agent_lead_proposal(request, message))
       return {
           "assistantMessage": "I drafted a lead creation action. Review it and approve to create the lead in the telecom workflow.",
           "proposals": proposals,
@@ -391,26 +396,7 @@ def offline_response(request: AssistantChatRequest, history: list[dict[str, Any]
           }
       ]
       if request.mode == "dev" and any(word in message.lower() for word in ["repo", "repository", "github", "branch", "file", "pull request", "pr"]):
-        proposals.append({
-            "title": "Prepare GitHub change request",
-            "summary": "Review a repository-targeted development change for a specific branch and file.",
-            "target": request.context.githubRepo or "GitHub repository",
-            "kind": "github_update",
-            "patch": {
-                "github": {
-                    "repository": request.context.githubRepo or "owner/repo",
-                    "branch": request.context.githubBranch or "feature/ai-change",
-                    "filePath": request.context.githubFilePath or "path/to/file",
-                    "changeSummary": message,
-                    "instructions": [
-                        "Open the target branch.",
-                        "Update the requested file with the approved change.",
-                        "Validate the change before committing."
-                    ],
-                }
-            },
-            "requiresApproval": True,
-        })
+        proposals.append(build_github_update_proposal(request, message))
         return {
             "assistantMessage": "I prepared a GitHub-targeted change request with repository, branch, and file details for review.",
             "proposals": proposals,
@@ -450,6 +436,56 @@ def offline_response(request: AssistantChatRequest, history: list[dict[str, Any]
     }
 
 
+def build_agent_lead_proposal(request: AssistantChatRequest, message: str) -> dict[str, Any]:
+    sales_defaults = request.context.salesDefaults or {}
+    lead_draft = {
+        "accountName": sales_defaults.get("accountName") or "New Telecom Account",
+        "contactName": sales_defaults.get("contactName") or "Primary Contact",
+        "source": sales_defaults.get("source") or "AI Agent",
+        "qualification": "Open",
+        "status": "Open",
+        "estimatedValue": sales_defaults.get("estimatedValue") or 0,
+        "ownerName": sales_defaults.get("ownerName") or request.userName or "AI Agent",
+        "productInterest": sales_defaults.get("productInterest") or "Fiber 500",
+        "serviceNeeds": sales_defaults.get("serviceNeeds") or ["Fiber 500"],
+        "customerInfo": sales_defaults.get("customerInfo") or {"createdBy": "ai-agent"},
+        "notes": f"Drafted from assistant request: {message}",
+    }
+    return {
+        "title": "Create telecom lead",
+        "summary": "Review and create a new lead directly in the telecom workflow.",
+        "target": "sales/leads",
+        "kind": "lead_create",
+        "patch": {"leadDraft": lead_draft},
+        "requiresApproval": True,
+    }
+
+
+def build_github_update_proposal(request: AssistantChatRequest, message: str) -> dict[str, Any]:
+    return {
+        "title": "Prepare GitHub change request",
+        "summary": "Review a repository-targeted development change for a specific branch and file.",
+        "target": request.context.githubRepo or "GitHub repository",
+        "kind": "github_update",
+        "patch": {
+            "github": {
+                "repository": request.context.githubRepo or "owner/repo",
+                "branch": request.context.githubBranch or "feature/ai-change",
+                "filePath": request.context.githubFilePath or "path/to/file",
+                "changeSummary": message,
+                "commitMessage": "Apply approved AI change request",
+                "content": "// Replace with approved file content\n",
+                "instructions": [
+                    "Open the target branch.",
+                    "Update the requested file with the approved change.",
+                    "Validate the change before committing."
+                ],
+            }
+        },
+        "requiresApproval": True,
+    }
+
+
 def call_model(request: AssistantChatRequest, history: list[dict[str, Any]]) -> dict[str, Any]:
     client = openai_client()
     if client is None:
@@ -462,13 +498,23 @@ def call_model(request: AssistantChatRequest, history: list[dict[str, Any]]) -> 
         max_output_tokens=700,
     )
     text = getattr(response, "output_text", None) or ""
+    raw = response.model_dump()
     if not text:
-      raw = response.model_dump()
+      text = extract_text_from_output_items(raw.get("output", []))
+    if not text:
       text = json.dumps(raw.get("output", []))
-    payload = extract_json_object(text)
-    if "assistantMessage" not in payload:
+    payload_raw = extract_json_object(text)
+    payload = payload_raw if isinstance(payload_raw, dict) else {}
+    if "assistantMessage" not in payload and isinstance(payload_raw, dict):
       payload["assistantMessage"] = text.strip()
     payload.setdefault("proposals", [])
+    if request.mode == "agent" and not any(item.get("kind") == "lead_create" for item in payload["proposals"]):
+      payload["proposals"] = [build_agent_lead_proposal(request, request.message)]
+      payload["assistantMessage"] = payload.get("assistantMessage") or "I drafted a lead creation action for review."
+    if request.mode == "dev" and request.context.githubRepo and request.context.githubFilePath and not any(item.get("kind") == "github_update" for item in payload["proposals"]):
+      payload["proposals"].append(build_github_update_proposal(request, request.message))
+      payload["assistantMessage"] = payload.get("assistantMessage") or "I prepared a GitHub-targeted change request for review."
+    payload["assistantMessage"] = payload.get("assistantMessage") or "I am ready."
     return payload
 
 
@@ -507,6 +553,80 @@ def create_change_request(
         "proposal": proposal.model_dump(),
     })
     return change_request_id
+
+
+def github_request(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
+    if not GITHUB_TOKEN:
+      raise ValueError("GitHub execution is not configured. Add GITHUB_TOKEN to enable repository updates.")
+    body = None if payload is None else json.dumps(payload).encode("utf-8")
+    req = urlrequest.Request(
+        f"{GITHUB_API_URL}{path}",
+        data=body,
+        method=method,
+        headers={
+            "Accept": "application/vnd.github+json",
+            "Authorization": f"Bearer {GITHUB_TOKEN}",
+            "Content-Type": "application/json",
+            "X-GitHub-Api-Version": "2022-11-28",
+        },
+    )
+    try:
+      with urlrequest.urlopen(req, timeout=30) as response:
+        raw = response.read().decode("utf-8")
+        return json.loads(raw) if raw else {}
+    except urlerror.HTTPError as exc:
+      detail = exc.read().decode("utf-8", errors="replace")
+      raise ValueError(f"GitHub API error ({exc.code}): {detail}") from exc
+
+
+def execute_github_update(record: AssistantChangeRequest) -> dict[str, Any]:
+    github = record.patch.get("github") or {}
+    repository = github.get("repository")
+    branch = github.get("branch")
+    file_path = github.get("filePath")
+    content = github.get("content")
+    commit_message = github.get("commitMessage") or record.title
+
+    if not repository or not branch or not file_path or content is None:
+      raise ValueError("GitHub change request is missing repository, branch, file path, or content.")
+
+    file_endpoint = f"/repos/{repository}/contents/{file_path}"
+    sha = None
+    try:
+      existing = github_request("GET", f"{file_endpoint}?ref={branch}")
+      sha = existing.get("sha")
+    except ValueError as exc:
+      if "404" not in str(exc):
+        raise
+
+    payload = {
+        "message": commit_message,
+        "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
+        "branch": branch,
+    }
+    if sha:
+      payload["sha"] = sha
+    result = github_request("PUT", file_endpoint, payload)
+    log_audit("github_change_applied", "change_request", str(record.changeRequestId), {
+        "repository": repository,
+        "branch": branch,
+        "filePath": file_path,
+        "commitSha": ((result.get("commit") or {}).get("sha")),
+    })
+    return result
+
+
+def execute_lead_create(record: AssistantChangeRequest) -> dict[str, Any]:
+    ensure_sales_storage()
+    lead_draft = record.patch.get("leadDraft")
+    if not isinstance(lead_draft, dict):
+      raise ValueError("Lead creation request is missing a leadDraft payload.")
+    created = create_sales_lead(lead_draft)
+    log_audit("lead_created_from_assistant", "change_request", str(record.changeRequestId), {
+        "leadId": created.get("LeadId"),
+        "leadNumber": created.get("LeadNumber"),
+    })
+    return created
 
 
 def chat(request: AssistantChatRequest) -> AssistantChatResponse:
@@ -607,6 +727,12 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
     record = get_change_request(change_request_id)
     if record is None:
       raise ValueError("Change request not found.")
+
+    if record.kind == "lead_create":
+      execute_lead_create(record)
+    elif record.kind == "github_update":
+      execute_github_update(record)
+
     conn = get_sql_connection()
     try:
       approved_at = utc_now()
@@ -623,22 +749,23 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
           request.approvedBy,
           change_request_id,
       )
-      overrides = record.patch.get("overrides", [])
-      for override in overrides:
-        conn.cursor().execute(
-            f"""
-            INSERT INTO {AI_SCHEMA}.UiOverrides
-            (OverrideId, ChangeRequestId, Scope, TargetKey, ValueJson, Active, CreatedAtUtc)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            uuid.uuid4(),
-            change_request_id,
-            record.page,
-            override["targetKey"],
-            safe_json(override["value"]),
-            1,
-            approved_at,
-        )
+      if record.kind in {"ui_override", "ui_patch"}:
+        overrides = record.patch.get("overrides", [])
+        for override in overrides:
+          conn.cursor().execute(
+              f"""
+              INSERT INTO {AI_SCHEMA}.UiOverrides
+              (OverrideId, ChangeRequestId, Scope, TargetKey, ValueJson, Active, CreatedAtUtc)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
+              """,
+              uuid.uuid4(),
+              change_request_id,
+              record.page,
+              override["targetKey"],
+              safe_json(override["value"]),
+              1,
+              approved_at,
+          )
       conn.commit()
     finally:
       conn.close()

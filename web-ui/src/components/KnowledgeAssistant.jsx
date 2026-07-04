@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Icon } from "./Icons";
 import { approveAssistantChange, chatAssistant, fetchAssistantUiOverrides, rejectAssistantChange } from "../utils/assistantApi";
-import { createLead } from "../utils/salesApi";
 
 const assistantModes = [
   {
@@ -227,12 +226,7 @@ export function KnowledgeAssistant({ open, onClose, showToast, context, uiOverri
     try {
       const approved = await approveAssistantChange(proposal.changeRequestId, "admin");
       if (proposal.kind === "lead_create" && proposal.patch?.leadDraft) {
-        const createdLead = await createLead({
-          ...proposal.patch.leadDraft,
-          qualification: proposal.patch.leadDraft.qualification || "Open",
-          status: proposal.patch.leadDraft.status || "Open"
-        });
-        showToast(`Lead ${createdLead.LeadNumber || createdLead.LeadId || "created"} saved`);
+        showToast("Lead created from approved agent action");
       } else if (proposal.kind === "github_update") {
         showToast(`GitHub change request approved for ${proposal.patch?.github?.repository || approved.target || "repository"}`);
       } else {
