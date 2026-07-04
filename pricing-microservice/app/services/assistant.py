@@ -5,6 +5,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import OpenAI
 
 from app.database import get_sql_connection
@@ -20,9 +21,20 @@ from app.models import (
 
 
 AI_SCHEMA = os.getenv("AI_SCHEMA", "ai")
-AI_MODEL = os.getenv("AZURE_OPENAI_DEPLOYMENT", "bdwus-ai")
-AI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT", "").rstrip("/")
-AI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
+AI_MODEL = (
+    os.getenv("AZURE_AI_FOUNDRY_DEPLOYMENT")
+    or os.getenv("AZURE_OPENAI_DEPLOYMENT")
+    or "gpt-5-nano"
+)
+AI_ENDPOINT = (
+    os.getenv("AZURE_AI_FOUNDRY_OPENAI_ENDPOINT")
+    or os.getenv("AZURE_OPENAI_ENDPOINT")
+    or ""
+).rstrip("/")
+AI_PROJECT_ENDPOINT = os.getenv("AZURE_AI_FOUNDRY_PROJECT_ENDPOINT", "").rstrip("/")
+AI_API_KEY = os.getenv("AZURE_AI_FOUNDRY_API_KEY") or os.getenv("AZURE_OPENAI_API_KEY")
+AI_AUTH_MODE = os.getenv("AI_AUTH_MODE", "auto").lower()
+AI_SCOPE = os.getenv("AZURE_AI_FOUNDRY_SCOPE", "https://ai.azure.com/.default")
 AI_OFFLINE = os.getenv("AI_ASSISTANT_OFFLINE", "false").lower() in {"1", "true", "yes"}
 
 MAX_HISTORY_MESSAGES = int(os.getenv("AI_ASSISTANT_MAX_HISTORY_MESSAGES", "8"))
@@ -32,10 +44,44 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def normalize_openai_base_url(endpoint: str) -> str:
+    cleaned = endpoint.rstrip("/")
+    if not cleaned:
+        return ""
+    if cleaned.endswith("/openai/v1"):
+        return cleaned
+    if "/api/projects/" in cleaned:
+        origin = cleaned.split("/api/projects/", 1)[0].rstrip("/")
+        return f"{origin}/openai/v1"
+    return f"{cleaned}/openai/v1"
+
+
 def openai_client() -> OpenAI | None:
-    if AI_OFFLINE or not AI_ENDPOINT or not AI_API_KEY:
+    if AI_OFFLINE:
         return None
-    return OpenAI(api_key=AI_API_KEY, base_url=f"{AI_ENDPOINT}/openai/v1/")
+
+    base_url = normalize_openai_base_url(AI_ENDPOINT or AI_PROJECT_ENDPOINT)
+    if not base_url:
+        return None
+
+    if AI_AUTH_MODE == "api_key":
+        return OpenAI(api_key=AI_API_KEY, base_url=base_url) if AI_API_KEY else None
+
+    if AI_AUTH_MODE in {"bearer_token", "managed_identity", "entra"}:
+        token_provider = get_bearer_token_provider(
+            DefaultAzureCredential(exclude_interactive_browser_credential=False),
+            AI_SCOPE,
+        )
+        return OpenAI(api_key=token_provider, base_url=base_url)
+
+    if AI_API_KEY:
+        return OpenAI(api_key=AI_API_KEY, base_url=base_url)
+
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(exclude_interactive_browser_credential=False),
+        AI_SCOPE,
+    )
+    return OpenAI(api_key=token_provider, base_url=base_url)
 
 
 def extract_json_object(text: str) -> dict[str, Any]:
