@@ -122,25 +122,29 @@ def ready():
         "sqlServer": SQL_SERVER,
         "sqlDatabase": SQL_DATABASE,
         "billingContextObject": BILLING_CONTEXT_OBJECT,
+        "errors": [],
     }
 
-    conn = get_sql_connection()
     try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1 AS Healthy")
-        cursor.fetchone()
-        checks["sql"] = True
+        conn = get_sql_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 AS Healthy")
+            cursor.fetchone()
+            checks["sql"] = True
 
-        cursor.execute(f"SELECT TOP 1 1 AS Healthy FROM {BILLING_CONTEXT_OBJECT}")
-        checks["pricingContext"] = cursor.fetchone() is not None
+            cursor.execute(f"SELECT TOP 1 1 AS Healthy FROM {BILLING_CONTEXT_OBJECT}")
+            checks["pricingContext"] = cursor.fetchone() is not None
 
-        cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ai' AND TABLE_NAME = 'ChangeRequests'")
-        checks["assistantStorage"] = cursor.fetchone() is not None
+            cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ai' AND TABLE_NAME = 'ChangeRequests'")
+            checks["assistantStorage"] = cursor.fetchone() is not None
 
-        cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ms' AND TABLE_NAME = 'Leads'")
-        checks["salesStorage"] = cursor.fetchone() is not None
-    finally:
-        conn.close()
+            cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ms' AND TABLE_NAME = 'Leads'")
+            checks["salesStorage"] = cursor.fetchone() is not None
+        finally:
+            conn.close()
+    except Exception as exc:
+        details["errors"].append(str(exc))
 
     return {
         "status": "healthy" if all(checks.values()) else "degraded",
