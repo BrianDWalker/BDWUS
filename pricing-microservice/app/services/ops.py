@@ -50,6 +50,13 @@ def fetch_one(sql: str, params: tuple[Any, ...] = ()) -> dict[str, Any] | None:
     return rows[0] if rows else None
 
 
+def require_row(sql: str, params: tuple[Any, ...] = ()) -> dict[str, Any]:
+    row = fetch_one(sql, params)
+    if not row:
+        raise HTTPException(status_code=404, detail="Record not found.")
+    return row
+
+
 def execute(sql: str, params: tuple[Any, ...] = ()) -> None:
     conn = get_sql_connection()
     try:
