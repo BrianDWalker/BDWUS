@@ -189,6 +189,8 @@ class AssistantContext(BaseModel):
     githubRepo: Optional[str] = None
     githubBranch: Optional[str] = None
     githubFilePath: Optional[str] = None
+    githubTreePath: Optional[str] = None
+    githubFiles: list[dict[str, Any]] = Field(default_factory=list)
     salesDefaults: dict[str, Any] = Field(default_factory=dict)
 
 

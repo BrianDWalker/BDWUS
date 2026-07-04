@@ -24,6 +24,9 @@ from app.services.assistant import (
     approve_change_request,
     chat,
     ensure_ai_storage,
+    get_github_branches,
+    get_github_file,
+    get_github_tree,
     get_change_request,
     list_ui_overrides,
     reject_change_request,
@@ -208,3 +211,27 @@ def assistant_reject_change_request(change_request_id: UUID, request: AssistantA
 @app.get("/api/assistant/ui-overrides", response_model=list[AssistantUiOverride])
 def assistant_ui_overrides(scope: str = "knowledge"):
     return list_ui_overrides(scope)
+
+
+@app.get("/api/assistant/github/branches")
+def assistant_github_branches(repository: str):
+    try:
+        return get_github_branches(repository)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get("/api/assistant/github/tree")
+def assistant_github_tree(repository: str, branch: str, path: str = ""):
+    try:
+        return get_github_tree(repository, branch, path)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get("/api/assistant/github/file")
+def assistant_github_file(repository: str, branch: str, path: str):
+    try:
+        return get_github_file(repository, branch, path)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error

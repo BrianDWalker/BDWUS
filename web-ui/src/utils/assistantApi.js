@@ -98,3 +98,25 @@ export async function rejectAssistantChange(changeRequestId, approvedBy = "admin
     body: JSON.stringify({ approvedBy })
   });
 }
+
+export async function fetchGithubBranches(repository) {
+  return requestJson(`/api/assistant/github/branches?repository=${encodeURIComponent(repository)}`);
+}
+
+export async function fetchGithubTree(repository, branch, path = "") {
+  const params = new URLSearchParams({
+    repository,
+    branch,
+    path
+  });
+  return requestJson(`/api/assistant/github/tree?${params.toString()}`);
+}
+
+export async function fetchGithubFile(repository, branch, path) {
+  const params = new URLSearchParams({
+    repository,
+    branch,
+    path
+  });
+  return requestJson(`/api/assistant/github/file?${params.toString()}`);
+}

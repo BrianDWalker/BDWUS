@@ -6,6 +6,7 @@ import base64
 from datetime import datetime, timezone
 from typing import Any
 from urllib import error as urlerror
+from urllib import parse as urlparse
 from urllib import request as urlrequest
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
@@ -44,6 +45,26 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com").rstrip("/")
 
 MAX_HISTORY_MESSAGES = int(os.getenv("AI_ASSISTANT_MAX_HISTORY_MESSAGES", "8"))
+
+
+def normalize_github_repository(repository: str) -> str:
+    cleaned = (repository or "").strip().strip("/")
+    parts = [item for item in cleaned.split("/") if item]
+    if len(parts) != 2:
+        raise ValueError("GitHub repository must be formatted as owner/repo.")
+    return "/".join(parts)
+
+
+def normalize_github_branch(branch: str) -> str:
+    cleaned = (branch or "").strip()
+    if not cleaned:
+        raise ValueError("GitHub branch is required.")
+    return cleaned
+
+
+def normalize_github_path(path: str) -> str:
+    cleaned = (path or "").strip().strip("/")
+    return cleaned
 
 
 def utc_now() -> datetime:
@@ -320,7 +341,7 @@ You must return JSON only with this shape:
 Rules:
 - In knowledge mode, behave like a telecom knowledge search and answer assistant.
 - In agent mode, help create telecom leads. If the user gives enough information to create a lead, return a single `lead_create` proposal with a `leadDraft` object in `patch`.
-- In dev mode, propose changes instead of claiming anything was changed.
+- In dev mode, act like a repository-aware engineering agent. Use the provided GitHub branch, file, and selected file contents to reason about real code changes, but still propose changes instead of claiming anything was changed.
 - All UI edits require approval before they are applied.
 - For `lead_create`, include:
   {
@@ -343,13 +364,19 @@ Rules:
     "github": {
       "repository": "owner/repo",
       "branch": "branch-name",
-      "filePath": "path/to/file",
       "changeSummary": "...",
-      "instructions": ["...", "..."],
       "commitMessage": "...",
-      "content": "full file content or replacement content to write"
+      "files": [
+        {
+          "filePath": "path/to/file",
+          "content": "full file content to write"
+        }
+      ],
+      "instructions": ["...", "..."]
     }
   }
+- If only one file is involved you may also include the legacy `filePath` and `content` fields, but prefer the `files` array for all new dev-mode proposals.
+- In dev mode, when GitHub file contents are present in `pageContext.githubFiles`, treat them as the current source of truth for the target branch and write complete replacement content for every changed file.
 - When the user asks to create a new page, include an override with targetKey "assistant.pages" and a value shaped like an object or array of page objects:
   {
     "id": "stable slug",
@@ -462,23 +489,37 @@ def build_agent_lead_proposal(request: AssistantChatRequest, message: str) -> di
 
 
 def build_github_update_proposal(request: AssistantChatRequest, message: str) -> dict[str, Any]:
+    selected_files = []
+    for item in request.context.githubFiles:
+        file_path = normalize_github_path(str(item.get("path") or item.get("filePath") or ""))
+        if not file_path:
+            continue
+        selected_files.append({
+            "filePath": file_path,
+            "content": f"// Replace with approved content for {file_path}\n",
+        })
+    if not selected_files:
+        fallback_path = request.context.githubFilePath or "path/to/file"
+        selected_files.append({
+            "filePath": fallback_path,
+            "content": "// Replace with approved file content\n",
+        })
     return {
         "title": "Prepare GitHub change request",
-        "summary": "Review a repository-targeted development change for a specific branch and file.",
+        "summary": "Review a repository-targeted development change for one or more files on a specific branch.",
         "target": request.context.githubRepo or "GitHub repository",
         "kind": "github_update",
         "patch": {
             "github": {
                 "repository": request.context.githubRepo or "owner/repo",
                 "branch": request.context.githubBranch or "feature/ai-change",
-                "filePath": request.context.githubFilePath or "path/to/file",
                 "changeSummary": message,
                 "commitMessage": "Apply approved AI change request",
-                "content": "// Replace with approved file content\n",
+                "files": selected_files,
                 "instructions": [
-                    "Open the target branch.",
-                    "Update the requested file with the approved change.",
-                    "Validate the change before committing."
+                    "Review the selected repository context and target branch.",
+                    "Apply the approved file changes exactly as specified.",
+                    "Validate the updated files before committing them."
                 ],
             }
         },
@@ -495,7 +536,7 @@ def call_model(request: AssistantChatRequest, history: list[dict[str, Any]]) -> 
     response = client.responses.create(
         model=AI_MODEL,
         input=prompt,
-        max_output_tokens=700,
+        max_output_tokens=1600,
     )
     text = getattr(response, "output_text", None) or ""
     raw = response.model_dump()
@@ -511,7 +552,8 @@ def call_model(request: AssistantChatRequest, history: list[dict[str, Any]]) -> 
     if request.mode == "agent" and not any(item.get("kind") == "lead_create" for item in payload["proposals"]):
       payload["proposals"] = [build_agent_lead_proposal(request, request.message)]
       payload["assistantMessage"] = payload.get("assistantMessage") or "I drafted a lead creation action for review."
-    if request.mode == "dev" and request.context.githubRepo and request.context.githubFilePath and not any(item.get("kind") == "github_update" for item in payload["proposals"]):
+    has_github_targets = bool(request.context.githubFilePath or request.context.githubFiles)
+    if request.mode == "dev" and request.context.githubRepo and has_github_targets and not any(item.get("kind") == "github_update" for item in payload["proposals"]):
       payload["proposals"].append(build_github_update_proposal(request, request.message))
       payload["assistantMessage"] = payload.get("assistantMessage") or "I prepared a GitHub-targeted change request for review."
     payload["assistantMessage"] = payload.get("assistantMessage") or "I am ready."
@@ -555,6 +597,12 @@ def create_change_request(
     return change_request_id
 
 
+def github_api_path(path: str, params: dict[str, str] | None = None) -> str:
+    if not params:
+        return path
+    return f"{path}?{urlparse.urlencode(params)}"
+
+
 def github_request(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
     if not GITHUB_TOKEN:
       raise ValueError("GitHub execution is not configured. Add GITHUB_TOKEN to enable repository updates.")
@@ -579,41 +627,195 @@ def github_request(method: str, path: str, payload: dict[str, Any] | None = None
       raise ValueError(f"GitHub API error ({exc.code}): {detail}") from exc
 
 
+def get_github_branches(repository: str) -> dict[str, Any]:
+    normalized_repo = normalize_github_repository(repository)
+    payload = github_request("GET", github_api_path(f"/repos/{normalized_repo}/branches", {"per_page": "100"}))
+    branches = []
+    for item in payload if isinstance(payload, list) else []:
+        branches.append({
+            "name": item.get("name"),
+            "sha": ((item.get("commit") or {}).get("sha")),
+            "protected": bool(item.get("protected")),
+        })
+    return {
+        "repository": normalized_repo,
+        "branches": branches,
+    }
+
+
+def get_github_tree(repository: str, branch: str, path: str = "") -> dict[str, Any]:
+    normalized_repo = normalize_github_repository(repository)
+    normalized_branch = normalize_github_branch(branch)
+    normalized_path = normalize_github_path(path)
+    encoded_path = urlparse.quote(normalized_path, safe="/")
+    response = github_request(
+        "GET",
+        github_api_path(f"/repos/{normalized_repo}/contents/{encoded_path}", {"ref": normalized_branch}) if encoded_path
+        else github_api_path(f"/repos/{normalized_repo}/contents", {"ref": normalized_branch}),
+    )
+    if not isinstance(response, list):
+        raise ValueError("The selected GitHub path is a file. Use the file reader for file contents.")
+    entries = [
+        {
+            "name": item.get("name"),
+            "path": item.get("path"),
+            "type": item.get("type"),
+            "sha": item.get("sha"),
+            "size": item.get("size") or 0,
+        }
+        for item in response
+        if isinstance(item, dict)
+    ]
+    entries.sort(key=lambda item: (item.get("type") != "dir", (item.get("path") or "").lower()))
+    return {
+        "repository": normalized_repo,
+        "branch": normalized_branch,
+        "path": normalized_path,
+        "entries": entries,
+    }
+
+
+def get_github_file(repository: str, branch: str, path: str) -> dict[str, Any]:
+    normalized_repo = normalize_github_repository(repository)
+    normalized_branch = normalize_github_branch(branch)
+    normalized_path = normalize_github_path(path)
+    if not normalized_path:
+        raise ValueError("GitHub file path is required.")
+    encoded_path = urlparse.quote(normalized_path, safe="/")
+    response = github_request(
+        "GET",
+        github_api_path(f"/repos/{normalized_repo}/contents/{encoded_path}", {"ref": normalized_branch}),
+    )
+    if not isinstance(response, dict) or response.get("type") != "file":
+        raise ValueError("The selected GitHub path is not a file.")
+    encoded_content = response.get("content") or ""
+    content = ""
+    if response.get("encoding") == "base64" and encoded_content:
+        content = base64.b64decode(encoded_content.encode("utf-8")).decode("utf-8", errors="replace")
+    return {
+        "repository": normalized_repo,
+        "branch": normalized_branch,
+        "path": normalized_path,
+        "name": response.get("name"),
+        "sha": response.get("sha"),
+        "size": response.get("size") or len(content),
+        "content": content,
+    }
+
+
+def normalize_github_files_patch(github: dict[str, Any]) -> list[dict[str, str]]:
+    files: list[dict[str, str]] = []
+    raw_files = github.get("files")
+    if isinstance(raw_files, list):
+        for item in raw_files:
+            if not isinstance(item, dict):
+                continue
+            file_path = normalize_github_path(str(item.get("filePath") or item.get("path") or ""))
+            content = item.get("content")
+            if not file_path or not isinstance(content, str):
+                continue
+            files.append({
+                "filePath": file_path,
+                "content": content,
+            })
+    legacy_path = normalize_github_path(str(github.get("filePath") or ""))
+    legacy_content = github.get("content")
+    if legacy_path and isinstance(legacy_content, str) and not any(item["filePath"] == legacy_path for item in files):
+        files.append({
+            "filePath": legacy_path,
+            "content": legacy_content,
+        })
+    if not files:
+        raise ValueError("GitHub change request is missing at least one file with full content.")
+    deduped: dict[str, str] = {}
+    for item in files:
+        deduped[item["filePath"]] = item["content"]
+    return [
+        {"filePath": file_path, "content": content}
+        for file_path, content in deduped.items()
+    ]
+
+
 def execute_github_update(record: AssistantChangeRequest) -> dict[str, Any]:
     github = record.patch.get("github") or {}
-    repository = github.get("repository")
-    branch = github.get("branch")
-    file_path = github.get("filePath")
-    content = github.get("content")
+    repository = normalize_github_repository(str(github.get("repository") or ""))
+    branch = normalize_github_branch(str(github.get("branch") or ""))
     commit_message = github.get("commitMessage") or record.title
+    files = normalize_github_files_patch(github)
 
-    if not repository or not branch or not file_path or content is None:
-      raise ValueError("GitHub change request is missing repository, branch, file path, or content.")
+    ref = github_request("GET", f"/repos/{repository}/git/ref/heads/{urlparse.quote(branch, safe='/')}")
+    head_commit_sha = ((ref.get("object") or {}).get("sha"))
+    if not head_commit_sha:
+      raise ValueError("Unable to resolve the current GitHub branch head.")
+    head_commit = github_request("GET", f"/repos/{repository}/git/commits/{head_commit_sha}")
+    base_tree_sha = ((head_commit.get("tree") or {}).get("sha"))
+    if not base_tree_sha:
+      raise ValueError("Unable to resolve the current GitHub branch tree.")
 
-    file_endpoint = f"/repos/{repository}/contents/{file_path}"
-    sha = None
-    try:
-      existing = github_request("GET", f"{file_endpoint}?ref={branch}")
-      sha = existing.get("sha")
-    except ValueError as exc:
-      if "404" not in str(exc):
-        raise
+    tree_entries = []
+    for item in files:
+        blob = github_request(
+            "POST",
+            f"/repos/{repository}/git/blobs",
+            {
+                "content": item["content"],
+                "encoding": "utf-8",
+            },
+        )
+        blob_sha = blob.get("sha")
+        if not blob_sha:
+            raise ValueError(f"GitHub blob creation failed for {item['filePath']}.")
+        tree_entries.append({
+            "path": item["filePath"],
+            "mode": "100644",
+            "type": "blob",
+            "sha": blob_sha,
+        })
 
-    payload = {
-        "message": commit_message,
-        "content": base64.b64encode(content.encode("utf-8")).decode("utf-8"),
-        "branch": branch,
-    }
-    if sha:
-      payload["sha"] = sha
-    result = github_request("PUT", file_endpoint, payload)
+    tree = github_request(
+        "POST",
+        f"/repos/{repository}/git/trees",
+        {
+            "base_tree": base_tree_sha,
+            "tree": tree_entries,
+        },
+    )
+    tree_sha = tree.get("sha")
+    if not tree_sha:
+        raise ValueError("GitHub tree creation failed.")
+    commit = github_request(
+        "POST",
+        f"/repos/{repository}/git/commits",
+        {
+            "message": commit_message,
+            "tree": tree_sha,
+            "parents": [head_commit_sha],
+        },
+    )
+    commit_sha = commit.get("sha")
+    if not commit_sha:
+        raise ValueError("GitHub commit creation failed.")
+    github_request(
+        "PATCH",
+        f"/repos/{repository}/git/refs/heads/{urlparse.quote(branch, safe='/')}",
+        {
+            "sha": commit_sha,
+            "force": False,
+        },
+    )
     log_audit("github_change_applied", "change_request", str(record.changeRequestId), {
         "repository": repository,
         "branch": branch,
-        "filePath": file_path,
-        "commitSha": ((result.get("commit") or {}).get("sha")),
+        "filePaths": [item["filePath"] for item in files],
+        "commitSha": commit_sha,
     })
-    return result
+    return {
+        "repository": repository,
+        "branch": branch,
+        "commitSha": commit_sha,
+        "fileCount": len(files),
+        "files": files,
+    }
 
 
 def execute_lead_create(record: AssistantChangeRequest) -> dict[str, Any]:
