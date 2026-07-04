@@ -54,9 +54,12 @@ If a live staging URL is available, add smoke checks:
 
 ```bash
 curl -fsS "$API_BASE_URL/health"
+curl -fsS "$API_BASE_URL/health/ready"
 curl -fsS "$API_BASE_URL/health/sales"
 curl -fsS "$API_BASE_URL/api/sales/bootstrap"
 curl -fsS "$API_BASE_URL/api/billing/customers"
+curl -fsS "$API_BASE_URL/api/platform/bootstrap"
+curl -fsS "$API_BASE_URL/api/ops/bootstrap"
 ```
 
 ## Manual Browser Validation
@@ -87,29 +90,31 @@ Use this matrix to avoid claiming full completion when only build checks have pa
 | Area | Smoke test |
 | --- | --- |
 | Service boot | `GET /health` returns 200 |
+| Readiness | `GET /health/ready` returns healthy or a useful degraded payload |
 | SQL sales storage | `GET /health/sales` returns 200 and counts |
 | Pricing context | `GET /health/pricing-context` returns 200 in environments with the billing context table |
 | Sales bootstrap | `GET /api/sales/bootstrap` returns dashboard, records, and reference data |
+| Platform bootstrap | `GET /api/platform/bootstrap` returns cross-module portal data |
 | Lead writes | Create lead, update lead, add activity, convert lead |
 | Opportunity writes | Add/update/delete opportunity product, add note |
 | Quote writes | Add/update/delete line item, price quote, submit approval |
 | Approval writes | Approve, reject, request changes |
 | Contract writes | Create/update contract, add/delete file metadata |
 | Billing references | Customers, products, hierarchy, codes, elements, offers, promotions, and rate plans all return arrays |
+| Ops writes | Create/update an order, create/update a provisioning job, create a network event |
+| Admin writes | Create a user, role, and integration |
+| Billing workflow writes | Create an invoice action and adjustment |
 
 ## What Is Not Yet Proven By Existing Code
 
-The current backend does not expose full production endpoints for every legacy UI domain. Do not wire modules to guessed URLs.
+The current backend exposes foundations for every major legacy UI domain, but live CI/staging validation is still required before claiming production completion. Do not wire modules to guessed URLs beyond the endpoint families listed in `docs/web-ui-module-migration-map.md`.
 
 Known gaps before full mock removal:
-- Invoice workflow endpoints for billing actions.
-- Order/provisioning endpoints.
-- Ticket/customer-service endpoints.
-- Network/service-ops endpoints.
-- Reports endpoints.
-- Admin/RBAC persistence endpoints.
+- Customer-service ticket endpoints are still not a complete dedicated API family.
+- Some endpoints are foundation-level and need permissions, audit trails, validation depth, and integration tests.
+- Frontend modules still need loading, empty, error, and mutation states wired to the available APIs.
+- Live Azure SQL and staging checks must pass against the deployed service.
 
-Until those exist, keep those modules either:
+Until those gaps are closed, keep affected modules either:
 - explicitly mock-backed, or
 - partially migrated to the existing `/api/billing/*` and `/api/sales/*` endpoints with remaining gaps called out in the PR.
-

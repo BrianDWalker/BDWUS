@@ -102,6 +102,7 @@ Billing reference data:
 Health and assistant:
 - `GET /`
 - `GET /health`
+- `GET /health/ready`
 - `GET /health/assistant`
 - `GET /health/sales`
 - `GET /health/pricing-context`
@@ -112,6 +113,35 @@ Health and assistant:
 - `GET /api/assistant/github/file`
 - `GET /api/assistant/github/commits`
 
+Platform:
+- `GET /api/platform/bootstrap`
+- `GET /api/platform/reports/definitions`
+- `GET /api/platform/reports/{report_id}`
+- `GET /api/platform/administration/summary`
+- `GET /api/platform/customer-360/{customer_number}`
+- `GET /api/platform/product-pricing/overview`
+
+Operations:
+- `GET /api/ops/bootstrap`
+- `GET/POST /api/ops/orders`
+- `PUT /api/ops/orders/{order_id}`
+- `GET /api/ops/network-events`
+- `POST /api/ops/network-events`
+- `GET/POST /api/ops/provisioning-jobs`
+- `PUT /api/ops/provisioning-jobs/{job_id}`
+- `GET/POST /api/ops/carrier-settlement`
+
+Administration:
+- `GET/POST /api/admin/users`
+- `GET/POST /api/admin/roles`
+- `GET/POST /api/admin/integrations`
+
+Billing workflows:
+- `GET /api/billing-workflows/invoices`
+- `GET /api/billing-workflows/invoices/{invoice_id}`
+- `GET/POST /api/billing-workflows/invoices/{invoice_id}/actions`
+- `GET/POST /api/billing-workflows/adjustments`
+
 ## Target UI-To-API Mapping
 
 Migrate modules in this order so each change can be reviewed and validated independently.
@@ -119,13 +149,13 @@ Migrate modules in this order so each change can be reviewed and validated indep
 | Priority | Module | Current data source | Target source |
 | --- | --- | --- | --- |
 | 1 | Sales | Mixed, mostly complete in `SalesDatabaseCRM.jsx` | Keep using `/api/sales/bootstrap` plus sales CRUD |
-| 2 | Product pricing | `services`, `pricingPrograms`, local derivations | `/api/billing/products`, `/api/billing/product-hierarchy`, `/api/billing/billing-codes`, `/api/billing/billing-elements`, `/api/billing/offers`, `/api/billing/promotions`, `/api/billing/rate-plans` |
-| 3 | Customer 360 | `customers`, `orders`, `invoices`, `tickets`, derived helpers | Start with `/api/billing/customers/*`; add backend endpoints before removing mock orders, invoices, tickets |
-| 4 | Billing | `customers`, `invoices`, `adjustments`, local PDF/export helpers | Start with `/api/billing/customers/*`; keep mock invoice actions until invoice workflow endpoints exist |
-| 5 | Orders | `orders`, local status derivation | Requires new `/api/ops/orders` or `/api/sales/orders` endpoints before full mock removal |
-| 6 | Reports | `reportDefinitions`, `reportRows` | Requires new reports endpoint or keep mock reports explicitly labeled as demo data |
-| 7 | Administration | Mostly local simulated actions | Requires RBAC/admin endpoints before full migration |
-| 8 | Service operations | `networkEvents`, `tickets`, local simulated actions | Requires ops/network/ticket endpoints before full migration |
+| 2 | Product pricing | `services`, `pricingPrograms`, local derivations | `/api/platform/product-pricing/overview` plus `/api/billing/products`, hierarchy, codes, elements, offers, promotions, and rate plans |
+| 3 | Customer 360 | `customers`, `orders`, `invoices`, `tickets`, derived helpers | `/api/platform/customer-360/{customer_number}` plus `/api/billing/customers/*` |
+| 4 | Billing | `customers`, `invoices`, `adjustments`, local PDF/export helpers | `/api/billing-workflows/invoices`, invoice actions, adjustments, and `/api/billing/customers/*` |
+| 5 | Orders | `orders`, local status derivation | `/api/ops/orders`, `/api/ops/provisioning-jobs`, `/api/ops/bootstrap` |
+| 6 | Reports | `reportDefinitions`, `reportRows` | `/api/platform/reports/definitions` and `/api/platform/reports/{report_id}` |
+| 7 | Administration | Mostly local simulated actions | `/api/platform/administration/summary`, `/api/admin/users`, `/api/admin/roles`, `/api/admin/integrations` |
+| 8 | Service operations | `networkEvents`, `tickets`, local simulated actions | `/api/ops/network-events`, `/api/ops/provisioning-jobs`, `/api/ops/carrier-settlement` |
 
 ## Extraction Rules
 
@@ -152,4 +182,3 @@ Each migrated module is done only when:
 - It still builds with `npm run build`.
 - The route can be opened directly with a hash URL.
 - The module has a short note in the PR summary listing remaining mock-only areas, if any.
-
