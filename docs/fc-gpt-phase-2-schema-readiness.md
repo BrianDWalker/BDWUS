@@ -95,9 +95,9 @@ Completed non-pytest validation:
 - migration rerun against live Azure SQL
 - live Phase 2 schema validation script
 
-## Still Owned By Later Phases
+## Later Phase Follow-Up
 
-- Phase 3 should update API reads for report definitions, Knowledge content, and administration summary to use the new SQL objects.
-- Phase 3 should decide whether startup-time DDL remains as a defensive fallback or is reduced once migrations are part of deployment.
+- Phase 3 completed API reads for report definitions, Knowledge content, and administration summary in `docs/fc-gpt-phase-3-api-contracts.md`.
+- A later deployment hardening pass should decide whether startup-time DDL remains as a defensive fallback or is reduced once migrations are part of deployment.
 - Phase 4 should remove production frontend usage of Knowledge mock data after the new Knowledge API exists.
 - Phase 5 should enforce backend roles for protected mutations.
