@@ -11,17 +11,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import struct
 import subprocess
-from collections import defaultdict
 
 import pyodbc
 
 
 SQL_COPT_SS_ACCESS_TOKEN = 1256
 DEFAULT_SERVER = "bdwus.database.windows.net"
-DEFAULT_SOURCE_DB = "BDWUS_MS"
-DEFAULT_TARGET_DB = "AZBDWUSP"
+DEFAULT_SOURCE_DB = os.getenv("SOURCE_SQL_DATABASE")
+DEFAULT_TARGET_DB = os.getenv("TARGET_SQL_DATABASE") or os.getenv("SQL_DATABASE") or "AZBDWUSP"
 DEFAULT_SCHEMAS = ("ai", "billing", "dbo", "ms")
 SYSTEM_VIEWS = {"sys.database_firewall_rules"}
 
@@ -305,7 +305,7 @@ def copy_table(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Clone Azure SQL schema and data between databases.")
     parser.add_argument("--server", default=DEFAULT_SERVER)
-    parser.add_argument("--source-db", default=DEFAULT_SOURCE_DB)
+    parser.add_argument("--source-db", default=DEFAULT_SOURCE_DB, required=DEFAULT_SOURCE_DB is None)
     parser.add_argument("--target-db", default=DEFAULT_TARGET_DB)
     parser.add_argument("--schemas", nargs="+", default=list(DEFAULT_SCHEMAS))
     parser.add_argument("--batch-size", type=int, default=1000)

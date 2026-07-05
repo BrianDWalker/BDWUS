@@ -1,0 +1,89 @@
+name: Deploy Pricing Microservice
+
+on:
+  push:
+    branches: [main, fc-gpt, fc-gpt-deep-review-audit]
+    paths:
+      - 'pricing-microservice/**'
+      - '.github/workflows/pricing-microservice-containerapp.yml'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: pricing-microservice-containerapp-bdwusca
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      AZURE_CLIENT_ID: "266a6780-0e55-4cb3-862a-f6e8cb121ab1"
+      AZURE_TENANT_ID: "4e1db426-c797-4336-bd16-7e771a5de494"
+      AZURE_SUBSCRIPTION_ID: "a8f3fd5d-0d2f-4715-b685-728b21d1cc10"
+      RESOURCE_GROUP: "AZURE-SQL-PNG"
+      CONTAINER_APP_NAME: "bdwusca"
+      ACR_NAME: "bdwuscr"
+      ACR_LOGIN_SERVER: "bdwuscr.azurecr.io"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - working-directory: ./pricing-microservice
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m compileall app
+      - working-directory: ./pricing-microservice
+        run: docker build -t pricing-microservice:ci .
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+      - name: Build and publish image in ACR
+        run: |
+          IMAGE_TAG="${GITHUB_REF_NAME}-${GITHUB_SHA::7}"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_ENV"
+          az acr build \
+            --registry "$ACR_NAME" \
+            --image "pricing-microservice:$IMAGE_TAG" \
+            ./pricing-microservice
+      - name: Update Azure Container App
+        run: |
+          az extension add --name containerapp --upgrade --only-show-errors
+          az containerapp update \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$CONTAINER_APP_NAME" \
+            --image "$ACR_LOGIN_SERVER/pricing-microservice:$IMAGE_TAG"
+      - name: Smoke check deployed API
+        run: |
+          set -euo pipefail
+          revision_fqdn="$(az containerapp show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$CONTAINER_APP_NAME" \
+            --query properties.latestRevisionFqdn \
+            --output tsv)"
+          base="https://${revision_fqdn%/}"
+          endpoints=(
+            "/health"
+            "/health/ready"
+            "/api/platform/bootstrap"
+            "/api/ops/bootstrap"
+          )
+          for endpoint in "${endpoints[@]}"; do
+            for i in {1..24}; do
+              if curl -fsS "$base$endpoint" >/dev/null; then
+                break
+              fi
+              if [ "$i" -eq 24 ]; then
+                echo "Endpoint failed to become ready: $endpoint" >&2
+                exit 1
+              fi
+              sleep 5
+          done
+          done

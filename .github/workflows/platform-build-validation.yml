@@ -1,0 +1,55 @@
+name: Platform Build Validation
+
+on:
+  push:
+    branches: [main, fc-gpt]
+  pull_request:
+    branches: [main, fc-gpt]
+  workflow_dispatch:
+
+jobs:
+  web-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - working-directory: ./web-ui
+        run: npm ci
+      - working-directory: ./web-ui
+        run: npm run build
+
+  pricing-microservice:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - working-directory: ./pricing-microservice
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx
+      - working-directory: ./pricing-microservice
+        run: python -m compileall app
+      - working-directory: ./pricing-microservice
+        run: python -m pytest tests -q
+
+  assistant-service:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - working-directory: ./assistant-service
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx
+      - working-directory: ./assistant-service
+        run: python -m compileall app
+      - working-directory: ./assistant-service
+        run: python -m pytest tests -q

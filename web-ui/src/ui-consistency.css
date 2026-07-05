@@ -1,0 +1,225 @@
+/* Phase 5 UI consistency layer for extracted fc-gpt modules. */
+
+.content > .topbar,
+.content > .record-header,
+.content > .overview-grid,
+.content > .record-main-layout,
+.content > .care-layout,
+.content > .report-studio,
+.content > .panel,
+.content > .empty-state {
+  width: min(100%, 1360px);
+  margin-inline: auto;
+}
+
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+}
+
+.topbar-title,
+.panel-title-copy {
+  min-width: 0;
+}
+
+.topbar-title h1,
+.panel-header h2 {
+  overflow-wrap: anywhere;
+}
+
+.topbar-actions,
+.panel-action-slot,
+.module-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.panel-header {
+  gap: 14px;
+}
+
+.panel-action-slot {
+  flex: 0 1 auto;
+}
+
+.panel-body {
+  min-width: 0;
+}
+
+.overview-grid {
+  align-items: stretch;
+}
+
+.metric-card {
+  min-width: 0;
+}
+
+.metric-card .value {
+  overflow-wrap: anywhere;
+}
+
+.table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  outline: none;
+}
+
+.table-wrap:focus-visible {
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.16);
+  border-radius: var(--radius-md, 8px);
+}
+
+.table {
+  min-width: 720px;
+}
+
+.table th,
+.table td {
+  vertical-align: top;
+}
+
+.table-empty-row td {
+  padding: 22px !important;
+  color: var(--muted);
+  text-align: center;
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.record-tabs {
+  width: min(100%, 1360px);
+  margin-inline: auto;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.inline-search {
+  flex: 1 1 240px;
+  max-width: 360px;
+}
+
+.button,
+.ghost-button,
+.link-button,
+.compact-action,
+.topnav-icon-button,
+.topnav-avatar,
+.topnav-nav-button,
+.topnav-brand {
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.button:focus-visible,
+.ghost-button:focus-visible,
+.link-button:focus-visible,
+.compact-action:focus-visible,
+.topnav-icon-button:focus-visible,
+.topnav-avatar:focus-visible,
+.topnav-nav-button:focus-visible,
+.topnav-brand:focus-visible,
+.inline-search:focus-within {
+  outline: 3px solid rgba(37, 99, 235, 0.22);
+  outline-offset: 2px;
+}
+
+.empty-state {
+  min-height: 58px;
+  display: grid;
+  place-items: center;
+  line-height: 1.45;
+}
+
+.mini-tag {
+  white-space: nowrap;
+}
+
+.modal-actions {
+  justify-content: flex-end;
+}
+
+@media (max-width: 920px) {
+  .topbar,
+  .report-page-header,
+  .profile-hero {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topbar-actions,
+  .panel-action-slot,
+  .module-toolbar,
+  .report-page-actions,
+  .report-page-pagination,
+  .report-page-exports {
+    justify-content: flex-start;
+  }
+
+  .overview-grid,
+  .coefficient-grid,
+  .profile-grid,
+  .mini-stat-row,
+  .report-summary-strip,
+  .invoice-preview-grid,
+  .order-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .report-studio,
+  .record-main-layout,
+  .care-layout,
+  .billing-detail-grid,
+  .dashboard-canvas,
+  .pricing-lab,
+  .invoice-research,
+  .orders-layout,
+  .ops-split,
+  .customer360-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .report-catalog {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .content {
+    padding-inline: 12px !important;
+  }
+
+  .overview-grid,
+  .coefficient-grid,
+  .profile-grid,
+  .mini-stat-row,
+  .report-summary-strip,
+  .invoice-preview-grid,
+  .order-filter-grid,
+  .modal-form,
+  .parameter-ribbon,
+  .order-form {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar-actions > *,
+  .panel-action-slot > *,
+  .module-toolbar > *,
+  .inline-search {
+    width: 100%;
+    max-width: none;
+  }
+
+  .button,
+  .ghost-button {
+    justify-content: center;
+  }
+
+  .table {
+    min-width: 640px;
+  }
+}

@@ -4,44 +4,52 @@ export function MetricCard({ label, value, delta, tone = "" }) {
   return (
     <article className="metric-card">
       <div className="label">{label}</div>
-      <div className="value">{value}</div>
-      <div className={`delta ${tone}`}>{delta}</div>
+      <div className="value">{value ?? "-"}</div>
+      {delta !== undefined && delta !== null && <div className={`delta ${tone}`.trim()}>{delta}</div>}
     </article>
   );
 }
 
 export function Panel({ title, description, action, children, className = "" }) {
   return (
-    <article className={`panel ${className}`}>
+    <article className={`panel ${action ? "has-panel-action" : ""} ${className}`.trim()}>
       <div className="panel-header">
-        <div>
+        <div className="panel-title-copy">
           <h2>{title}</h2>
           {description && <p>{description}</p>}
         </div>
-        {action}
+        {action && <div className="panel-action-slot">{action}</div>}
       </div>
       <div className="panel-body">{children}</div>
     </article>
   );
 }
 
-export function DataTable({ columns, rows, onRowClick }) {
+function rowKey(row, index) {
+  return row?.id || row?.Id || row?.key || row?.Key || row?.uuid || row?.UUID || row?.TicketId || row?.TicketNumber || row?.OrderId || row?.OrderNumber || row?.InvoiceId || row?.InvoiceNumber || row?.CustomerNumber || row?.OpportunityId || row?.QuoteId || row?.ContractId || index;
+}
+
+export function DataTable({ columns, rows = [], onRowClick, emptyMessage = "No rows returned." }) {
   return (
-    <div className="table-wrap">
+    <div className="table-wrap" role="region" aria-label="Data table" tabIndex={0}>
       <table className="table">
         <thead>
-          <tr>{columns.map(column => <th key={column.key}>{column.label}</th>)}</tr>
+          <tr>{columns.map(column => <th key={column.key} scope="col">{column.label}</th>)}</tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => (
+          {rows.length ? rows.map((row, index) => (
             <tr
               className={onRowClick ? "interactive-row" : ""}
-              key={row.id || index}
+              key={rowKey(row, index)}
               onClick={() => onRowClick?.(row)}
             >
-              {columns.map(column => <td key={column.key}>{column.render ? column.render(row) : row[column.key]}</td>)}
+              {columns.map(column => <td key={column.key}>{column.render ? column.render(row, index) : row[column.key]}</td>)}
             </tr>
-          ))}
+          )) : (
+            <tr className="table-empty-row">
+              <td colSpan={Math.max(columns.length, 1)}>{emptyMessage}</td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
@@ -49,7 +57,7 @@ export function DataTable({ columns, rows, onRowClick }) {
 }
 
 export function StatusTag({ children, tone = "blue" }) {
-  return <span className={`mini-tag ${tone}`}>{children}</span>;
+  return <span className={`mini-tag ${tone}`.trim()}>{children || "-"}</span>;
 }
 
 export function formatMoney(value) {
@@ -57,5 +65,5 @@ export function formatMoney(value) {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0
-  }).format(value);
+  }).format(value || 0);
 }
