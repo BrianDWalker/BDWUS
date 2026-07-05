@@ -5,6 +5,7 @@ import ReportsModule from "./modules/reports/ReportsModule";
 import AdministrationModule from "./modules/admin/AdministrationModule";
 import ProductPricingModule from "./modules/productPricing/ProductPricingModule";
 import Customer360Module from "./modules/customer360/Customer360Module";
+import CustomerServiceModule from "./modules/customerService/CustomerServiceModule";
 import BillingModule from "./modules/billing/BillingModule";
 import OrdersModule from "./modules/orders/OrdersModule";
 import ServiceOpsModule from "./modules/ops/ServiceOpsModule";
@@ -42,6 +43,7 @@ function ExtractedRoute({ route, setRoute, showToast }) {
   if (route === "administration") return <AdministrationModule setRoute={setRoute} showToast={showToast} />;
   if (route === "product-pricing") return <ProductPricingModule setRoute={setRoute} showToast={showToast} />;
   if (route === "customer-360") return <Customer360Module setRoute={setRoute} showToast={showToast} />;
+  if (route === "customer-service") return <CustomerServiceModule setRoute={setRoute} showToast={showToast} />;
   if (route === "billing") return <BillingModule setRoute={setRoute} showToast={showToast} />;
   if (route === "orders") return <OrdersModule setRoute={setRoute} showToast={showToast} />;
   if (["network", "service-management", "provisioning", "carrier-settlement"].includes(route)) return <ServiceOpsModule route={route} setRoute={setRoute} showToast={showToast} />;
