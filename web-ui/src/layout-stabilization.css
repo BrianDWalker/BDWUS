@@ -91,7 +91,17 @@
 .care-layout,
 .orders-layout,
 .ops-split,
-.report-studio {
+.report-studio,
+.sales-board,
+.coefficient-grid,
+.product-grid,
+.profile-grid,
+.mini-stat-row,
+.report-summary-strip,
+.order-filter-grid,
+.workflow-track,
+.pipeline-kanban,
+.ops-map {
   min-width: 0;
 }
 
@@ -142,7 +152,38 @@
   max-width: 100%;
 }
 
+.floating-workflow-action {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: var(--shadow-soft);
+}
+
 .role-selector { flex: 0 0 auto; }
+
+@media (max-width: 1100px) {
+  .sales-board,
+  .coefficient-grid,
+  .product-grid,
+  .profile-grid,
+  .mini-stat-row,
+  .report-summary-strip,
+  .order-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .workflow-track,
+  .pipeline-kanban,
+  .ops-map {
+    overflow-x: auto;
+  }
+}
 
 @media (max-width: 920px) {
   .record-main-layout,
@@ -179,7 +220,8 @@
   .modal-actions,
   .record-actions,
   .detail-action-stack,
-  .report-page-actions {
+  .report-page-actions,
+  .floating-workflow-action {
     justify-content: flex-start;
     width: 100%;
   }
@@ -189,12 +231,20 @@
   .button-cluster > *,
   .modal-actions > *,
   .record-actions > *,
-  .detail-action-stack > * {
+  .detail-action-stack > *,
+  .floating-workflow-action > * {
     flex: 1 1 100%;
   }
 
   .record-tabs { max-width: 100%; }
 
+  .sales-board,
+  .coefficient-grid,
+  .product-grid,
+  .profile-grid,
+  .mini-stat-row,
+  .report-summary-strip,
+  .order-filter-grid,
   .modal-form,
   .order-form,
   .parameter-ribbon,
