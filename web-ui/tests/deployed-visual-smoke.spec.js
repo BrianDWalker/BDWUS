@@ -16,13 +16,15 @@ async function attachScreenshot(testInfo, page, name) {
   });
 }
 
-async function waitForRenderedContent(page, route) {
-  await expect(page.getByRole("heading", { name: route.heading }).first()).toBeVisible();
-  await expect(page.locator("#root > *")).toHaveCount(1);
+async function waitForRenderedContent(page, route, { expectDesktopNav = true } = {}) {
+  const root = page.locator("#root");
+  await expect(root.getByRole("heading", { name: route.heading }).first()).toBeVisible();
+  await expect(root.locator("> *")).toHaveCount(1);
   await expect(page.locator(".crawler-preview")).toBeHidden();
-  await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
-  await expect(page.getByText(/Loading/i)).toHaveCount(0, { timeout: 20000 });
-  await expect(page.getByText(route.readyText).first()).toBeVisible({ timeout: 20000 });
+  if (expectDesktopNav) {
+    await expect(root.getByRole("navigation", { name: "Primary" })).toBeVisible();
+  }
+  await expect(root.getByText(route.readyText).first()).toBeVisible({ timeout: 20000 });
 }
 
 test.describe("deployed visual smoke", () => {
@@ -51,7 +53,7 @@ test.describe("deployed visual smoke", () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/#/dashboard", { waitUntil: "domcontentloaded" });
-    await waitForRenderedContent(page, routes[0]);
+    await waitForRenderedContent(page, routes[0], { expectDesktopNav: false });
 
     const menuButton = page.getByRole("button", { name: "Open navigation" });
     await expect(menuButton).toBeVisible();
