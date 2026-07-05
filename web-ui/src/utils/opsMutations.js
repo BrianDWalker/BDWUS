@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from "./fetchTimeout";
+import { demoRoleHeaders } from "./permissions";
 
 const DEFAULT_OPS_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
 
@@ -15,7 +16,7 @@ function url(path) {
 
 async function requestJson(path, options = {}) {
   const response = await fetchWithTimeout(url(path), {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    headers: { "Content-Type": "application/json", ...demoRoleHeaders(), ...(options.headers || {}) },
     ...options
   });
   if (!response.ok) {

@@ -15,6 +15,10 @@ export function activeRole() {
   return window.localStorage?.getItem("bdwus.role") || defaultRole;
 }
 
+export function demoRoleHeaders(role = activeRole()) {
+  return { "X-Demo-Role": role };
+}
+
 export function roleCapabilities(role = activeRole()) {
   return roles[role] || roles[defaultRole];
 }

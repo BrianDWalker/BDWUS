@@ -247,6 +247,15 @@ Completion criteria:
 
 ### Phase 5 - Backend role enforcement
 
+Status:
+
+- Complete in `docs/fc-gpt-phase-5-backend-role-enforcement.md`.
+- Added backend middleware role/capability checks for protected ops, billing-workflow, admin, sales, quote, approval, contract, and compatibility mutation paths.
+- Backend authorization now defaults missing or unknown roles to `Viewer`, so bypassed mutation calls without a role header are denied.
+- Frontend mutation clients send the active demo role with `X-Demo-Role` so preview/demo workflows exercise backend enforcement.
+- Added backend role-enforcement contract tests for denied Viewer behavior, missing-role denial, allowed role capabilities, and protected method/path mappings.
+- Remaining auth maturity: `X-User-Role` and `X-Demo-Role` are header-based role sources. A future identity phase should derive roles from signed tokens, API sessions, or user profiles.
+
 Goal:
 
 - Move role gating beyond frontend/demo controls and enforce protected operations in the API.

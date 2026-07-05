@@ -1,8 +1,9 @@
 import os
 from uuid import UUID
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.database import SQL_DATABASE, SQL_SERVER, get_sql_connection
 from app.models import (
@@ -31,6 +32,7 @@ from app.services.assistant import (
     list_ui_overrides,
     reject_change_request,
 )
+from app.services.authz import active_role_from_request, required_capability_for_request, role_can
 from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
 from app.services.customer_service import ensure_customer_service_storage, router as customer_service_router
 from app.services.ops import admin_router, billing_workflow_router, ensure_ops_storage, ops_router
@@ -77,6 +79,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def enforce_role_permissions(request: Request, call_next):
+    required_capability = required_capability_for_request(request.method, request.url.path)
+    if required_capability:
+        role = active_role_from_request(request)
+        if not role_can(role, required_capability):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": {
+                        "message": f"{role} does not have permission for {required_capability}.",
+                        "role": role,
+                        "requiredCapability": required_capability,
+                    }
+                },
+            )
+    return await call_next(request)
 
 # Compatibility routes must be registered before the full sales router because they preserve
 # migrated UI flows for routes that existed conceptually before the API-backed sales module.
