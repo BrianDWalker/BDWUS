@@ -11,9 +11,13 @@ function platformUrl(path) {
   return `${platformApiBase}${path}`;
 }
 
-async function requestJson(path) {
+async function requestJson(path, options = {}) {
   const response = await fetch(platformUrl(path), {
-    headers: { "Content-Type": "application/json" }
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    },
+    ...options
   });
 
   if (!response.ok) {
@@ -38,3 +42,7 @@ export const fetchAdministrationSummary = () => requestJson("/api/platform/admin
 export const fetchCustomer360 = customerNumber => requestJson(`/api/platform/customer-360/${encodeURIComponent(customerNumber)}`);
 export const fetchProductPricingOverview = () => requestJson("/api/platform/product-pricing/overview");
 export const fetchCustomerServiceOverview = () => requestJson("/api/platform/customer-service/overview");
+export const fetchCustomerServiceTickets = () => requestJson("/api/platform/customer-service/tickets");
+export const fetchCustomerServiceTicket = id => requestJson(`/api/platform/customer-service/tickets/${encodeURIComponent(id)}`);
+export const createCustomerServiceTicket = payload => requestJson("/api/platform/customer-service/tickets", { method: "POST", body: JSON.stringify(payload) });
+export const updateCustomerServiceTicket = (id, payload) => requestJson(`/api/platform/customer-service/tickets/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(payload) });
