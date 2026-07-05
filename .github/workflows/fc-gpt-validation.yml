@@ -41,7 +41,7 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Run extracted route smoke tests
         working-directory: ./web-ui
-        run: npm run test:e2e
+        run: npm run test:routes
 
   pricing-microservice-tests:
     name: pricing-microservice compile and tests
@@ -190,4 +190,13 @@ jobs:
         working-directory: ./web-ui
         env:
           PLAYWRIGHT_BASE_URL: ${{ vars.STAGING_WEB_BASE_URL || 'https://polite-cliff-080b22c0f-previewgpt.eastus2.7.azurestaticapps.net' }}
-        run: npm run test:e2e -- --config=playwright.deployed.config.js
+        run: npx playwright test portal-routes.spec.js deployed-visual-smoke.spec.js --config=playwright.deployed.config.js
+      - name: Upload deployed web Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployed-web-playwright-report
+          path: |
+            web-ui/playwright-report
+            web-ui/test-results
+          if-no-files-found: ignore
