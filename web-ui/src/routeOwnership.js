@@ -20,7 +20,6 @@ export const legacyOwnedRoutes = [
 ];
 
 export const intentionalLegacyDetailTypes = [
-  "ticket",
   "network",
   "record"
 ];
@@ -49,7 +48,7 @@ export function detailType(route) {
 }
 
 export function isExtractedRoute(route) {
-  return extractedRoutes.includes(route);
+  return extractedRoutes.includes(route) || route.startsWith("details/ticket/");
 }
 
 export function isIntegratedSalesRoute(route) {
