@@ -41,6 +41,9 @@ export const fetchPlatformBootstrap = () => requestJson("/api/platform/bootstrap
 export const fetchPlatformReportDefinitions = () => requestJson("/api/platform/reports/definitions");
 export const fetchPlatformReport = reportId => requestJson(`/api/platform/reports/${encodeURIComponent(reportId)}`);
 export const fetchAdministrationSummary = () => requestJson("/api/platform/administration/summary");
+export const fetchKnowledgeBootstrap = () => requestJson("/api/platform/knowledge/bootstrap");
+export const fetchKnowledgeDocuments = () => requestJson("/api/platform/knowledge/documents");
+export const fetchKnowledgeTopics = () => requestJson("/api/platform/knowledge/topics");
 export const fetchCustomer360 = customerNumber => requestJson(`/api/platform/customer-360/${encodeURIComponent(customerNumber)}`);
 export const fetchProductPricingOverview = () => requestJson("/api/platform/product-pricing/overview");
 export const fetchCustomerServiceOverview = () => requestJson("/api/platform/customer-service/overview");
