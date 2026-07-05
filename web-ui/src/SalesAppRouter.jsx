@@ -2,19 +2,7 @@ import React, { useEffect, useState } from "react";
 import App from "./App";
 import { Shell } from "./components/Shell";
 import { SalesContractDetail, SalesLeadDetail, SalesModule, SalesOpportunityDetail, SalesQuoteDetail } from "./components/SalesDatabaseCRM";
-
-const routeAliases = { pricing: "product-pricing", products: "product-pricing", quotes: "sales" };
-
-function normalizeRoute(route) {
-  const normalized = routeAliases[route] || route;
-  if (normalized.startsWith("details/customer/") || normalized.startsWith("details/account/")) return "customer-360";
-  if (normalized.startsWith("details/billing-account/")) return "customer-360";
-  if (normalized.startsWith("details/invoice/")) return "billing";
-  if (normalized.startsWith("details/service/")) return "billing";
-  if (normalized.startsWith("details/order/")) return "orders";
-  if (normalized.startsWith("details/product/") || normalized.startsWith("details/product-pricing/")) return "product-pricing";
-  return normalized;
-}
+import { isIntegratedSalesRoute, normalizeRoute } from "./routeOwnership";
 
 function currentHashRoute() {
   const route = window.location.hash.replace(/^#\/?/, "");
@@ -41,13 +29,6 @@ function useRoute() {
 
 function Toast({ toast }) {
   return toast ? <div className="toast">{toast}</div> : null;
-}
-
-function isIntegratedSalesRoute(route) {
-  if (route === "sales") return true;
-  if (!route.startsWith("details/")) return false;
-  const [, type] = route.split("/");
-  return ["lead", "opportunity", "quote", "contract"].includes(type);
 }
 
 function IntegratedSalesRoute({ route, setRoute, showToast }) {
