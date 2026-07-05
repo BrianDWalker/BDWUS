@@ -61,13 +61,21 @@ jobs:
         run: |
           set -euo pipefail
           base="${STAGING_API_BASE_URL%/}"
-          for i in {1..30}; do
-            if curl -fsS "$base/health" >/dev/null; then
-              break
-            fi
-            sleep 5
+          endpoints=(
+            "/health"
+            "/health/ready"
+            "/api/platform/bootstrap"
+            "/api/ops/bootstrap"
+          )
+          for endpoint in "${endpoints[@]}"; do
+            for i in {1..24}; do
+              if curl -fsS "$base$endpoint" >/dev/null; then
+                break
+              fi
+              if [ "$i" -eq 24 ]; then
+                echo "Endpoint failed to become ready: $endpoint" >&2
+                exit 1
+              fi
+              sleep 5
+            done
           done
-          curl -fsS "$base/health"
-          curl -fsS "$base/health/ready"
-          curl -fsS "$base/api/platform/bootstrap"
-          curl -fsS "$base/api/ops/bootstrap"
