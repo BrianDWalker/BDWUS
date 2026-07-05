@@ -1,4 +1,6 @@
 export const extractedRoutes = [
+  "dashboard",
+  "knowledge",
   "reports",
   "administration",
   "product-pricing",
@@ -14,10 +16,7 @@ export const extractedRoutes = [
 
 export const integratedSalesDetailTypes = ["lead", "opportunity", "quote", "contract"];
 
-export const legacyOwnedRoutes = [
-  "dashboard",
-  "knowledge"
-];
+export const legacyOwnedRoutes = [];
 
 export const intentionalLegacyDetailTypes = [
   "network",
