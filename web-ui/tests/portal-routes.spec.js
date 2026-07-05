@@ -28,6 +28,12 @@ async function mockApi(page) {
 
     if (method !== "GET") {
       body = { id: "created", status: "ok" };
+    } else if (path === "/api/platform/customer-service/overview") {
+      body = {
+        tickets: [{ TicketId: "ticket-1", TicketNumber: "TKT-1001", CustomerNumber: "CUST-1001", AccountName: "Apex Health", IssueType: "Network outage", Category: "Network", Priority: "Urgent", Status: "Open", AgeHours: 18, OwnerName: "Care Ops" }],
+        customerReportedOutages: [{ EventId: "event-1", EventNumber: "NE-1001", Market: "Midwest", Type: "Capacity", Impacted: "Apex Health", Severity: "Major", Status: "Open", SlaExposure: 25000 }],
+        summary: { openTicketCount: 1, networkTicketCount: 1, billingTicketCount: 0, averageAgeHours: 18 }
+      };
     } else if (path === "/api/platform/reports/definitions") {
       body = [{ id: "executive-scorecard", name: "Executive scorecard", area: "Executive", description: "Pipeline and revenue." }];
     } else if (path === "/api/platform/reports/executive-scorecard") {
@@ -93,6 +99,7 @@ for (const [hash, heading] of [
   ["administration", "Administration"],
   ["product-pricing", "Product & Pricing"],
   ["customer-360", "Customer 360"],
+  ["customer-service", "Customer Service"],
   ["billing", "Billing"],
   ["orders", "Orders"],
   ["network", "Network Events"],
