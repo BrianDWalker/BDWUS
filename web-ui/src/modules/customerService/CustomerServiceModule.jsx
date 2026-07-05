@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
 import { Icon } from "../../components/Icons";
 import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "../../components/Primitives";
-import { fetchCustomerServiceOverview } from "../../utils/platformApi";
+import { createCustomerServiceTicket, fetchCustomerServiceOverview } from "../../utils/platformApi";
 import { arrayField, normalizeNetworkEvent, normalizeTicket } from "../../utils/payloadMapping";
 
 function contains(row, query, keys) {
@@ -29,6 +29,7 @@ export default function CustomerServiceModule({ setRoute, showToast }) {
   const [data, setData] = useState({ tickets: [], customerReportedOutages: [], summary: {} });
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   async function loadCustomerService() {
@@ -54,21 +55,28 @@ export default function CustomerServiceModule({ setRoute, showToast }) {
     return (data.tickets || []).filter(ticket => contains(ticket, query, ["TicketNumber", "AccountName", "CustomerNumber", "IssueType", "Category", "Priority", "Status", "OwnerName"]));
   }, [data.tickets, query]);
 
-  function captureDraft() {
-    const next = normalizeTicket({
-      TicketId: `draft-${Date.now()}`,
-      TicketNumber: `TKT-DRAFT-${(data.tickets.length + 1).toString().padStart(3, "0")}`,
-      CustomerNumber: "Draft",
-      AccountName: "New Customer",
-      IssueType: "Customer inquiry",
-      Category: "Care",
-      Priority: "Normal",
-      Status: "Draft",
-      AgeHours: 0,
-      OwnerName: "Care Ops"
-    });
-    setData(current => ({ ...current, tickets: [next, ...current.tickets], summary: { ...current.summary, openTicketCount: Number(current.summary.openTicketCount || 0) + 1 } }));
-    showToast?.("Ticket draft captured");
+  async function createTicket() {
+    setSaving(true);
+    setError("");
+    try {
+      const ticket = normalizeTicket(await createCustomerServiceTicket({
+        accountName: "New Customer",
+        issueType: "Customer inquiry",
+        category: "Care",
+        priority: "Normal",
+        status: "Open",
+        ownerName: "Care Ops",
+        summary: "Customer service ticket created from the portal.",
+        createdBy: "Care Ops"
+      }));
+      setData(current => ({ ...current, tickets: [ticket, ...current.tickets], summary: normalizeSummary({ ...current.summary, openTicketCount: Number(current.summary.openTicketCount || 0) + 1 }, [ticket, ...current.tickets]) }));
+      showToast?.(`Ticket ${ticket.TicketNumber || "created"} saved`);
+      if (ticket.TicketId) setRoute?.(`details/ticket/${ticket.TicketId}`);
+    } catch (err) {
+      setError(err.message || "Unable to create ticket.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const summary = data.summary || {};
@@ -78,7 +86,7 @@ export default function CustomerServiceModule({ setRoute, showToast }) {
       <PageHeader
         title="Customer Service"
         description="API-backed support tickets, customer-reported network issues, billing inquiries, and care queue triage."
-        actions={<div className="module-toolbar"><button className="ghost-button" type="button" disabled={loading} onClick={loadCustomerService}>Refresh</button><button className="button" type="button" onClick={captureDraft}>Create ticket</button></div>}
+        actions={<div className="module-toolbar"><button className="ghost-button" type="button" disabled={loading} onClick={loadCustomerService}>Refresh</button><button className="button" type="button" disabled={saving} onClick={createTicket}>{saving ? "Creating..." : "Create ticket"}</button></div>}
       />
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading customer service queue...</div> : (
