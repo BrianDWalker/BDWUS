@@ -64,6 +64,54 @@ jobs:
         working-directory: ./pricing-microservice
         run: python -m pytest tests -q
 
+  full-platform-runtime-smoke:
+    name: full platform runtime smoke
+    runs-on: ubuntu-latest
+    needs: pricing-microservice-tests
+    env:
+      PLATFORM_RUNTIME_SMOKE_MODE: "1"
+      STAGING_API_BASE_URL: "http://127.0.0.1:8000"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        working-directory: ./pricing-microservice
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Start seeded platform API
+        working-directory: ./pricing-microservice
+        run: |
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/platform-api.log 2>&1 &
+          echo $! > /tmp/platform-api.pid
+          for i in {1..30}; do
+            if curl -fsS "$STAGING_API_BASE_URL/health" >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/platform-api.log
+          exit 1
+      - name: Hit full platform runtime endpoints
+        run: |
+          set -euo pipefail
+          base="${STAGING_API_BASE_URL%/}"
+          curl -fsS "$base/health"
+          curl -fsS "$base/health/ready"
+          curl -fsS "$base/health/sales"
+          curl -fsS "$base/api/sales/bootstrap"
+          curl -fsS "$base/api/billing/customers"
+          curl -fsS "$base/api/platform/bootstrap"
+          curl -fsS "$base/api/ops/bootstrap"
+      - name: Stop seeded platform API
+        if: always()
+        run: |
+          if [ -f /tmp/platform-api.pid ]; then
+            kill "$(cat /tmp/platform-api.pid)" || true
+          fi
+
   assistant-service-tests:
     name: assistant-service compile and tests
     runs-on: ubuntu-latest

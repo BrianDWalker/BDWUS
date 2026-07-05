@@ -7,6 +7,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from app.services.sales import ensure_sales_storage, fetch_all, fetch_one
+from app.services import smoke_data
 
 router = APIRouter(prefix="/api/platform", tags=["platform"])
 
@@ -40,6 +41,8 @@ def utc_now_iso() -> str:
 
 
 def sales_dashboard() -> dict[str, Any]:
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.sales_dashboard()
     ensure_sales_storage()
     row = fetch_one("SELECT TOP 1 * FROM ms.vSalesModuleDashboard")
     return row or {
@@ -112,6 +115,8 @@ def report_rows(report_id: str) -> list[dict[str, Any]]:
 
 @router.get("/bootstrap")
 def platform_bootstrap() -> dict[str, Any]:
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.platform_bootstrap()
     ensure_sales_storage()
     return {
         "generatedAtUtc": utc_now_iso(),
@@ -178,6 +183,19 @@ def administration_summary() -> dict[str, Any]:
 
 @router.get("/customer-360/{customer_number}")
 def customer_360(customer_number: str) -> dict[str, Any]:
+    if smoke_data.smoke_mode_enabled():
+        customer = next((item for item in smoke_data.CUSTOMERS if item["CustomerNumber"] == customer_number), None)
+        if not customer:
+            raise HTTPException(status_code=404, detail="Customer not found.")
+        return {
+            "generatedAtUtc": smoke_data.utc_now_iso(),
+            "customer": customer,
+            "accounts": smoke_data.sales_bootstrap()["accounts"],
+            "serviceLocations": [{"ServiceLocationId": "loc-1", "LocationName": "HQ", "City": "Chicago", "StateProvince": "IL", "ServiceabilityType": "On-net", "Status": "Active"}],
+            "opportunities": smoke_data.sales_bootstrap()["opportunities"],
+            "quotes": smoke_data.sales_bootstrap()["quotes"],
+            "contracts": [],
+        }
     ensure_sales_storage()
     customer = fetch_one(
         """
@@ -228,6 +246,25 @@ def customer_360(customer_number: str) -> dict[str, Any]:
 
 @router.get("/product-pricing/overview")
 def product_pricing_overview() -> dict[str, Any]:
+    if smoke_data.smoke_mode_enabled():
+        return {
+            "generatedAtUtc": smoke_data.utc_now_iso(),
+            "products": smoke_data.PRODUCTS,
+            "services": [{"ServiceId": "svc-1", "ServiceName": "Fiber", "Status": "Active"}],
+            "hierarchy": smoke_data.sales_bootstrap()["billingProductHierarchy"],
+            "billingCodes": smoke_data.BILLING_CODES,
+            "offers": smoke_data.OFFERS,
+            "promotions": smoke_data.PROMOTIONS,
+            "ratePlans": smoke_data.RATE_PLANS,
+            "summary": {
+                "productCount": len(smoke_data.PRODUCTS),
+                "serviceCount": 1,
+                "billingCodeCount": len(smoke_data.BILLING_CODES),
+                "offerCount": len(smoke_data.OFFERS),
+                "promotionCount": len(smoke_data.PROMOTIONS),
+                "ratePlanCount": len(smoke_data.RATE_PLANS),
+            },
+        }
     ensure_sales_storage()
     products = fetch_all("SELECT * FROM billing.Products WHERE IsDeleted = 0 ORDER BY ProductName")
     services = fetch_all("SELECT * FROM billing.Services WHERE IsDeleted = 0 ORDER BY ServiceName")

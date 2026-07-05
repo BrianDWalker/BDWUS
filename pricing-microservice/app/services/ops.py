@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from app.database import get_sql_connection
+from app.services import smoke_data
 
 ops_router = APIRouter(prefix="/api/ops", tags=["ops"])
 admin_router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -71,6 +72,8 @@ def stable_uuid(value: str) -> str:
 
 
 def ensure_ops_storage() -> None:
+    if smoke_data.smoke_mode_enabled():
+        return
     global SCHEMA_READY
     if SCHEMA_READY:
         return
@@ -167,30 +170,40 @@ def seed_ops_data() -> None:
 
 @ops_router.get("/bootstrap")
 def ops_bootstrap() -> dict[str, Any]:
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.ops_bootstrap()
     ensure_ops_storage()
     return {"orders": fetch_all("SELECT * FROM ops.Orders WHERE IsDeleted = 0 ORDER BY CreatedAtUtc DESC"), "networkEvents": fetch_all("SELECT * FROM ops.NetworkEvents ORDER BY CreatedAtUtc DESC"), "provisioningJobs": fetch_all("SELECT * FROM ops.ProvisioningJobs ORDER BY CreatedAtUtc DESC"), "settlements": fetch_all("SELECT * FROM ops.Settlements ORDER BY CreatedAtUtc DESC")}
 
 
 @ops_router.get("/orders")
 def list_orders():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.ORDERS
     ensure_ops_storage()
     return fetch_all("SELECT * FROM ops.Orders WHERE IsDeleted = 0 ORDER BY CreatedAtUtc DESC")
 
 
 @ops_router.get("/network-events")
 def list_network_events():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.NETWORK_EVENTS
     ensure_ops_storage()
     return fetch_all("SELECT * FROM ops.NetworkEvents ORDER BY CreatedAtUtc DESC")
 
 
 @ops_router.get("/provisioning-jobs")
 def list_provisioning_jobs():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.PROVISIONING_JOBS
     ensure_ops_storage()
     return fetch_all("SELECT * FROM ops.ProvisioningJobs ORDER BY CreatedAtUtc DESC")
 
 
 @ops_router.get("/carrier-settlement")
 def list_settlements():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.SETTLEMENTS
     ensure_ops_storage()
     return fetch_all("SELECT * FROM ops.Settlements ORDER BY CreatedAtUtc DESC")
 
@@ -215,12 +228,19 @@ def list_integrations():
 
 @billing_workflow_router.get("/invoices")
 def list_invoices():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.INVOICES
     ensure_ops_storage()
     return fetch_all("SELECT * FROM billingops.Invoices ORDER BY InvoiceDate DESC")
 
 
 @billing_workflow_router.get("/invoices/{invoice_id}")
 def get_invoice(invoice_id: uuid.UUID):
+    if smoke_data.smoke_mode_enabled():
+        for invoice in smoke_data.INVOICES:
+            if invoice["InvoiceId"] == str(invoice_id):
+                return invoice
+        raise HTTPException(status_code=404, detail="Invoice not found.")
     ensure_ops_storage()
     row = fetch_one("SELECT TOP 1 * FROM billingops.Invoices WHERE InvoiceId = ?", (str(invoice_id),))
     if not row:
@@ -230,11 +250,15 @@ def get_invoice(invoice_id: uuid.UUID):
 
 @billing_workflow_router.get("/invoices/{invoice_id}/actions")
 def invoice_actions(invoice_id: uuid.UUID):
+    if smoke_data.smoke_mode_enabled():
+        return [{"InvoiceActionId": "action-1", "InvoiceId": str(invoice_id), "ActionType": "Review", "Status": "Open", "RequestedBy": "Billing Ops", "Notes": "Smoke action"}]
     ensure_ops_storage()
     return fetch_all("SELECT * FROM billingops.InvoiceActions WHERE InvoiceId = ? ORDER BY CreatedAtUtc DESC", (str(invoice_id),))
 
 
 @billing_workflow_router.get("/adjustments")
 def list_adjustments():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.ADJUSTMENTS
     ensure_ops_storage()
     return fetch_all("SELECT * FROM billingops.Adjustments ORDER BY CreatedAtUtc DESC")

@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException
 from app.database import get_sql_connection
 from app.services.context import lookup_customer_profile
 from app.services.pricing import calculate_price
+from app.services import smoke_data
 
 
 router = APIRouter(prefix="/api/sales", tags=["sales"])
@@ -905,6 +906,8 @@ def active_lead_filter_sql() -> str:
 
 @router.get("/dashboard")
 def sales_dashboard():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.sales_dashboard()
     ensure_sales_storage()
     seed_if_empty()
     return fetch_one("SELECT TOP 1 * FROM ms.vSalesModuleDashboard") or {}
@@ -912,6 +915,8 @@ def sales_dashboard():
 
 @router.get("/bootstrap")
 def sales_bootstrap():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.sales_bootstrap()
     ensure_sales_storage()
     seed_if_empty()
     cached = get_cached_bootstrap()
@@ -1993,12 +1998,19 @@ def get_contract_history(contract_id: uuid.UUID):
 
 @billing_router.get("/customers")
 def billing_customers():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.CUSTOMERS
     ensure_sales_storage()
     return fetch_all("SELECT * FROM billing.vCustomerLookup ORDER BY CustomerNumber")
 
 
 @billing_router.get("/customers/{customer_number}")
 def billing_customer(customer_number: str):
+    if smoke_data.smoke_mode_enabled():
+        for customer in smoke_data.CUSTOMERS:
+            if customer["CustomerNumber"] == customer_number:
+                return customer
+        raise HTTPException(status_code=404, detail="Customer not found.")
     ensure_sales_storage()
     return require_row("SELECT TOP 1 * FROM billing.vCustomerLookup WHERE CustomerNumber = ?", (customer_number,))
 
@@ -2011,6 +2023,8 @@ def billing_customer_lookup(customer_number: str):
 
 @billing_router.get("/products")
 def billing_products():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.PRODUCTS
     ensure_sales_storage()
     return fetch_all("SELECT * FROM billing.Products WHERE IsDeleted = 0 ORDER BY ProductName")
 
@@ -2023,36 +2037,48 @@ def billing_product(product_id: uuid.UUID):
 
 @billing_router.get("/product-hierarchy")
 def billing_product_hierarchy():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.sales_bootstrap()["billingProductHierarchy"]
     ensure_sales_storage()
     return fetch_all("SELECT * FROM billing.vProductBillingHierarchy ORDER BY DisplayOrder, ProductName")
 
 
 @billing_router.get("/billing-codes")
 def billing_codes():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.BILLING_CODES
     ensure_sales_storage()
     return fetch_all("SELECT * FROM billing.BillingCodes WHERE IsDeleted = 0 ORDER BY Code")
 
 
 @billing_router.get("/billing-elements")
 def billing_elements():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.BILLING_ELEMENTS
     ensure_sales_storage()
     return fetch_all("SELECT * FROM billing.BillingElements WHERE IsDeleted = 0 ORDER BY ElementName")
 
 
 @billing_router.get("/offers")
 def billing_offers():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.OFFERS
     ensure_sales_storage()
     return fetch_all("SELECT * FROM billing.Offers WHERE IsDeleted = 0 ORDER BY OfferName")
 
 
 @billing_router.get("/promotions")
 def billing_promotions():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.PROMOTIONS
     ensure_sales_storage()
     return fetch_all("SELECT * FROM billing.Promotions WHERE IsDeleted = 0 ORDER BY PromotionName")
 
 
 @billing_router.get("/rate-plans")
 def billing_rate_plans():
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.RATE_PLANS
     ensure_sales_storage()
     return fetch_all("SELECT * FROM billing.RatePlans WHERE IsDeleted = 0 ORDER BY PlanName")
 

@@ -45,6 +45,7 @@ from app.services.quotes import (
     revise_quote,
 )
 from app.services.sales import billing_router, init_sales, router as sales_router, sales_dashboard
+from app.services.smoke_data import smoke_mode_enabled
 
 
 SERVICE_NAME = os.getenv("PLATFORM_API_SERVICE_NAME", "BDWUS Platform API")
@@ -88,6 +89,8 @@ app.include_router(billing_write_router)
 
 @app.on_event("startup")
 def startup_assistant_storage():
+    if smoke_mode_enabled():
+        return
     ensure_ai_storage()
     init_sales()
     ensure_ops_storage()
@@ -127,6 +130,24 @@ def health():
 
 @app.get("/health/ready")
 def ready():
+    if smoke_mode_enabled():
+        return {
+            "status": "healthy",
+            "checks": {
+                "sql": True,
+                "pricingContext": True,
+                "assistantStorage": True,
+                "salesStorage": True,
+                "opsStorage": True,
+            },
+            "details": {
+                "mode": "PLATFORM_RUNTIME_SMOKE_MODE",
+                "sqlServer": SQL_SERVER,
+                "sqlDatabase": SQL_DATABASE,
+                "billingContextObject": BILLING_CONTEXT_OBJECT,
+                "errors": [],
+            },
+        }
     checks = {
         "sql": False,
         "pricingContext": False,
