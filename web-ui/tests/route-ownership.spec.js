@@ -16,6 +16,7 @@ test("route ownership registry documents extracted and legacy owners", () => {
     "administration",
     "product-pricing",
     "customer-360",
+    "customer-service",
     "billing",
     "orders",
     "network",
@@ -23,7 +24,7 @@ test("route ownership registry documents extracted and legacy owners", () => {
     "provisioning",
     "carrier-settlement"
   ]));
-  expect(legacyOwnedRoutes).toEqual(["dashboard", "knowledge", "customer-service"]);
+  expect(legacyOwnedRoutes).toEqual(["dashboard", "knowledge"]);
   expect(integratedSalesDetailTypes).toEqual(["lead", "opportunity", "quote", "contract"]);
   expect(intentionalLegacyDetailTypes).toEqual(["ticket", "network", "record"]);
 });
@@ -43,11 +44,12 @@ test("migrated detail routes normalize away from LegacyPortal", () => {
 
 test("ownership predicates classify route families", () => {
   expect(isExtractedRoute("billing")).toBe(true);
+  expect(isExtractedRoute("customer-service")).toBe(true);
   expect(isIntegratedSalesRoute("sales")).toBe(true);
   expect(isIntegratedSalesRoute("details/opportunity/OPP-1001")).toBe(true);
   expect(isIntentionalLegacyRoute("dashboard")).toBe(true);
   expect(isIntentionalLegacyRoute("knowledge")).toBe(true);
-  expect(isIntentionalLegacyRoute("customer-service")).toBe(true);
+  expect(isIntentionalLegacyRoute("customer-service")).toBe(false);
   expect(isIntentionalLegacyRoute("details/ticket/TKT-1001")).toBe(true);
   expect(isIntentionalLegacyRoute("details/invoice/INV-1001")).toBe(false);
 });
