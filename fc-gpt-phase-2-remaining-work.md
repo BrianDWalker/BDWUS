@@ -97,6 +97,13 @@ Completion criteria:
 
 ### Phase 1 - Fake data inventory and migration map
 
+Status:
+
+- Complete in `docs/fc-gpt-phase-1-data-source-migration-map.md`.
+- Azure SQL access was validated read-only against `bdwus.database.windows.net` / `AZBDWUSP`.
+- Azure Container App target `bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io` was identified.
+- No Azure SQL or Container App mutations were made in this phase.
+
 Goal:
 
 - Identify every place where the app still depends on fake data and decide the target Azure SQL/API replacement.
