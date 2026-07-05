@@ -21,6 +21,19 @@ function routeMatches(section, route) {
   return section.routes?.some(match => route === match || route.startsWith(`${match}/`) || route.startsWith(`${match}?`));
 }
 
+function routeGroupLabel(route) {
+  const groups = [
+    { label: "Command", matches: ["dashboard", "knowledge", "reports"] },
+    { label: "Commercial", matches: ["sales", "orders", "product-pricing", "details/lead", "details/opportunity", "details/quote", "details/contract"] },
+    { label: "Customer", matches: ["customer-service", "customer-360", "billing", "details/customer", "details/account", "details/billing-account", "details/invoice", "details/service", "details/ticket"] },
+    { label: "Network & Service", matches: ["network", "service-management", "provisioning", "details/network"] },
+    { label: "Finance", matches: ["carrier-settlement"] },
+    { label: "Administration", matches: ["administration", "details/record"] }
+  ];
+  const match = groups.find(group => group.matches.some(item => route === item || route.startsWith(`${item}/`) || route.startsWith(`${item}?`)));
+  return match?.label || "Workspace";
+}
+
 function navigate(setRoute, route) {
   setRoute(route);
 }
@@ -191,6 +204,8 @@ export function Shell({ activeRoute, setRoute, children }) {
     });
     return scored.slice(0, 8);
   }, [searchIndex, searchQuery]);
+  const activeSection = topNavSections.find(section => routeMatches(section, activeRoute));
+  const activeGroup = routeGroupLabel(activeRoute);
 
   useEffect(() => {
     setUtility(null);
@@ -239,7 +254,7 @@ export function Shell({ activeRoute, setRoute, children }) {
             <span className="topnav-brand-mark">BDW</span>
             <span className="topnav-brand-copy">
               <strong>Northstar Telecom</strong>
-              <span>Unified operations platform</span>
+              <span>{activeGroup}{activeSection ? ` · ${activeSection.label}` : ""}</span>
             </span>
           </button>
         </div>
