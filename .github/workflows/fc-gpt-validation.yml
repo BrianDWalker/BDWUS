@@ -186,6 +186,8 @@ jobs:
       - name: Install Chromium
         working-directory: ./web-ui
         run: npx playwright install --with-deps chromium
+      - name: Wait for deployed preview to settle
+        run: sleep 90
       - name: Run route smoke tests against deployed web app
         working-directory: ./web-ui
         env:
