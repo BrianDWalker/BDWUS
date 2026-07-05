@@ -40,11 +40,11 @@ Run these checks on pushes to `fc-gpt`:
 
 The `fc-gpt Validation` workflow and the `Platform Build Validation` workflow are intentionally configured without push path filters so every commit on `fc-gpt` gets attached validation runs, including documentation-only handoff commits.
 
-`fc-gpt Validation` always runs a deployed API baseline smoke. By default it uses `https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io`, which currently exposes health, sales, pricing-context, and billing customer endpoints. Set the repository variable `STAGING_API_BASE_URL` to a newer full-platform API deployment to run the stricter platform/ops smoke endpoints.
+`fc-gpt Validation` always runs deployed API smoke jobs. By default they use `https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io`, the Azure Container App staging API for `fc-gpt`. This URL exposes the newer full-platform endpoints, including `/health/ready`, `/api/platform/bootstrap`, and `/api/ops/bootstrap`. Set the repository variable `STAGING_API_BASE_URL` only when the workflow should validate a different API deployment.
 
 `fc-gpt Validation` also runs `full platform runtime smoke`, which starts the current FastAPI app in `PLATFORM_RUNTIME_SMOKE_MODE=1` on `http://127.0.0.1:8000` inside GitHub Actions. This gives a concrete `STAGING_API_BASE_URL` for the current code and proves `/health/ready`, `/api/platform/bootstrap`, and `/api/ops/bootstrap` are reachable at runtime without needing Azure SQL credentials.
 
-Set `STAGING_WEB_BASE_URL` to a deployed web app URL if browser route smoke should run against the deployed frontend instead of the local preview build.
+`fc-gpt Validation` also runs deployed frontend browser smoke by default against `https://polite-cliff-080b22c0f-previewgpt.eastus2.7.azurestaticapps.net`, the Static Web App preview environment for the `fc-gpt` branch. Set `STAGING_WEB_BASE_URL` only when the workflow should validate a different deployed frontend.
 
 `fc-gpt Validation` also runs a Chromium route smoke suite from `web-ui/tests/portal-routes.spec.js`. That suite mocks API payloads and verifies the extracted routes render without browser console errors. It is not a replacement for live staging, but it gives GitHub-visible runtime evidence for the React route layer.
 
