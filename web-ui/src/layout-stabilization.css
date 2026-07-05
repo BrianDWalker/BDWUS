@@ -49,7 +49,7 @@
 .panel-action-slot,
 .record-actions,
 .report-page-actions {
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .button,

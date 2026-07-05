@@ -14,12 +14,10 @@
 
 .topbar {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 16px;
   min-width: 0;
-  text-align: center;
 }
 
 .topbar-title,
@@ -28,9 +26,9 @@
 }
 
 .topbar-title {
-  display: grid;
-  justify-items: center;
-  gap: 0;
+  display: flex;
+  align-items: center;
+  min-height: 100%;
 }
 
 .topbar-title h1,
@@ -43,7 +41,7 @@
 .module-toolbar {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 8px;
   flex-wrap: wrap;
   min-width: 0;
