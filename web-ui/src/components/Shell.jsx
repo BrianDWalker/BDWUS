@@ -1,5 +1,5 @@
 import React, { createContext, useEffect, useMemo, useRef, useState } from "react";
-import { navGroups, topNavSections } from "../data/mockData";
+import { navGroups, topNavSections } from "../navigationConfig";
 import { activeRole, roles } from "../utils/permissions";
 import { Icon } from "./Icons";
 
