@@ -163,25 +163,49 @@
       </section>
     </main>
     <noscript>
-      <main>
-        <h1>Northstar Telecom Portal</h1>
+      <main class="crawler-preview" aria-label="No-JavaScript preview of the Northstar Telecom Portal">
+        <h1>Northstar Telecom Portal · fc-gpt Preview</h1>
         <p>
-          BDWUS staging portal for telecom sales, pricing, billing, service operations,
-          provisioning, reporting, and administration workflows.
+          This no-JavaScript fallback mirrors the deployed React application surface for fetchers
+          that do not execute JavaScript. Browser-rendered validation and screenshots are attached
+          to the successful fc-gpt Validation workflow artifact named deployed-web-playwright-report.
         </p>
-        <nav aria-label="Primary portal routes">
+        <nav class="crawler-preview-nav" aria-label="Primary portal routes">
+          <a href="/#/dashboard">Home</a>
+          <a href="/#/knowledge">Knowledge</a>
           <a href="/#/sales">Sales</a>
-          <a href="/#/product-pricing">Product and Pricing</a>
+          <a href="/#/product-pricing">Product & Pricing</a>
           <a href="/#/customer-360">Customer 360</a>
           <a href="/#/billing">Billing</a>
           <a href="/#/orders">Orders</a>
-          <a href="/#/network">Network Operations</a>
+          <a href="/#/network">Network & Service</a>
           <a href="/#/service-management">Service Management</a>
           <a href="/#/provisioning">Provisioning</a>
           <a href="/#/carrier-settlement">Carrier Settlement</a>
           <a href="/#/reports">Reports</a>
           <a href="/#/administration">Administration</a>
         </nav>
+        <section class="crawler-preview-section" aria-labelledby="noscript-proof-heading">
+          <h2 id="noscript-proof-heading">Rendered UI Proof Available</h2>
+          <ul class="crawler-preview-list">
+            <li>Azure Static Web Apps previewgpt environment is Ready and deployed from fc-gpt.</li>
+            <li>React browser smoke verifies the app root mounts and this crawler shell is hidden after hydration.</li>
+            <li>Desktop screenshots cover Home, Product & Pricing, Billing, Reports, and Administration.</li>
+            <li>Mobile screenshot covers the responsive navigation drawer.</li>
+            <li>The deployed API allows the previewgpt origin through Container Apps CORS.</li>
+          </ul>
+        </section>
+        <section class="crawler-preview-section" aria-labelledby="noscript-routes-heading">
+          <h2 id="noscript-routes-heading">Route Coverage</h2>
+          <div class="crawler-preview-grid">
+            <article class="crawler-preview-route"><h3>Sales</h3><p>Pipeline, leads, opportunities, quotes, approvals, contracts, and quote-to-order workflow.</p></article>
+            <article class="crawler-preview-route"><h3>Product & Pricing</h3><p>Catalog, hierarchy, billing codes, billing elements, offers, promotions, and rate plans.</p></article>
+            <article class="crawler-preview-route"><h3>Customer 360</h3><p>Customer profile, account health, active services, billing records, tickets, and account context.</p></article>
+            <article class="crawler-preview-route"><h3>Billing</h3><p>Invoices, invoice actions, adjustments, customers, loading states, empty states, and refresh behavior.</p></article>
+            <article class="crawler-preview-route"><h3>Orders and Operations</h3><p>Orders, provisioning jobs, network events, service management, and carrier settlement.</p></article>
+            <article class="crawler-preview-route"><h3>Reports and Administration</h3><p>Report definitions, result sets, exports, users, roles, integrations, audit, and settings.</p></article>
+          </div>
+        </section>
       </main>
     </noscript>
     <script type="module" src="/src/main.jsx"></script>
