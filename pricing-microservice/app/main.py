@@ -32,6 +32,7 @@ from app.services.assistant import (
     reject_change_request,
 )
 from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
+from app.services.customer_service import router as customer_service_router
 from app.services.ops import admin_router, billing_workflow_router, ensure_ops_storage, ops_router
 from app.services.ops_write import admin_write_router, billing_write_router, ops_write_router
 from app.services.platform import router as platform_router
@@ -83,6 +84,7 @@ app.include_router(sales_compat_router)
 app.include_router(sales_router)
 app.include_router(billing_router)
 app.include_router(platform_router)
+app.include_router(customer_service_router)
 app.include_router(ops_router)
 app.include_router(admin_router)
 app.include_router(billing_workflow_router)
@@ -115,6 +117,7 @@ def root():
             "pricing": True,
             "billing": True,
             "platform": True,
+            "customerService": True,
             "operations": True,
             "administration": True,
             "billingWorkflows": True,
