@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { topNavSections } from "../src/data/mockData";
+import { topNavSections } from "../src/navigationConfig";
 import {
   extractedRoutes,
   integratedSalesDetailTypes,
