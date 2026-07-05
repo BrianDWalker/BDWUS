@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { topNavSections } from "../data/mockData";
-import { activeRole } from "../utils/permissions";
+import { activeRole, roles } from "../utils/permissions";
 import { Icon } from "./Icons";
 
 function useMediaQuery(query) {
@@ -39,7 +39,18 @@ function TopNavButton({ section, active, onNavigate }) {
   );
 }
 
-function UtilityPopover({ utility, onClose, onNavigate }) {
+function RoleSelector({ role, onRoleChange }) {
+  return (
+    <label className="role-selector" title="Demo permission role">
+      <span>Role</span>
+      <select value={role} onChange={event => onRoleChange(event.target.value)} aria-label="Active permission role">
+        {Object.keys(roles).map(item => <option key={item} value={item}>{item}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function UtilityPopover({ utility, onClose, onNavigate, role }) {
   const menuSets = {
     notifications: [
       { label: "Reports", description: "Open operational reporting", route: "reports" },
@@ -58,7 +69,7 @@ function UtilityPopover({ utility, onClose, onNavigate }) {
       { label: "Billing", description: "Billing controls and reports", route: "billing" }
     ],
     profile: [
-      { label: `Active role: ${activeRole()}`, description: "Role controls sensitive actions", route: "administration" },
+      { label: `Active role: ${role}`, description: "Role controls sensitive actions", route: "administration" },
       { label: "Home", description: "Return to the operating brief", route: "dashboard" },
       { label: "Sales", description: "Pipeline and quote desk", route: "sales" },
       { label: "Sign out", description: "Session action placeholder", route: "dashboard" }
@@ -161,6 +172,12 @@ export function Shell({ activeRoute, setRoute, children }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [role, setRole] = useState(activeRole());
+
+  function changeRole(nextRole) {
+    window.localStorage?.setItem("bdwus.role", nextRole);
+    setRole(nextRole);
+  }
 
   const searchIndex = useMemo(() => {
     return topNavSections.map(section => ({ label: section.label, description: section.label, route: section.route || section.id, icon: section.icon }));
@@ -205,8 +222,6 @@ export function Shell({ activeRoute, setRoute, children }) {
     setSearchQuery("");
   }
 
-  const role = activeRole();
-
   return (
     <div className="app-shell" ref={shellRef}>
       <header className="app-topnav">
@@ -249,7 +264,7 @@ export function Shell({ activeRoute, setRoute, children }) {
         )}
 
         <div className="topnav-right">
-          {!isMobile ? <span className="mini-tag blue" title="Active permission role">{role}</span> : null}
+          {!isMobile ? <RoleSelector role={role} onRoleChange={changeRole} /> : null}
           {!isMobile ? (
             <div className="topnav-search-shell">
               <label className="topnav-search-field">
@@ -320,6 +335,7 @@ export function Shell({ activeRoute, setRoute, children }) {
         {utility && (
           <UtilityPopover
             utility={utility}
+            role={role}
             onClose={() => setUtility(null)}
             onNavigate={go}
           />
