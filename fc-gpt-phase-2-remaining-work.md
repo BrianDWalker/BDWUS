@@ -137,6 +137,15 @@ Completion criteria:
 
 ### Phase 2 - Azure SQL schema, views, and migration readiness
 
+Status:
+
+- Complete in `docs/fc-gpt-phase-2-schema-readiness.md`.
+- Added source-controlled migration `pricing-microservice/sql/phase2_schema_hardening.sql`.
+- Added reusable SQL runner `pricing-microservice/scripts/apply_sql_file.py`.
+- Added validator `pricing-microservice/scripts/validate_phase2_schema.py`.
+- Applied and reran the migration against `bdwus.database.windows.net` / `AZBDWUSP`.
+- Live validation passed for operational schemas, report metadata, Knowledge tables/views, billing elements, indexes, and migration marker.
+
 Goal:
 
 - Ensure Azure SQL Database has the required schemas, tables, views, constraints, and seed/migration process for the app surface.
