@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.services.sales import ensure_sales_storage, fetch_all, fetch_one
+from app.services.sales import ensure_sales_storage, fetch_all, fetch_one, sales_bootstrap as sales_module_bootstrap
 from app.services import smoke_data
 
 router = APIRouter(prefix="/api/platform", tags=["platform"])
@@ -118,21 +118,22 @@ def platform_bootstrap() -> dict[str, Any]:
     if smoke_data.smoke_mode_enabled():
         return smoke_data.platform_bootstrap()
     ensure_sales_storage()
+    sales_payload = sales_module_bootstrap()
     return {
         "generatedAtUtc": utc_now_iso(),
-        "dashboard": sales_dashboard(),
-        "customers": customer_summary_rows(),
-        "accounts": fetch_all("SELECT TOP 25 * FROM ms.Accounts WHERE IsDeleted = 0 ORDER BY CreatedAtUtc DESC"),
-        "leads": fetch_all("SELECT TOP 25 * FROM ms.vLeadDetail ORDER BY CreatedAtUtc DESC"),
-        "opportunities": fetch_all("SELECT TOP 25 * FROM ms.vOpportunityDetail ORDER BY CreatedAtUtc DESC"),
-        "quotes": fetch_all("SELECT TOP 25 * FROM ms.vQuoteDetail ORDER BY CreatedAtUtc DESC"),
-        "contracts": fetch_all("SELECT TOP 25 * FROM ms.Contracts WHERE IsDeleted = 0 ORDER BY CreatedAtUtc DESC"),
-        "products": fetch_all("SELECT TOP 25 * FROM billing.Products WHERE IsDeleted = 0 ORDER BY ProductName"),
-        "billingCodes": fetch_all("SELECT TOP 50 * FROM billing.BillingCodes WHERE IsDeleted = 0 ORDER BY Code"),
-        "offers": fetch_all("SELECT TOP 25 * FROM billing.Offers WHERE IsDeleted = 0 ORDER BY OfferName"),
-        "promotions": fetch_all("SELECT TOP 25 * FROM billing.Promotions WHERE IsDeleted = 0 ORDER BY PromotionName"),
-        "ratePlans": fetch_all("SELECT TOP 25 * FROM billing.RatePlans WHERE IsDeleted = 0 ORDER BY PlanName"),
-        "approvals": approvals(),
+        "dashboard": sales_payload.get("dashboard", {}),
+        "customers": sales_payload.get("billingCustomers", []),
+        "accounts": sales_payload.get("accounts", [])[:25],
+        "leads": sales_payload.get("leads", [])[:25],
+        "opportunities": sales_payload.get("opportunities", [])[:25],
+        "quotes": sales_payload.get("quotes", [])[:25],
+        "contracts": sales_payload.get("contracts", [])[:25],
+        "products": sales_payload.get("billingProducts", [])[:25],
+        "billingCodes": sales_payload.get("billingCodes", [])[:50],
+        "offers": sales_payload.get("offers", [])[:25],
+        "promotions": sales_payload.get("promotions", [])[:25],
+        "ratePlans": sales_payload.get("ratePlans", [])[:25],
+        "approvals": sales_payload.get("approvals", []),
         "reportDefinitions": REPORT_DEFINITIONS,
         "users": DEFAULT_USERS,
         "roles": DEFAULT_ROLES,
@@ -266,13 +267,14 @@ def product_pricing_overview() -> dict[str, Any]:
             },
         }
     ensure_sales_storage()
-    products = fetch_all("SELECT * FROM billing.Products WHERE IsDeleted = 0 ORDER BY ProductName")
+    sales_payload = sales_module_bootstrap()
+    products = sales_payload.get("billingProducts", [])
     services = fetch_all("SELECT * FROM billing.Services WHERE IsDeleted = 0 ORDER BY ServiceName")
-    hierarchy = fetch_all("SELECT * FROM billing.vProductBillingHierarchy ORDER BY DisplayOrder, ProductName")
-    billing_codes = fetch_all("SELECT * FROM billing.BillingCodes WHERE IsDeleted = 0 ORDER BY Code")
-    offers = fetch_all("SELECT * FROM billing.Offers WHERE IsDeleted = 0 ORDER BY OfferName")
-    promotions = fetch_all("SELECT * FROM billing.Promotions WHERE IsDeleted = 0 ORDER BY PromotionName")
-    rate_plans = fetch_all("SELECT * FROM billing.RatePlans WHERE IsDeleted = 0 ORDER BY PlanName")
+    hierarchy = sales_payload.get("billingProductHierarchy", [])
+    billing_codes = sales_payload.get("billingCodes", [])
+    offers = sales_payload.get("offers", [])
+    promotions = sales_payload.get("promotions", [])
+    rate_plans = sales_payload.get("ratePlans", [])
     return {
         "generatedAtUtc": utc_now_iso(),
         "products": products,
