@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { topNavSections } from "../data/mockData";
+import { activeRole } from "../utils/permissions";
 import { Icon } from "./Icons";
 
 function useMediaQuery(query) {
@@ -57,6 +58,7 @@ function UtilityPopover({ utility, onClose, onNavigate }) {
       { label: "Billing", description: "Billing controls and reports", route: "billing" }
     ],
     profile: [
+      { label: `Active role: ${activeRole()}`, description: "Role controls sensitive actions", route: "administration" },
       { label: "Home", description: "Return to the operating brief", route: "dashboard" },
       { label: "Sales", description: "Pipeline and quote desk", route: "sales" },
       { label: "Sign out", description: "Session action placeholder", route: "dashboard" }
@@ -203,6 +205,8 @@ export function Shell({ activeRoute, setRoute, children }) {
     setSearchQuery("");
   }
 
+  const role = activeRole();
+
   return (
     <div className="app-shell" ref={shellRef}>
       <header className="app-topnav">
@@ -245,6 +249,7 @@ export function Shell({ activeRoute, setRoute, children }) {
         )}
 
         <div className="topnav-right">
+          {!isMobile ? <span className="mini-tag blue" title="Active permission role">{role}</span> : null}
           {!isMobile ? (
             <div className="topnav-search-shell">
               <label className="topnav-search-field">
