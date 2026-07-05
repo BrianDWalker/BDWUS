@@ -15,6 +15,7 @@ export default function Customer360Module({ setRoute, showToast }) {
   const [customer360, setCustomer360] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -56,7 +57,7 @@ export default function Customer360Module({ setRoute, showToast }) {
     return () => {
       active = false;
     };
-  }, [selectedCustomer]);
+  }, [selectedCustomer, reloadKey]);
 
   const customer = customer360?.customer || customerProfile || {};
   const opportunities = customer360?.opportunities || [];
@@ -77,7 +78,7 @@ export default function Customer360Module({ setRoute, showToast }) {
       <PageHeader
         title="Customer 360"
         description="API-backed customer profile, account, location, opportunity, quote, and contract context."
-        actions={<div className="button-cluster"><button className="ghost-button" disabled={loading || !selectedCustomer} type="button" onClick={() => setSelectedCustomer(current => current)}>Refresh</button><button className="button" type="button" onClick={() => { setRoute?.("orders"); showToast?.("Opening order workspace"); }}>Create Order</button></div>}
+        actions={<div className="button-cluster"><button className="ghost-button" disabled={loading || !selectedCustomer} type="button" onClick={() => setReloadKey(value => value + 1)}>Refresh</button><button className="button" type="button" onClick={() => { setRoute?.("orders"); showToast?.("Opening order workspace"); }}>Create Order</button></div>}
       />
       <div className="module-toolbar">
         <label className="inline-search">Customer<select value={selectedCustomer} onChange={event => setSelectedCustomer(event.target.value)}>{customerOptions.map(item => <option key={item.number} value={item.number}>{item.name}</option>)}</select></label>
