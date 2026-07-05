@@ -6,34 +6,20 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.services.sales import ensure_sales_storage, fetch_all, fetch_one, sales_bootstrap as sales_module_bootstrap
+from app.services.sales import ensure_sales_storage, sales_bootstrap as sales_module_bootstrap
 from app.services import smoke_data
+from app.services.sql_access import fetch_all, fetch_one
 
 router = APIRouter(prefix="/api/platform", tags=["platform"])
 
-DEFAULT_USERS = [
-    {"id": "USR-1001", "name": "Rhea Patel", "role": "Sales Operations", "status": "Active", "lastLogin": "2026-05-14T08:45:00Z"},
-    {"id": "USR-1002", "name": "Cal Brooks", "role": "Billing Ops", "status": "Active", "lastLogin": "2026-05-14T09:10:00Z"},
-    {"id": "USR-1003", "name": "Maya Ortiz", "role": "Network Ops", "status": "Locked", "lastLogin": "2026-05-12T17:05:00Z"},
-]
-
-DEFAULT_ROLES = [
-    {"id": "ROLE-1", "name": "Sales Manager", "permissions": ["opportunities", "quotes", "approvals"], "status": "Active"},
-    {"id": "ROLE-2", "name": "Billing Analyst", "permissions": ["invoices", "payments", "adjustments"], "status": "Active"},
-    {"id": "ROLE-3", "name": "Provisioning Lead", "permissions": ["orders", "tasks", "escalations"], "status": "Review"},
-]
-
-DEFAULT_INTEGRATIONS = [
-    {"id": "INT-1", "name": "CRM Sync", "status": "Connected", "owner": "Platform", "detail": "Customer and account sync"},
-    {"id": "INT-2", "name": "Billing Engine", "status": "Connected", "owner": "Finance", "detail": "Ledger and invoice posting"},
-    {"id": "INT-3", "name": "Provisioning API", "status": "Pending", "owner": "Network", "detail": "Activation and circuit mapping"},
-]
-
-REPORT_DEFINITIONS = [
+REPORT_DEFINITION_SEEDS = [
     {"id": "executive-scorecard", "name": "Executive scorecard", "area": "Executive", "description": "Pipeline, quoted value, approvals, and contract coverage."},
     {"id": "pricing-approval-queue", "name": "Pricing approval queue", "area": "Pricing", "description": "Quotes and custom pricing requests waiting on review."},
     {"id": "customer-revenue", "name": "Customer revenue watchlist", "area": "Billing", "description": "Customer MRR and account exposure across active accounts."},
 ]
+# Backward-compatible import surface for older smoke/contract tests. Production route handlers
+# use report_definitions(), which reads report.vReportDefinitions from Azure SQL.
+REPORT_DEFINITIONS = REPORT_DEFINITION_SEEDS
 
 
 def utc_now_iso() -> str:
@@ -73,6 +59,99 @@ def customer_summary_rows() -> list[dict[str, Any]]:
         ORDER BY c.CustomerName
         """
     )
+
+
+def report_definitions() -> list[dict[str, Any]]:
+    return fetch_all(
+        """
+        SELECT id, name, area, description, SortOrder, Status
+        FROM report.vReportDefinitions
+        ORDER BY SortOrder, name
+        """
+    )
+
+
+def admin_users() -> list[dict[str, Any]]:
+    return fetch_all(
+        """
+        SELECT UserId, UserNumber, UserName, Email, RoleName, Status, LastLoginAtUtc, CreatedAtUtc, UpdatedAtUtc
+        FROM admin.Users
+        WHERE IsDeleted = 0
+        ORDER BY UserName
+        """
+    )
+
+
+def admin_roles() -> list[dict[str, Any]]:
+    return fetch_all(
+        """
+        SELECT RoleId, RoleNumber, RoleName, PermissionsJson, Status, CreatedAtUtc, UpdatedAtUtc
+        FROM admin.Roles
+        WHERE IsDeleted = 0
+        ORDER BY RoleName
+        """
+    )
+
+
+def admin_integrations() -> list[dict[str, Any]]:
+    return fetch_all(
+        """
+        SELECT IntegrationId, IntegrationNumber, IntegrationName, OwnerName, Status, Detail, CreatedAtUtc, UpdatedAtUtc
+        FROM admin.Integrations
+        WHERE IsDeleted = 0
+        ORDER BY IntegrationName
+        """
+    )
+
+
+def knowledge_topics() -> list[dict[str, Any]]:
+    return fetch_all(
+        """
+        SELECT
+            TopicId AS id,
+            TopicName AS name,
+            TopicName AS label,
+            Description AS description,
+            SortOrder,
+            Status AS status
+        FROM knowledge.Topics
+        WHERE IsDeleted = 0
+        ORDER BY SortOrder, TopicName
+        """
+    )
+
+
+def knowledge_documents() -> list[dict[str, Any]]:
+    rows = fetch_all(
+        """
+        SELECT
+            d.DocumentId AS id,
+            d.Title AS title,
+            d.Category AS category,
+            d.Audience AS audience,
+            d.UpdatedDate AS updated,
+            d.OwnerName AS owner,
+            d.Summary AS summary,
+            d.SourceUrl AS sourceUrl,
+            d.Status AS status,
+            STRING_AGG(t.TopicName, ', ') AS topics
+        FROM knowledge.Documents d
+        LEFT JOIN knowledge.DocumentTopics dt ON dt.DocumentId = d.DocumentId
+        LEFT JOIN knowledge.Topics t ON t.TopicId = dt.TopicId AND t.IsDeleted = 0
+        WHERE d.IsDeleted = 0
+        GROUP BY d.DocumentId, d.Title, d.Category, d.Audience, d.UpdatedDate, d.OwnerName, d.Summary, d.SourceUrl, d.Status
+        ORDER BY d.UpdatedDate DESC, d.Title
+        """
+    )
+    for row in rows:
+        tag_values = [row.get("category"), row.get("audience"), row.get("owner"), row.get("topics")]
+        row["tags"] = [
+            tag.strip()
+            for value in tag_values
+            for tag in str(value or "").split(",")
+            if tag.strip()
+        ]
+    return rows
 
 
 def report_rows(report_id: str) -> list[dict[str, Any]]:
@@ -119,6 +198,10 @@ def platform_bootstrap() -> dict[str, Any]:
         return smoke_data.platform_bootstrap()
     ensure_sales_storage()
     sales_payload = sales_module_bootstrap()
+    reports = report_definitions()
+    users = admin_users()
+    roles = admin_roles()
+    integrations = admin_integrations()
     return {
         "generatedAtUtc": utc_now_iso(),
         "dashboard": sales_payload.get("dashboard", {}),
@@ -134,21 +217,27 @@ def platform_bootstrap() -> dict[str, Any]:
         "promotions": sales_payload.get("promotions", [])[:25],
         "ratePlans": sales_payload.get("ratePlans", [])[:25],
         "approvals": sales_payload.get("approvals", []),
-        "reportDefinitions": REPORT_DEFINITIONS,
-        "users": DEFAULT_USERS,
-        "roles": DEFAULT_ROLES,
-        "integrations": DEFAULT_INTEGRATIONS,
+        "reportDefinitions": reports,
+        "users": users,
+        "roles": roles,
+        "integrations": integrations,
     }
 
 
 @router.get("/reports/definitions")
 def platform_report_definitions() -> list[dict[str, Any]]:
-    return REPORT_DEFINITIONS
+    if smoke_data.smoke_mode_enabled():
+        return smoke_data.platform_bootstrap().get("reportDefinitions", [])
+    return report_definitions()
 
 
 @router.get("/reports/{report_id}")
 def platform_report(report_id: str) -> dict[str, Any]:
-    matching = next((item for item in REPORT_DEFINITIONS if item["id"] == report_id), None)
+    if smoke_data.smoke_mode_enabled():
+        definitions = smoke_data.platform_bootstrap().get("reportDefinitions", [])
+    else:
+        definitions = report_definitions()
+    matching = next((item for item in definitions if item["id"] == report_id), None)
     if not matching:
         raise HTTPException(status_code=404, detail="Report definition not found.")
     rows = report_rows(report_id)
@@ -163,12 +252,34 @@ def platform_report(report_id: str) -> dict[str, Any]:
 
 @router.get("/administration/summary")
 def administration_summary() -> dict[str, Any]:
+    if smoke_data.smoke_mode_enabled():
+        payload = smoke_data.platform_bootstrap()
+        dashboard = payload.get("dashboard", {})
+        return {
+            "generatedAtUtc": smoke_data.utc_now_iso(),
+            "users": payload.get("users", []),
+            "roles": payload.get("roles", []),
+            "integrations": payload.get("integrations", []),
+            "platform": {
+                "serviceName": os.getenv("PLATFORM_API_SERVICE_NAME", "BDWUS Platform API"),
+                "environment": os.getenv("PLATFORM_ENVIRONMENT", "development"),
+                "assistantModel": os.getenv("AZURE_AI_FOUNDRY_DEPLOYMENT") or os.getenv("AZURE_OPENAI_DEPLOYMENT") or "gpt-5-nano",
+            },
+            "controls": {
+                "pendingApprovals": dashboard.get("PendingApprovalCount", 0),
+                "openQuotes": dashboard.get("QuoteCount", 0),
+                "openOpportunities": dashboard.get("OpportunityCount", 0),
+            },
+        }
     dashboard = sales_dashboard()
+    users = admin_users()
+    roles = admin_roles()
+    integrations = admin_integrations()
     return {
         "generatedAtUtc": utc_now_iso(),
-        "users": DEFAULT_USERS,
-        "roles": DEFAULT_ROLES,
-        "integrations": DEFAULT_INTEGRATIONS,
+        "users": users,
+        "roles": roles,
+        "integrations": integrations,
         "platform": {
             "serviceName": os.getenv("PLATFORM_API_SERVICE_NAME", "BDWUS Platform API"),
             "environment": os.getenv("PLATFORM_ENVIRONMENT", "development"),
@@ -180,6 +291,51 @@ def administration_summary() -> dict[str, Any]:
             "openOpportunities": dashboard.get("OpportunityCount", 0),
         },
     }
+
+
+@router.get("/knowledge/bootstrap")
+def knowledge_bootstrap() -> dict[str, Any]:
+    if smoke_data.smoke_mode_enabled():
+        return {
+            "generatedAtUtc": smoke_data.utc_now_iso(),
+            "documents": [],
+            "topics": [],
+            "summary": {
+                "documentCount": 0,
+                "topicCount": 0,
+                "currentCount": 0,
+                "reviewCount": 0,
+            },
+        }
+    documents = knowledge_documents()
+    topics = knowledge_topics()
+    current_count = sum(1 for item in documents if item.get("status") in {"Current", "Approved", "Active"})
+    review_count = sum(1 for item in documents if item.get("status") in {"Review", "Draft", "Needs Update"})
+    return {
+        "generatedAtUtc": utc_now_iso(),
+        "documents": documents,
+        "topics": topics,
+        "summary": {
+            "documentCount": len(documents),
+            "topicCount": len(topics),
+            "currentCount": current_count,
+            "reviewCount": review_count,
+        },
+    }
+
+
+@router.get("/knowledge/documents")
+def list_knowledge_documents() -> list[dict[str, Any]]:
+    if smoke_data.smoke_mode_enabled():
+        return []
+    return knowledge_documents()
+
+
+@router.get("/knowledge/topics")
+def list_knowledge_topics() -> list[dict[str, Any]]:
+    if smoke_data.smoke_mode_enabled():
+        return []
+    return knowledge_topics()
 
 
 @router.get("/customer-360/{customer_number}")
