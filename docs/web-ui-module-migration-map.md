@@ -23,8 +23,15 @@ Current state:
 | `#/details/opportunity/:id` | `SalesOpportunityDetail` | Uses `/api/sales/opportunities/*`, quote, contract, and billing reference endpoints |
 | `#/details/quote/:id` | `SalesQuoteDetail` | Uses `/api/sales/quotes/*` |
 | `#/details/contract/:id` | `SalesContractDetail` | Uses `/api/sales/contracts/*` |
+| `#/product-pricing` | `ProductPricingModule` from `src/modules/productPricing` | Uses `/api/platform/product-pricing/overview` and `/api/billing/*` reference endpoints |
+| `#/customer-360` | `Customer360Module` from `src/modules/customer360` | Uses `/api/platform/customer-360/{customer_number}` and `/api/billing/customers/*` |
+| `#/billing` | `BillingModule` from `src/modules/billing` | Uses `/api/billing-workflows/*` and `/api/billing/customers` |
+| `#/orders` | `OrdersModule` from `src/modules/orders` | Uses `/api/ops/orders`, `/api/ops/provisioning-jobs`, and `/api/ops/bootstrap` |
+| `#/network`, `#/service-management`, `#/provisioning`, `#/carrier-settlement` | `ServiceOpsModule` from `src/modules/ops` | Uses `/api/ops/network-events`, `/api/ops/provisioning-jobs`, and `/api/ops/carrier-settlement` |
+| `#/reports` | `ReportsModule` from `src/modules/reports` | Uses `/api/platform/reports/*` |
+| `#/administration` | `AdministrationModule` from `src/modules/admin` | Uses `/api/platform/administration/summary` and `/api/admin/*` |
 
-Every other route falls back to `LegacyPortal.jsx` through the small `App.jsx` shell.
+Routes not listed above still fall back to `LegacyPortal.jsx` through the small `App.jsx` shell.
 
 ## LegacyPortal.jsx Section Boundaries
 

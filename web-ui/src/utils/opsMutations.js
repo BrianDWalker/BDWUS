@@ -1,4 +1,11 @@
-const opsApiBase = (import.meta.env.VITE_PLATFORM_API_BASE_URL || window.location.origin || "").replace(/\/$/, "");
+const DEFAULT_OPS_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
+
+const opsApiBase = (
+  import.meta.env.VITE_PLATFORM_API_BASE_URL ||
+  import.meta.env.VITE_SALES_API_BASE_URL ||
+  import.meta.env.VITE_AI_API_BASE_URL ||
+  DEFAULT_OPS_API_BASE
+).replace(/\/$/, "");
 
 function url(path) {
   return `${opsApiBase}${path}`;

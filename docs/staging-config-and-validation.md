@@ -38,7 +38,9 @@ Do not commit secret values. Commit only example names and documentation.
 
 Run these checks on pushes to `fc-gpt`:
 
-The `Platform Build Validation` GitHub Actions workflow is intentionally configured without push path filters so every commit on `fc-gpt` gets an attached validation run, including documentation-only handoff commits.
+The `fc-gpt Validation` workflow and the `Platform Build Validation` workflow are intentionally configured without push path filters so every commit on `fc-gpt` gets attached validation runs, including documentation-only handoff commits.
+
+For optional live smoke validation, configure the repository variable `STAGING_API_BASE_URL` to the deployed API base URL. When that variable is present, `fc-gpt Validation` hits the staging smoke endpoints.
 
 ```bash
 cd web-ui

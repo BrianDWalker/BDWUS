@@ -3,6 +3,11 @@ import LegacyPortal from "./LegacyPortal";
 import { Shell } from "./components/Shell";
 import ReportsModule from "./modules/reports/ReportsModule";
 import AdministrationModule from "./modules/admin/AdministrationModule";
+import ProductPricingModule from "./modules/productPricing/ProductPricingModule";
+import Customer360Module from "./modules/customer360/Customer360Module";
+import BillingModule from "./modules/billing/BillingModule";
+import OrdersModule from "./modules/orders/OrdersModule";
+import ServiceOpsModule from "./modules/ops/ServiceOpsModule";
 
 const routeAliases = { pricing: "product-pricing", products: "product-pricing", quotes: "sales" };
 
@@ -38,12 +43,28 @@ function Toast({ toast }) {
 }
 
 function isExtractedRoute(route) {
-  return ["reports", "administration"].includes(route);
+  return [
+    "reports",
+    "administration",
+    "product-pricing",
+    "customer-360",
+    "billing",
+    "orders",
+    "network",
+    "service-management",
+    "provisioning",
+    "carrier-settlement"
+  ].includes(route);
 }
 
 function ExtractedRoute({ route, setRoute, showToast }) {
   if (route === "reports") return <ReportsModule setRoute={setRoute} showToast={showToast} />;
   if (route === "administration") return <AdministrationModule setRoute={setRoute} showToast={showToast} />;
+  if (route === "product-pricing") return <ProductPricingModule setRoute={setRoute} showToast={showToast} />;
+  if (route === "customer-360") return <Customer360Module setRoute={setRoute} showToast={showToast} />;
+  if (route === "billing") return <BillingModule setRoute={setRoute} showToast={showToast} />;
+  if (route === "orders") return <OrdersModule setRoute={setRoute} showToast={showToast} />;
+  if (["network", "service-management", "provisioning", "carrier-settlement"].includes(route)) return <ServiceOpsModule route={route} setRoute={setRoute} showToast={showToast} />;
   return null;
 }
 
