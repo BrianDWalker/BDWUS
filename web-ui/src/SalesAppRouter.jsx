@@ -6,7 +6,14 @@ import { SalesContractDetail, SalesLeadDetail, SalesModule, SalesOpportunityDeta
 const routeAliases = { pricing: "product-pricing", products: "product-pricing", quotes: "sales" };
 
 function normalizeRoute(route) {
-  return routeAliases[route] || route;
+  const normalized = routeAliases[route] || route;
+  if (normalized.startsWith("details/customer/") || normalized.startsWith("details/account/")) return "customer-360";
+  if (normalized.startsWith("details/billing-account/")) return "customer-360";
+  if (normalized.startsWith("details/invoice/")) return "billing";
+  if (normalized.startsWith("details/service/")) return "billing";
+  if (normalized.startsWith("details/order/")) return "orders";
+  if (normalized.startsWith("details/product/") || normalized.startsWith("details/product-pricing/")) return "product-pricing";
+  return normalized;
 }
 
 function currentHashRoute() {
