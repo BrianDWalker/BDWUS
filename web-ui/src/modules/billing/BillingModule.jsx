@@ -4,6 +4,31 @@ import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "../../comp
 import { fetchBillingWorkflowAdjustments, fetchBillingWorkflowInvoice, fetchBillingWorkflowInvoiceActions, fetchBillingWorkflowInvoices } from "../../utils/opsApi";
 import { createBillingAdjustment, createInvoiceAction } from "../../utils/opsMutations";
 import { listBillingCustomers } from "../../utils/salesApi";
+import { normalizeCustomer, normalizeInvoice } from "../../utils/payloadMapping";
+
+function normalizeAction(row = {}) {
+  return {
+    ...row,
+    InvoiceActionId: row.InvoiceActionId || row.invoiceActionId || row.id,
+    ActionType: row.ActionType || row.actionType || row.type,
+    Status: row.Status || row.status,
+    RequestedBy: row.RequestedBy || row.requestedBy,
+    Notes: row.Notes || row.notes,
+    CreatedAtUtc: row.CreatedAtUtc || row.createdAtUtc || row.createdAt
+  };
+}
+
+function normalizeAdjustment(row = {}) {
+  return {
+    ...row,
+    AdjustmentId: row.AdjustmentId || row.adjustmentId || row.id,
+    AdjustmentNumber: row.AdjustmentNumber || row.adjustmentNumber || row.number,
+    AdjustmentType: row.AdjustmentType || row.adjustmentType || row.type,
+    Amount: Number(row.Amount ?? row.amount ?? 0),
+    Status: row.Status || row.status,
+    Reason: row.Reason || row.reason
+  };
+}
 
 export default function BillingModule({ showToast }) {
   const [tab, setTab] = useState("Invoices");
@@ -27,10 +52,11 @@ export default function BillingModule({ showToast }) {
         fetchBillingWorkflowInvoices(),
         fetchBillingWorkflowAdjustments()
       ]);
-      setCustomers(customerRows || []);
-      setInvoices(invoiceRows || []);
-      setAdjustments(adjustmentRows || []);
-      setSelectedInvoice(current => current || invoiceRows?.[0]?.InvoiceId || "");
+      const normalizedInvoices = (invoiceRows || []).map(normalizeInvoice);
+      setCustomers((customerRows || []).map(normalizeCustomer));
+      setInvoices(normalizedInvoices);
+      setAdjustments((adjustmentRows || []).map(normalizeAdjustment));
+      setSelectedInvoice(current => current || normalizedInvoices?.[0]?.InvoiceId || "");
     } catch (err) {
       setError(err.message || "Unable to load billing workflows.");
     } finally {
@@ -56,8 +82,8 @@ export default function BillingModule({ showToast }) {
     ])
       .then(([invoiceDetail, actionRows]) => {
         if (!active) return;
-        setSelectedInvoiceDetail(invoiceDetail);
-        setActions(actionRows || []);
+        setSelectedInvoiceDetail(normalizeInvoice(invoiceDetail));
+        setActions((actionRows || []).map(normalizeAction));
       })
       .catch(err => {
         if (active) setError(err.message || "Unable to load invoice actions.");
@@ -75,7 +101,7 @@ export default function BillingModule({ showToast }) {
     setSaving(true);
     try {
       await createInvoiceAction(selectedInvoice, { actionType: "Review", status: "Open", requestedBy: "Billing Ops", notes: "Created from billing module" });
-      setActions(await fetchBillingWorkflowInvoiceActions(selectedInvoice));
+      setActions((await fetchBillingWorkflowInvoiceActions(selectedInvoice) || []).map(normalizeAction));
       showToast?.("Invoice action created");
     } catch (err) {
       setError(err.message || "Unable to create invoice action.");
@@ -88,7 +114,7 @@ export default function BillingModule({ showToast }) {
     setSaving(true);
     try {
       await createBillingAdjustment({ invoiceId: selectedInvoice || null, adjustmentType: "Credit", amount: -100, status: "Pending", reason: "Created from billing module", createdBy: "Billing Ops" });
-      setAdjustments(await fetchBillingWorkflowAdjustments());
+      setAdjustments((await fetchBillingWorkflowAdjustments() || []).map(normalizeAdjustment));
       showToast?.("Adjustment created");
     } catch (err) {
       setError(err.message || "Unable to create adjustment.");
