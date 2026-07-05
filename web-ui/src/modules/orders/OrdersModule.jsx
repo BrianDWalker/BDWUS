@@ -1,14 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { GatedButton } from "../../components/PermissionGate";
 import { PageHeader } from "../../components/Shell";
-import { DataTable, MetricCard, Panel, StatusTag, formatDate } from "../../components/Primitives";
+import { DataTable, MetricCard, Panel, StatusTag, formatDate, statusTone } from "../../components/Primitives";
 import { fetchOpsBootstrap, fetchOrders, fetchProvisioningJobs } from "../../utils/opsApi";
 import { createOrder, createProvisioningJob, updateOrder } from "../../utils/opsMutations";
 import { arrayField, normalizeOrder, normalizeProvisioningJob } from "../../utils/payloadMapping";
-
-function statusTone(status) {
-  return ["Completed", "Validated"].includes(status) ? "success" : ["Blocked", "Pending Network", "Provisioning", "In Progress"].includes(status) ? "warn" : "blue";
-}
 
 const normalizeOrders = rows => (rows || []).map(normalizeOrder);
 const normalizeJobs = rows => (rows || []).map(normalizeProvisioningJob);

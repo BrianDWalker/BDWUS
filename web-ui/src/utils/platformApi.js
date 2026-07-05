@@ -13,6 +13,14 @@ function platformUrl(path) {
   return `${platformApiBase}${path}`;
 }
 
+async function readResponsePayload(response) {
+  try {
+    return await response.json();
+  } catch {
+    return await response.text().catch(() => "");
+  }
+}
+
 async function requestJson(path, options = {}) {
   const response = await fetchWithTimeout(platformUrl(path), {
     headers: {
@@ -22,18 +30,19 @@ async function requestJson(path, options = {}) {
     ...options
   });
 
+  const payload = await readResponsePayload(response);
+
   if (!response.ok) {
-    let detail = "";
-    try {
-      const payload = await response.json();
-      detail = payload.detail || payload.message || JSON.stringify(payload);
-    } catch {
-      detail = await response.text().catch(() => "");
+    if (options.acceptStatuses?.includes(response.status)) {
+      return payload && typeof payload === "object"
+        ? { ...payload, __httpStatus: response.status }
+        : { detail: payload, __httpStatus: response.status };
     }
+    const detail = payload?.detail || payload?.message || (typeof payload === "string" ? payload : JSON.stringify(payload));
     throw new Error(detail || `Platform request failed: ${response.status}`);
   }
 
-  return response.json();
+  return payload;
 }
 
 export { platformApiBase };
@@ -41,7 +50,7 @@ export const fetchPlatformBootstrap = () => requestJson("/api/platform/bootstrap
 export const fetchPlatformReportDefinitions = () => requestJson("/api/platform/reports/definitions");
 export const fetchPlatformReport = reportId => requestJson(`/api/platform/reports/${encodeURIComponent(reportId)}`);
 export const fetchAdministrationSummary = () => requestJson("/api/platform/administration/summary");
-export const fetchKnowledgeBootstrap = () => requestJson("/api/platform/knowledge/bootstrap");
+export const fetchKnowledgeBootstrap = () => requestJson("/api/platform/knowledge/bootstrap", { acceptStatuses: [404] });
 export const fetchKnowledgeDocuments = () => requestJson("/api/platform/knowledge/documents");
 export const fetchKnowledgeTopics = () => requestJson("/api/platform/knowledge/topics");
 export const fetchCustomer360 = customerNumber => requestJson(`/api/platform/customer-360/${encodeURIComponent(customerNumber)}`);

@@ -1,17 +1,11 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
 import { KnowledgeAssistant } from "../../components/KnowledgeAssistant";
-import { DataTable, MetricCard, Panel, StatusTag } from "../../components/Primitives";
+import { DataTable, MetricCard, Panel, StatusTag, WarningBanner, statusTone } from "../../components/Primitives";
 import { fetchKnowledgeBootstrap } from "../../utils/platformApi";
 
 function match(value, query) {
   return String(value || "").toLowerCase().includes(query.trim().toLowerCase());
-}
-
-function docStatusTone(status) {
-  if (["Current", "Approved", "Active"].includes(status)) return "success";
-  if (["Review", "Draft", "Needs Update"].includes(status)) return "warn";
-  return "blue";
 }
 
 function normalizeKnowledgeDocument(doc = {}) {
@@ -41,6 +35,7 @@ export default function KnowledgeModule({ setRoute }) {
   const [knowledgePayload, setKnowledgePayload] = useState({ documents: [], topics: [], summary: {} });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [warnings, setWarnings] = useState([]);
   const docs = useMemo(() => (knowledgePayload.documents || []).map(normalizeKnowledgeDocument), [knowledgePayload.documents]);
   const topics = knowledgePayload.topics || [];
 
@@ -48,14 +43,17 @@ export default function KnowledgeModule({ setRoute }) {
     let active = true;
     setLoading(true);
     setError("");
+    setWarnings([]);
     fetchKnowledgeBootstrap()
       .then(payload => {
         if (!active) return;
+        const missingEndpoint = payload?.__httpStatus === 404;
         setKnowledgePayload({
           documents: payload?.documents || [],
           topics: payload?.topics || [],
           summary: payload?.summary || {}
         });
+        setWarnings(missingEndpoint ? ["Knowledge bootstrap is unavailable in this environment; showing the Knowledge shell without document data."] : []);
       })
       .catch(err => {
         if (!active) return;
@@ -83,6 +81,7 @@ export default function KnowledgeModule({ setRoute }) {
         description="Extracted knowledge workspace with article search, topic coverage, and the platform assistant preserved."
         actions={<div className="module-toolbar"><button className="ghost-button" type="button" onClick={() => setRoute?.("reports")}>Open Reports</button><button className="button" type="button" onClick={() => setRoute?.("administration")}>Admin Settings</button></div>}
       />
+      {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
       {error && <div className="empty-state">{error}</div>}
       {loading && <div className="empty-state">Loading knowledge records…</div>}
       <section className="overview-grid">
@@ -98,7 +97,7 @@ export default function KnowledgeModule({ setRoute }) {
             { key: "category", label: "Category" },
             { key: "audience", label: "Audience" },
             { key: "owner", label: "Owner" },
-            { key: "status", label: "Status", render: row => <StatusTag tone={docStatusTone(row.status)}>{row.status}</StatusTag> },
+            { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status)}>{row.status}</StatusTag> },
             { key: "updated", label: "Updated" }
           ]} rows={filteredDocs.slice(0, 12)} /> : <div className="empty-state">No knowledge documents match the current search.</div>}
         </Panel>

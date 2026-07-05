@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { PageHeader } from "./Shell";
 import { Icon } from "./Icons";
 import { DataTable, Panel, StatusTag, formatMoney } from "./Primitives";
-import { customers, leads, opportunities, quotes, contracts } from "../data/mockData";
+import { customers, leads, opportunities, quotes, contracts } from "../data/legacyMockData";
 
 const owners = ["Sarah Johnson", "Tia Brooks", "Sam Malik", "Ari Fox", "Maya Ortiz"];
 const stages = ["New", "Discovery", "Solutioning", "Quote", "Approval", "Closed Won", "Closed Lost"];

@@ -190,8 +190,8 @@ Status:
 - Converted platform report definition, Knowledge, administration summary, and platform bootstrap slices from static/mock sources to Azure SQL-backed reads.
 - Added platform Knowledge API endpoints and moved the Knowledge module off direct `mockData.js` imports.
 - Existing admin, ops, billing-workflow, customer-service, and sales mutation routes continue to use Azure SQL write paths.
-- Local pytest remains blocked because `pytest` is not installed in the local Python environment.
-- Full `app.main` OpenAPI import remains blocked locally because the `openai` package is not installed in this Python environment.
+- Backend pytest now passes in an isolated local virtualenv with project requirements plus `pytest` and `httpx` installed.
+- `app.main` import and route registration validate successfully in that isolated environment once the project dependencies are installed.
 
 Goal:
 
@@ -229,7 +229,7 @@ Status:
 - Active production routes now render extracted/API-backed modules or an API-backed unknown-route state.
 - Route ownership tests now import navigation from the real navigation config, not mock data.
 - Current emitted JavaScript bundle has no `mockData`, `LegacyPortal`, or old fixture-data string matches.
-- Blocker: retired source files `web-ui/src/LegacyPortal.jsx` and `web-ui/src/components/SalesCRM.jsx` still import `web-ui/src/data/mockData.js`, but they are no longer imported by the production route graph.
+- Retired source files `web-ui/src/LegacyPortal.jsx` and `web-ui/src/components/SalesCRM.jsx` now import `web-ui/src/data/legacyMockData.js`, isolating legacy-only fixtures away from the active production route graph.
 
 Goal:
 
@@ -347,9 +347,9 @@ Status:
 - Complete in `docs/fc-gpt-phase-7-api-data-documentation.md`.
 - The extracted Sales route graph was corrected while documenting branch ownership, so `sales` and the sales detail routes now render from `App.jsx`.
 - Remaining blockers are documented explicitly:
-  - Knowledge still lacks a partial-data warning path for knowledge-side `404` responses.
+  - Knowledge now shows a partial-data warning path for knowledge bootstrap `404` responses instead of surfacing a hard error state.
   - Startup-time DDL and synthetic seed insertion still live inside API startup helpers.
-  - Multi-table writes still rely on inline transaction handling instead of one shared transaction helper.
+  - Shared transaction handling now exists in `pricing-microservice/app/services/sql_access.py`, and Sales lead conversion uses it; broader write-path adoption still remains.
   - Active backend role enforcement still depends on role headers, not signed identity.
 
 Goal:
@@ -383,7 +383,7 @@ Status:
 - Remaining blockers are documented explicitly:
   - Some edit dialogs still intentionally expose JSON textareas for structured payload entry because those workflows do not yet have dedicated field-by-field editors.
   - Broader mobile/tablet redesign work remains intentionally out of scope for this phase.
-  - Cross-module status-tone logic is still duplicated in places; visual output is now more consistent, but the mapping rules are not yet centralized.
+  - Shared `statusTone` handling now covers Knowledge, Dashboard, Orders, Service Ops, and Reports, reducing duplicated status-tag mapping. Some detail modules still carry local tone helpers where the domain-specific rules differ.
 
 Goal:
 

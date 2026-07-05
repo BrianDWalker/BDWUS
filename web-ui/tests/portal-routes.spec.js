@@ -234,3 +234,26 @@ test("orders render mobile table cards", async ({ page }) => {
   await expect(page.locator(".orders-compact .table-desktop").first()).toBeHidden();
   await expect(page.getByText("ORD-1001").first()).toBeVisible();
 });
+
+test("knowledge route shows partial-data warning when bootstrap returns 404", async ({ page }) => {
+  const consoleErrors = [];
+  page.on("console", message => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", error => consoleErrors.push(error.message));
+
+  await mockApi(page);
+  await page.route("**/api/platform/knowledge/bootstrap", async route => {
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "Not Found" })
+    });
+  });
+
+  await page.goto("/#/knowledge");
+  await expect(page.getByRole("heading", { name: "Knowledge" }).first()).toBeVisible();
+  await expect(page.getByText(/Knowledge bootstrap is unavailable in this environment/i)).toBeVisible();
+  await expect(page.locator(".empty-state").filter({ hasText: /Unable to|failed/i })).toHaveCount(0);
+  expect(consoleErrors).toEqual(["Failed to load resource: the server responded with a status of 404 (Not Found)"]);
+});

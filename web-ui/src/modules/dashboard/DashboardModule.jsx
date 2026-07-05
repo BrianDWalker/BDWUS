@@ -1,15 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
-import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "../../components/Primitives";
+import { DataTable, MetricCard, Panel, StatusTag, formatMoney, statusTone } from "../../components/Primitives";
 import { fetchCustomerServiceOverview, fetchPlatformBootstrap } from "../../utils/platformApi";
 import { fetchOpsBootstrap } from "../../utils/opsApi";
 import { arrayField, normalizeNetworkEvent, normalizeOrder, normalizeTicket } from "../../utils/payloadMapping";
-
-function statusTone(status) {
-  if (["Closed", "Completed", "Active", "Approved", "On Track"].includes(status)) return "success";
-  if (["Open", "In Progress", "Escalated", "Pending", "Risk", "Breached", "Blocked"].includes(status)) return "warn";
-  return "blue";
-}
 
 function numberValue(row = {}, ...keys) {
   const value = keys.map(key => row?.[key]).find(item => item !== undefined && item !== null && item !== "");

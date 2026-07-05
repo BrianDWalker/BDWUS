@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
-import { DataTable, Panel, StatusTag, formatDateTime, formatMoney } from "../../components/Primitives";
+import { DataTable, Panel, StatusTag, formatDateTime, formatMoney, statusTone } from "../../components/Primitives";
 import { downloadBlob, makeXlsx } from "../../utils/export";
 import { fetchPlatformReport, fetchPlatformReportDefinitions } from "../../utils/platformApi";
 
@@ -169,7 +169,7 @@ export default function ReportsModule({ showToast }) {
               </div>
               <div className="report-summary-strip"><div className="report-summary-card"><span>Total exposure</span><strong>{formatMoney(total)}</strong></div><div className="report-summary-card"><span>Rows</span><strong>{filteredRows.length}</strong></div><div className="report-summary-card"><span>Page</span><strong>{page} of {pages}</strong></div><div className="report-summary-card"><span>Area</span><strong>{definition.area}</strong></div></div>
               <Panel title="Result set" description="Current report results returned by the platform API.">
-                <DataTable emptyMessage="No rows match the current parameters." columns={[{ key: "account", label: "Account" }, { key: "region", label: "Region" }, { key: "segment", label: "Segment" }, { key: "service", label: "Service" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }, { key: "metric", label: "Metric" }, { key: "status", label: "Status", render: row => <StatusTag tone={["Priority", "Open", "Review", "Urgent"].includes(row.status) ? "warn" : ["Approved", "Active", "Growth", "Current"].includes(row.status) ? "success" : "blue"}>{row.status}</StatusTag> }]} rows={visibleRows} />
+                <DataTable emptyMessage="No rows match the current parameters." columns={[{ key: "account", label: "Account" }, { key: "region", label: "Region" }, { key: "segment", label: "Segment" }, { key: "service", label: "Service" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }, { key: "metric", label: "Metric" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status, { success: ["Growth"] })}>{row.status}</StatusTag> }]} rows={visibleRows} />
               </Panel>
             </section>
           )}

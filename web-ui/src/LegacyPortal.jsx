@@ -20,7 +20,7 @@ import {
   reportRows,
   services,
   tickets
-} from "./data/mockData";
+} from "./data/legacyMockData";
 import { fetchAssistantUiOverrides, mergeKnowledgeUi, mergeAssistantPages } from "./utils/assistantApi";
 import { downloadBlob, makeXlsx } from "./utils/export";
 

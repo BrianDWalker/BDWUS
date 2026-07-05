@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException
 from app.database import get_sql_connection
 from app.services.context import lookup_customer_profile
 from app.services.pricing import calculate_price
+from app.services.sql_access import sql_transaction
 from app.services import smoke_data
 
 
@@ -1048,8 +1049,7 @@ def delete_lead(lead_id: uuid.UUID):
 @router.post("/leads/{lead_id}/convert")
 def convert_lead(lead_id: uuid.UUID, payload: dict[str, Any]):
     ensure_sales_storage()
-    conn = get_sql_connection()
-    try:
+    with sql_transaction() as conn:
         cur = conn.cursor()
         lead = cur.execute("SELECT TOP 1 * FROM ms.Leads WHERE LeadId = ? AND IsDeleted = 0", (str(lead_id),)).fetchone()
         if not lead:
@@ -1108,14 +1108,8 @@ def convert_lead(lead_id: uuid.UUID, payload: dict[str, Any]):
                 trim(payload.get("approvedBy")) or lead.OwnerName,
             ),
         )
-        conn.commit()
-        invalidate_bootstrap_cache()
-        return get_view_row("ms.vOpportunityDetail", "OpportunityId", opportunity_id)
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+    invalidate_bootstrap_cache()
+    return get_view_row("ms.vOpportunityDetail", "OpportunityId", opportunity_id)
 
 
 @router.get("/leads/{lead_id}/activities")

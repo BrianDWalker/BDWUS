@@ -1,5 +1,8 @@
 import React from "react";
 
+const DEFAULT_SUCCESS_STATUSES = ["Active", "Approved", "Closed", "Completed", "Connected", "Current", "Paid", "Ready", "Resolved", "Validated"];
+const DEFAULT_WARN_STATUSES = ["At Risk", "Blocked", "Breached", "Delayed", "Dispute", "Draft", "Escalated", "High", "In Progress", "Needs Update", "Open", "Past Due", "Pending", "Pending Customer", "Pending Network", "Priority", "Provisioning", "Queued", "Review", "Risk", "Urgent", "Warning"];
+
 function normalizeDateValue(value) {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
@@ -21,6 +24,14 @@ export function formatPercent(value, { empty = "-", maximumFractionDigits = 1 } 
   return Number.isFinite(numeric)
     ? new Intl.NumberFormat("en-US", { style: "percent", minimumFractionDigits: 0, maximumFractionDigits }).format(numeric / 100)
     : empty;
+}
+
+export function statusTone(value, { success = [], warn = [] } = {}) {
+  const status = String(value || "").trim();
+  if (!status) return "blue";
+  if (new Set([...DEFAULT_SUCCESS_STATUSES, ...success]).has(status)) return "success";
+  if (new Set([...DEFAULT_WARN_STATUSES, ...warn]).has(status)) return "warn";
+  return "blue";
 }
 
 export function parseStructuredValue(value, fallback = null) {

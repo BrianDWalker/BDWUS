@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
@@ -45,5 +46,18 @@ def execute(sql: str, params: tuple[Any, ...] = ()) -> None:
         cursor = conn.cursor()
         cursor.execute(sql, params)
         conn.commit()
+    finally:
+        conn.close()
+
+
+@contextmanager
+def sql_transaction():
+    conn = get_sql_connection()
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
