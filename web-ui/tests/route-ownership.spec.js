@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { topNavSections } from "../src/data/mockData";
 import {
   extractedRoutes,
   integratedSalesDetailTypes,
@@ -29,6 +30,18 @@ test("route ownership registry documents extracted owners", () => {
   expect(legacyOwnedRoutes).toEqual([]);
   expect(integratedSalesDetailTypes).toEqual(["lead", "opportunity", "quote", "contract"]);
   expect(intentionalLegacyDetailTypes).toEqual([]);
+});
+
+test("every top navigation route has extracted or integrated ownership", () => {
+  for (const section of topNavSections) {
+    const route = section.route || section.id;
+    expect(isExtractedRoute(route) || isIntegratedSalesRoute(route), `${section.label} route ${route} must not fall to LegacyPortal`).toBe(true);
+  }
+});
+
+test("no intentional LegacyPortal owners remain", () => {
+  expect(legacyOwnedRoutes).toHaveLength(0);
+  expect(intentionalLegacyDetailTypes).toHaveLength(0);
 });
 
 test("migrated detail routes normalize away from LegacyPortal", () => {
