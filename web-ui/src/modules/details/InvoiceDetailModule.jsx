@@ -91,7 +91,7 @@ export default function InvoiceDetailModule({ id, setRoute, showToast }) {
 
   return (
     <>
-      <PageHeader title="Billing" description="Dedicated invoice detail workspace." actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("billing")}>Back to Billing</button><button className="button" type="button" disabled={loading} onClick={loadDetail}>Refresh</button></div>} />
+      <PageHeader title="Billing" description="Dedicated invoice detail workspace." actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("billing")}>Back to Billing</button></div>} />
       {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
       {error && <EmptyState>{error}</EmptyState>}
       {loading ? <EmptyState>Loading invoice detail...</EmptyState> : (

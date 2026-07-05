@@ -70,7 +70,7 @@ export default function ServiceOpsModule({ route = "network", showToast }) {
 
   return (
     <>
-      <PageHeader title={title} description="API-backed operations, network events, provisioning jobs, and carrier settlement." actions={<button className="button" disabled={loading || saving} type="button" onClick={loadOps}>Refresh</button>} />
+      <PageHeader title={title} description="API-backed operations, network events, provisioning jobs, and carrier settlement." />
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading service operations...</div> : (
         <>

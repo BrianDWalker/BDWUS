@@ -129,7 +129,7 @@ export default function BillingModule({ setRoute, showToast }) {
 
   return (
     <>
-      <PageHeader title="Billing" description="API-backed invoices, workflow actions, adjustments, and billing customers." actions={<button className="button" disabled={loading || saving} type="button" onClick={loadBilling}>Refresh</button>} />
+      <PageHeader title="Billing" description="API-backed invoices, workflow actions, adjustments, and billing customers." />
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading billing workflows...</div> : (
         <>

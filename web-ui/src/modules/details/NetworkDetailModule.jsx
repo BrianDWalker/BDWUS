@@ -33,7 +33,7 @@ export default function NetworkDetailModule({ id, setRoute }) {
 
   return (
     <>
-      <PageHeader title={title} description="Modern ServiceOps network event detail route." actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("network")}>Back to Network</button><button className="button" type="button" disabled={loading} onClick={loadNetworkDetail}>Refresh</button></div>} />
+      <PageHeader title={title} description="Modern ServiceOps network event detail route." actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("network")}>Back to Network</button></div>} />
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading network event...</div> : !event ? <div className="empty-state">Network event not found.</div> : (
         <>

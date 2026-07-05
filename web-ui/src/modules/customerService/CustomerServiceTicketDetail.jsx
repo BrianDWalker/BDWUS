@@ -85,7 +85,7 @@ export default function CustomerServiceTicketDetail({ id, setRoute, showToast })
       <PageHeader
         title={title}
         description="Modern API-backed customer service ticket detail."
-        actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("customer-service")}>Back to Customer Service</button><button className="ghost-button" type="button" disabled={loading} onClick={loadTicket}>Refresh</button><GatedButton action="escalate:ticket" className="ghost-button" disabled={saving || !ticket} onClick={escalateTicket}>Escalate</GatedButton><GatedButton action="close:ticket" disabled={saving || !ticket} onClick={closeTicket}>Close Ticket</GatedButton></div>}
+        actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("customer-service")}>Back to Customer Service</button><GatedButton action="escalate:ticket" className="ghost-button" disabled={saving || !ticket} onClick={escalateTicket}>Escalate</GatedButton><GatedButton action="close:ticket" disabled={saving || !ticket} onClick={closeTicket}>Close Ticket</GatedButton></div>}
       />
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading ticket...</div> : !ticket ? <div className="empty-state">Ticket not found.</div> : (

@@ -117,7 +117,7 @@ export default function ProductDetailModule({ id, setRoute, showToast }) {
 
   return (
     <>
-      <PageHeader title="Product & Pricing" description="Dedicated product and pricing detail workspace." actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("product-pricing")}>Back to Product & Pricing</button><button className="button" type="button" disabled={loading} onClick={loadDetail}>Refresh</button></div>} />
+      <PageHeader title="Product & Pricing" description="Dedicated product and pricing detail workspace." actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("product-pricing")}>Back to Product & Pricing</button></div>} />
       {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
       {error && <EmptyState>{error}</EmptyState>}
       {loading ? <EmptyState>Loading product detail...</EmptyState> : (

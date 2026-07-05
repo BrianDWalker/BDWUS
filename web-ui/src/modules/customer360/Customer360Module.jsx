@@ -143,7 +143,7 @@ export default function Customer360Module({ setRoute, showToast }) {
       <PageHeader
         title="Customer 360"
         description="API-backed customer profile, account, location, opportunity, quote, and contract context."
-        actions={<div className="button-cluster"><button className="ghost-button" disabled={loading || !selectedCustomer} type="button" onClick={() => setReloadKey(value => value + 1)}>Refresh</button><button className="ghost-button" disabled={!selectedCustomer} type="button" onClick={() => setRoute?.(`details/customer/${selectedCustomer}`)}>Open Detail</button><button className="button" type="button" onClick={() => { setRoute?.("orders"); showToast?.("Opening order workspace"); }}>Create Order</button></div>}
+        actions={<div className="button-cluster"><button className="ghost-button" disabled={!selectedCustomer} type="button" onClick={() => setRoute?.(`details/customer/${selectedCustomer}`)}>Open Detail</button><button className="button" type="button" onClick={() => { setRoute?.("orders"); showToast?.("Opening order workspace"); }}>Create Order</button></div>}
       />
       <div className="module-toolbar">
         <label className="inline-search">Customer<select value={selectedCustomer} onChange={event => setSelectedCustomer(event.target.value)}>{customerOptions.map(item => <option key={item.number} value={item.number}>{item.name}</option>)}</select></label>

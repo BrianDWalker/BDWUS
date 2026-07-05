@@ -55,18 +55,7 @@ function TopNavButton({ section, active, onNavigate }) {
   );
 }
 
-function RoleSelector({ role, onRoleChange }) {
-  return (
-    <label className="role-selector" title="Demo permission role selector">
-      <span>Demo role</span>
-      <select value={role} onChange={event => onRoleChange(event.target.value)} aria-label="Active permission role">
-        {Object.keys(roles).map(item => <option key={item} value={item}>{item}</option>)}
-      </select>
-    </label>
-  );
-}
-
-function UtilityPopover({ utility, onClose, onNavigate, role }) {
+function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange }) {
   const menuSets = {
     notifications: [
       { label: "Reports", description: "Open operational reporting", route: "reports" },
@@ -74,18 +63,14 @@ function UtilityPopover({ utility, onClose, onNavigate, role }) {
       { label: "Orders", description: "Inspect delivery queue", route: "orders" },
       { label: "Customer 360", description: "Jump into an account workspace", route: "customer-360" }
     ],
-    help: [
+    profile: [
+      { label: `Active role: ${role}`, description: "Role controls sensitive actions", route: "dashboard" },
+      { label: "Administration", description: "Users, roles, and integrations", route: "administration" },
       { label: "Customer Service", description: "Support and case work", route: "customer-service" },
       { label: "Network & Service", description: "Operational queue", route: "network" },
-      { label: "Reports", description: "Search and export reports", route: "reports" }
-    ],
-    settings: [
-      { label: "Administration", description: "Users, roles, and integrations", route: "administration" },
+      { label: "Reports", description: "Search and export reports", route: "reports" },
       { label: "Product & Pricing", description: "Catalog and governance", route: "product-pricing" },
-      { label: "Billing", description: "Billing controls and reports", route: "billing" }
-    ],
-    profile: [
-      { label: `Active role: ${role}`, description: "Role controls sensitive actions", route: "administration" },
+      { label: "Billing", description: "Billing controls and reports", route: "billing" },
       { label: "Home", description: "Return to the operating brief", route: "dashboard" },
       { label: "Sales", description: "Pipeline and quote desk", route: "sales" },
       { label: "Sign out", description: "Session action placeholder", route: "dashboard" }
@@ -111,6 +96,30 @@ function UtilityPopover({ utility, onClose, onNavigate, role }) {
           <Icon name="chevronRight" className="button-icon" />
         </button>
       ))}
+      {utility === "profile" ? (
+        <div className="topnav-role-section">
+          <div className="topnav-role-section-copy">
+            <strong>Demo role</strong>
+            <span>Switch the role used for gated workflow actions.</span>
+          </div>
+          <div className="topnav-role-options">
+            {Object.keys(roles).map(item => (
+              <button
+                key={item}
+                className={item === role ? "topnav-role-option active" : "topnav-role-option"}
+                type="button"
+                onClick={() => {
+                  onRoleChange(item);
+                  onClose();
+                }}
+                aria-pressed={item === role}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -299,7 +308,6 @@ export function Shell({ activeRoute, setRoute, children }) {
         )}
 
         <div className="topnav-right">
-          {!isMobile ? <RoleSelector role={role} onRoleChange={changeRole} /> : null}
           {!isMobile ? (
             <div className="topnav-search-shell">
               <label className="topnav-search-field">
@@ -346,20 +354,6 @@ export function Shell({ activeRoute, setRoute, children }) {
           }}>
             <Icon name="bell" className="button-icon" />
           </button>
-          <button className="topnav-icon-button" type="button" aria-label="Help" onClick={() => {
-            setSearchOpen(false);
-            setDrawerOpen(false);
-            setUtility(current => current === "help" ? null : "help");
-          }}>
-            <Icon name="help" className="button-icon" />
-          </button>
-          <button className="topnav-icon-button" type="button" aria-label="Settings" onClick={() => {
-            setSearchOpen(false);
-            setDrawerOpen(false);
-            setUtility(current => current === "settings" ? null : "settings");
-          }}>
-            <Icon name="settings" className="button-icon" />
-          </button>
           <button className="topnav-avatar" type="button" aria-label="Profile" onClick={() => {
             setSearchOpen(false);
             setDrawerOpen(false);
@@ -371,6 +365,7 @@ export function Shell({ activeRoute, setRoute, children }) {
           <UtilityPopover
             utility={utility}
             role={role}
+            onRoleChange={changeRole}
             onClose={() => setUtility(null)}
             onNavigate={go}
           />
@@ -404,9 +399,8 @@ export function PageHeader({ title, description, actions, className = "" }) {
     <header className={`topbar ${className}`}>
       <div className="topbar-title">
         <h1>{title}</h1>
-        <p>{description}</p>
       </div>
-      <div className="topbar-actions">{actions}</div>
+      {actions ? <div className="topbar-actions">{actions}</div> : null}
     </header>
   );
 }

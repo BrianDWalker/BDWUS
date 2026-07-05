@@ -83,7 +83,6 @@ export default function ProductPricingModule({ setRoute, showToast }) {
       <PageHeader
         title="Product & Pricing"
         description="API-backed catalog, hierarchy, billing elements, offers, promotions, and rate plans."
-        actions={<button className="button" disabled={loading} type="button" onClick={() => { loadProductPricing(); showToast?.("Product pricing refreshed"); }}>Refresh</button>}
       />
       {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
       {error && <div className="empty-state">{error}</div>}

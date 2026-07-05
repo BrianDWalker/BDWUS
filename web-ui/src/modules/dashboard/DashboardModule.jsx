@@ -75,7 +75,7 @@ export default function DashboardModule({ setRoute }) {
       <PageHeader
         title="Home"
         description="Modern API-backed operating dashboard for sales, care, orders, billing, network, and platform work."
-        actions={<div className="module-toolbar"><button className="ghost-button" type="button" disabled={loading} onClick={loadDashboard}>Refresh</button><button className="button" type="button" onClick={() => setRoute?.("reports")}>Open Reports</button></div>}
+        actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setRoute?.("reports")}>Open Reports</button></div>}
       />
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading operating dashboard...</div> : (

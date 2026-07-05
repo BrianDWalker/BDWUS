@@ -80,7 +80,7 @@ export default function CustomerServiceModule({ setRoute, showToast }) {
       <PageHeader
         title="Customer Service"
         description="API-backed support tickets, customer-reported network issues, billing inquiries, and care queue triage."
-        actions={<div className="module-toolbar"><button className="ghost-button" type="button" disabled={loading} onClick={loadCustomerService}>Refresh</button><button className="button" type="button" disabled={saving} onClick={createTicket}>{saving ? "Creating..." : "Create ticket"}</button></div>}
+        actions={<div className="module-toolbar"><button className="button" type="button" disabled={saving} onClick={createTicket}>{saving ? "Creating..." : "Create ticket"}</button></div>}
       />
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading customer service queue...</div> : (

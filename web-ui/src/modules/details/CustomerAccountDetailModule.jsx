@@ -118,7 +118,7 @@ export default function CustomerAccountDetailModule({ id, setRoute, showToast })
 
   return (
     <>
-      <PageHeader title="Customer 360" description="Dedicated customer and account detail workspace." actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("customer-360")}>Back to Customer 360</button><button className="button" type="button" disabled={loading} onClick={loadDetail}>Refresh</button></div>} />
+      <PageHeader title="Customer 360" description="Dedicated customer and account detail workspace." actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("customer-360")}>Back to Customer 360</button></div>} />
       {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
       {error && <EmptyState>{error}</EmptyState>}
       {loading ? <EmptyState>Loading customer detail...</EmptyState> : (

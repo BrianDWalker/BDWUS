@@ -3,10 +3,8 @@
   top: 0;
   z-index: 80;
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(320px, auto);
-  grid-template-areas:
-    "brand actions"
-    "nav nav";
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "brand nav actions";
   align-items: center;
   gap: 10px 12px;
   min-width: 0;
@@ -59,7 +57,7 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-  max-width: 300px;
+  max-width: 320px;
   min-height: 44px;
   padding: 6px 10px;
   border-radius: 14px;
@@ -128,7 +126,7 @@
   font-weight: 900;
 }
 
-.topnav-search-shell { position: relative; width: clamp(180px, 18vw, 280px); flex: 0 1 280px; min-width: 160px; }
+.topnav-search-shell { position: relative; width: clamp(220px, 22vw, 360px); flex: 0 1 360px; min-width: 220px; }
 
 .topnav-search-field {
   display: flex;
@@ -202,10 +200,56 @@
 .nav-menu-link-copy span,
 .topnav-empty-search { color: var(--muted); font-size: 12px; line-height: 1.35; }
 
+.topnav-role-section {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 10px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.topnav-role-section-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.topnav-role-section-copy strong {
+  font-size: 13px;
+}
+
+.topnav-role-section-copy span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.topnav-role-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topnav-role-option {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.9);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.topnav-role-option.active {
+  color: #0f766e;
+  border-color: rgba(15, 118, 110, 0.28);
+  background: rgba(15, 118, 110, 0.1);
+}
+
 @media (max-width: 1180px) {
-  .app-topnav { grid-template-columns: minmax(180px, 1fr) minmax(260px, auto); }
+  .app-topnav { grid-template-columns: auto minmax(0, 1fr) auto; }
   .topnav-brand-copy span { display: none; }
-  .topnav-search-shell { width: clamp(160px, 20vw, 220px); min-width: 150px; }
+  .topnav-search-shell { width: clamp(180px, 18vw, 260px); min-width: 180px; }
 }
 
 @media (max-width: 760px) {
@@ -214,9 +258,7 @@
   .topnav-brand { max-width: 190px; }
   .topnav-brand-copy strong { font-size: 12px; }
   .topnav-right { gap: 6px; }
-  .topnav-right .topnav-icon-button[aria-label="Notifications"],
-  .topnav-right .topnav-icon-button[aria-label="Help"],
-  .topnav-right .topnav-icon-button[aria-label="Settings"] { display: none; }
+  .topnav-right .topnav-icon-button[aria-label="Notifications"] { display: none; }
   .topnav-search-sheet,
   .topnav-drawer {
     position: fixed;
