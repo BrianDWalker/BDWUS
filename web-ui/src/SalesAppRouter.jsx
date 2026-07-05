@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import App from "./App";
+import { GatedButton } from "./components/PermissionGate";
 import { Shell } from "./components/Shell";
 import { SalesContractDetail, SalesLeadDetail, SalesModule, SalesOpportunityDetail, SalesQuoteDetail } from "./components/SalesDatabaseCRM";
 import { convertQuoteToOrder } from "./utils/salesApi";
@@ -53,9 +54,9 @@ function QuoteToOrderAction({ route, setRoute, showToast }) {
 
   return (
     <div className="floating-workflow-action" aria-label="Quote workflow action">
-      <button className="button" type="button" disabled={saving} onClick={createOrderFromQuote}>
+      <GatedButton action="create:order" disabled={saving} onClick={createOrderFromQuote}>
         {saving ? "Creating Order..." : "Create Order from Quote"}
-      </button>
+      </GatedButton>
     </div>
   );
 }
