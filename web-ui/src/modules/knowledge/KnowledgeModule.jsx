@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
 import { KnowledgeAssistant } from "../../components/KnowledgeAssistant";
 import { DataTable, MetricCard, Panel, StatusTag } from "../../components/Primitives";
-import { knowledgeDocuments, knowledgeTopics } from "../../data/mockData";
+import { fetchKnowledgeBootstrap } from "../../utils/platformApi";
 
 function match(value, query) {
   return String(value || "").toLowerCase().includes(query.trim().toLowerCase());
@@ -38,7 +38,38 @@ function normalizeKnowledgeDocument(doc = {}) {
 
 export default function KnowledgeModule({ setRoute }) {
   const [query, setQuery] = useState("");
-  const docs = useMemo(() => (knowledgeDocuments || []).map(normalizeKnowledgeDocument), []);
+  const [knowledgePayload, setKnowledgePayload] = useState({ documents: [], topics: [], summary: {} });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const docs = useMemo(() => (knowledgePayload.documents || []).map(normalizeKnowledgeDocument), [knowledgePayload.documents]);
+  const topics = knowledgePayload.topics || [];
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setError("");
+    fetchKnowledgeBootstrap()
+      .then(payload => {
+        if (!active) return;
+        setKnowledgePayload({
+          documents: payload?.documents || [],
+          topics: payload?.topics || [],
+          summary: payload?.summary || {}
+        });
+      })
+      .catch(err => {
+        if (!active) return;
+        setKnowledgePayload({ documents: [], topics: [], summary: {} });
+        setError(err.message || "Unable to load knowledge records.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const filteredDocs = useMemo(() => {
     return docs.filter(doc => !query.trim() || [doc.title, doc.category, doc.audience, doc.owner, doc.status, doc.summary, doc.tags.join(" ")].some(value => match(value, query)));
   }, [docs, query]);
@@ -52,11 +83,13 @@ export default function KnowledgeModule({ setRoute }) {
         description="Extracted knowledge workspace with article search, topic coverage, and the platform assistant preserved."
         actions={<div className="module-toolbar"><button className="ghost-button" type="button" onClick={() => setRoute?.("reports")}>Open Reports</button><button className="button" type="button" onClick={() => setRoute?.("administration")}>Admin Settings</button></div>}
       />
+      {error && <div className="empty-state">{error}</div>}
+      {loading && <div className="empty-state">Loading knowledge records…</div>}
       <section className="overview-grid">
-        <MetricCard label="Documents" value={docs.length} delta="Knowledge records" />
-        <MetricCard label="Topics" value={knowledgeTopics?.length || 0} delta="Coverage areas" />
-        <MetricCard label="Current" value={currentDocs.length} delta="Approved/current docs" />
-        <MetricCard label="Needs Review" value={reviewDocs.length} delta="Draft or review docs" tone={reviewDocs.length ? "warn" : ""} />
+        <MetricCard label="Documents" value={knowledgePayload.summary?.documentCount ?? docs.length} delta="Knowledge records" />
+        <MetricCard label="Topics" value={knowledgePayload.summary?.topicCount ?? topics.length} delta="Coverage areas" />
+        <MetricCard label="Current" value={knowledgePayload.summary?.currentCount ?? currentDocs.length} delta="Approved/current docs" />
+        <MetricCard label="Needs Review" value={knowledgePayload.summary?.reviewCount ?? reviewDocs.length} delta="Draft or review docs" tone={reviewDocs.length ? "warn" : ""} />
       </section>
       <section className="record-main-layout">
         <Panel title="Knowledge Search" description="Search products, policies, promotions, procedures, and operational runbooks." action={<label className="inline-search"><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search knowledge documents" /></label>}>
@@ -71,7 +104,7 @@ export default function KnowledgeModule({ setRoute }) {
         </Panel>
         <Panel title="Topic Coverage" description="Knowledge areas available to the assistant and support teams.">
           <div className="menu-actions">
-            {(knowledgeTopics || []).map(topic => <button className="menu-action" type="button" key={topic.id || topic.label || topic.name} onClick={() => setQuery(topic.label || topic.name || topic.id)}><strong>{topic.label || topic.name || topic.id}</strong><span>{topic.description || topic.summary || "Knowledge topic"}</span></button>)}
+            {(topics || []).map(topic => <button className="menu-action" type="button" key={topic.id || topic.label || topic.name} onClick={() => setQuery(topic.label || topic.name || topic.id)}><strong>{topic.label || topic.name || topic.id}</strong><span>{topic.description || topic.summary || "Knowledge topic"}</span></button>)}
           </div>
         </Panel>
       </section>
