@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { topNavSections } from "../data/mockData";
+import { navGroups, topNavSections } from "../data/mockData";
 import { activeRole, roles } from "../utils/permissions";
 import { Icon } from "./Icons";
 
@@ -150,29 +150,41 @@ function MobileDrawer({ activeRoute, onNavigate, onClose }) {
   return (
     <div className="topnav-drawer" role="dialog" aria-label="Primary navigation">
       <div className="topnav-drawer-header">
-        <strong>Navigation</strong>
+        <div>
+          <strong>Navigation</strong>
+          <span>{routeGroupLabel(activeRoute)} workspace</span>
+        </div>
         <button className="topnav-mega-close" type="button" onClick={onClose} aria-label="Close navigation">
           <Icon name="close" className="button-icon" />
         </button>
       </div>
-      <div className="topnav-drawer-flat">
-        {topNavSections.map(section => {
-          const active = routeMatches(section, activeRoute);
-          return (
-            <button
-              key={section.id}
-              className={active ? "topnav-drawer-item active" : "topnav-drawer-item"}
-              type="button"
-              onClick={() => {
-                onNavigate(section.route || section.id);
-                onClose();
-              }}
-            >
-              <Icon name={section.icon} className="button-icon" />
-              <span>{section.label}</span>
-            </button>
-          );
-        })}
+      <div className="topnav-drawer-groups">
+        {navGroups.map(group => (
+          <section key={group.label} className="topnav-drawer-group">
+            <strong className="topnav-drawer-group-title">{group.label}</strong>
+            <div className="topnav-drawer-flat">
+              {group.items.map(item => {
+                const section = topNavSections.find(nav => nav.id === item.id);
+                if (!section) return null;
+                const active = routeMatches(section, activeRoute);
+                return (
+                  <button
+                    key={section.id}
+                    className={active ? "topnav-drawer-item active" : "topnav-drawer-item"}
+                    type="button"
+                    onClick={() => {
+                      onNavigate(section.route || section.id);
+                      onClose();
+                    }}
+                  >
+                    <Icon name={section.icon} className="button-icon" />
+                    <span>{section.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </div>
     </div>
   );

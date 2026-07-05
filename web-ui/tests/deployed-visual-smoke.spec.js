@@ -17,7 +17,7 @@ const desktopRoutes = [
   { hash: "administration", heading: "Administration", name: "administration", loadedText: /Licensed accounts|Operational user accounts|Invite user/i }
 ];
 
-const responsiveRoutes = ["dashboard", "sales", "customer-service", "orders"]
+const responsiveRoutes = ["dashboard", "sales", "customer-360", "customer-service", "billing", "orders", "product-pricing", "reports", "administration"]
   .map(hash => desktopRoutes.find(route => route.hash === hash))
   .filter(Boolean);
 

@@ -30,6 +30,12 @@ function rowKey(row, index) {
 }
 
 export function DataTable({ columns, rows = [], onRowClick, emptyMessage = "No rows returned." }) {
+  const mobileColumns = columns.filter(column => !column.mobileHidden);
+  const titleColumn = mobileColumns.find(column => column.mobileTitle) || mobileColumns.find(column => column.key !== "actions") || mobileColumns[0];
+  const subtitleColumn = mobileColumns.find(column => column.mobileSubtitle) || mobileColumns.find(column => column.key !== titleColumn?.key && column.key !== "actions");
+  const actionColumns = mobileColumns.filter(column => column.key === "actions" || column.mobileAction);
+  const detailColumns = mobileColumns.filter(column => column.key !== titleColumn?.key && column.key !== subtitleColumn?.key && !actionColumns.includes(column));
+
   return (
     <div className="table-wrap" role="region" aria-label="Data table" tabIndex={0}>
       <div className="table-mobile">
@@ -39,12 +45,37 @@ export function DataTable({ columns, rows = [], onRowClick, emptyMessage = "No r
             key={rowKey(row, index)}
             onClick={() => onRowClick?.(row)}
           >
-            {columns.map(column => (
-              <div className="table-card-field" key={column.key}>
-                <span>{column.label || column.key}</span>
-                <div className="table-card-value">{column.render ? column.render(row, index) : row[column.key]}</div>
+            {titleColumn && (
+              <div className="table-card-header">
+                <span>{titleColumn.label || titleColumn.key}</span>
+                <strong className="table-card-title">{titleColumn.render ? titleColumn.render(row, index) : row[titleColumn.key]}</strong>
+                {subtitleColumn && (
+                  <div className="table-card-subtitle">
+                    <span>{subtitleColumn.label || subtitleColumn.key}</span>
+                    <strong>{subtitleColumn.render ? subtitleColumn.render(row, index) : row[subtitleColumn.key]}</strong>
+                  </div>
+                )}
               </div>
-            ))}
+            )}
+            {detailColumns.length ? (
+              <div className="table-card-fields">
+                {detailColumns.map(column => (
+                  <div className="table-card-field" key={column.key}>
+                    <span>{column.label || column.key}</span>
+                    <div className="table-card-value">{column.render ? column.render(row, index) : row[column.key]}</div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {actionColumns.length ? (
+              <div className="table-card-actions">
+                {actionColumns.map(column => (
+                  <div key={column.key} className="table-card-action-row">
+                    {column.render ? column.render(row, index) : row[column.key]}
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </article>
         )) : <div className="table-empty-row">{emptyMessage}</div>}
       </div>

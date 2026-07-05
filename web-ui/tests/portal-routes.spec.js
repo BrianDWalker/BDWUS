@@ -99,7 +99,7 @@ async function mockApi(page) {
 }
 
 for (const [hash, heading] of [
-  ["dashboard", "Home"],
+  ["dashboard", "Workday Command Center"],
   ["knowledge", "Knowledge"],
   ["reports", "Reports"],
   ["administration", "Administration"],
@@ -135,3 +135,27 @@ for (const [hash, heading] of [
     expect(consoleErrors).toEqual([]);
   });
 }
+
+test("mobile navigation drawer is grouped", async ({ page }) => {
+  await mockApi(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  await page.goto("/#/dashboard");
+  await page.getByRole("button", { name: "Open navigation" }).click();
+
+  const drawer = page.getByRole("dialog", { name: "Primary navigation" });
+  await expect(drawer.getByText("Commercial")).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "Sales" })).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "Billing" })).toBeVisible();
+});
+
+test("orders render mobile table cards", async ({ page }) => {
+  await mockApi(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  await page.goto("/#/orders");
+  const ordersTable = page.locator(".orders-compact .table-mobile").first();
+  await expect(ordersTable).toBeVisible();
+  await expect(page.locator(".orders-compact .table-desktop").first()).toBeHidden();
+  await expect(page.getByText("ORD-1001").first()).toBeVisible();
+});
