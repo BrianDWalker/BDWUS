@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://polite-cliff-080b22c0f.7.azurestaticapps.net/sitemap.xml
+Sitemap: https://polite-cliff-080b22c0f-previewgpt.eastus2.7.azurestaticapps.net/sitemap.xml
