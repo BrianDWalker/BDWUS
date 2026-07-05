@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import LegacyPortal from "./LegacyPortal";
 import { Shell } from "./components/Shell";
+import DashboardModule from "./modules/dashboard/DashboardModule";
+import KnowledgeModule from "./modules/knowledge/KnowledgeModule";
 import ReportsModule from "./modules/reports/ReportsModule";
 import AdministrationModule from "./modules/admin/AdministrationModule";
 import ProductPricingModule from "./modules/productPricing/ProductPricingModule";
@@ -40,6 +42,8 @@ function Toast({ toast }) {
 }
 
 function ExtractedRoute({ route, setRoute, showToast }) {
+  if (route === "dashboard") return <DashboardModule setRoute={setRoute} showToast={showToast} />;
+  if (route === "knowledge") return <KnowledgeModule setRoute={setRoute} showToast={showToast} />;
   if (route === "reports") return <ReportsModule setRoute={setRoute} showToast={showToast} />;
   if (route === "administration") return <AdministrationModule setRoute={setRoute} showToast={showToast} />;
   if (route === "product-pricing") return <ProductPricingModule setRoute={setRoute} showToast={showToast} />;
