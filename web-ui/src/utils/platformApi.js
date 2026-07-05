@@ -37,3 +37,4 @@ export const fetchPlatformReport = reportId => requestJson(`/api/platform/report
 export const fetchAdministrationSummary = () => requestJson("/api/platform/administration/summary");
 export const fetchCustomer360 = customerNumber => requestJson(`/api/platform/customer-360/${encodeURIComponent(customerNumber)}`);
 export const fetchProductPricingOverview = () => requestJson("/api/platform/product-pricing/overview");
+export const fetchCustomerServiceOverview = () => requestJson("/api/platform/customer-service/overview");
