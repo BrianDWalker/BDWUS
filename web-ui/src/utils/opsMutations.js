@@ -44,4 +44,4 @@ export const createAdminUser = payload => postJson('/api/admin/users', payload);
 export const createAdminRole = payload => postJson('/api/admin/roles', payload);
 export const createAdminIntegration = payload => postJson('/api/admin/integrations', payload);
 export const createInvoiceAction = (invoiceId, payload) => postJson(`/api/billing-workflows/invoices/${encodeURIComponent(invoiceId)}/actions`, payload);
-export const createBillingAdjustment = payload => postJson('/api/billing-workflows/adjustments');
+export const createBillingAdjustment = payload => postJson('/api/billing-workflows/adjustments', payload);
