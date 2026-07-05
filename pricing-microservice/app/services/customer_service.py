@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.database import get_sql_connection
 from app.services import smoke_data
-from app.services.ops import row_to_dict, stable_uuid, utc_now
+from app.services.ops import row_to_dict, stable_uuid
 from app.services.sales import ensure_sales_storage, fetch_all
 
 router = APIRouter(prefix="/api/platform/customer-service", tags=["customer-service"])
@@ -53,6 +53,9 @@ def _build_tickets(customers: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "Region": customer["Region"],
                 "Segment": customer["Segment"],
                 "SupportTier": customer["SupportTier"],
+                "EscalationLevel": "Tier 2" if category == "Network" else "Tier 1",
+                "SlaTargetHours": 4 if category == "Network" else 24,
+                "ClosureReason": None,
                 "CreatedAtUtc": smoke_data.utc_now_iso(),
             }
         )
@@ -86,6 +89,7 @@ def _summary(tickets: list[dict[str, Any]]) -> dict[str, Any]:
         "networkTicketCount": len([ticket for ticket in tickets if ticket.get("Category") == "Network"]),
         "billingTicketCount": len([ticket for ticket in tickets if ticket.get("Category") == "Billing"]),
         "averageAgeHours": round(sum(float(ticket.get("AgeHours") or 0) for ticket in tickets) / max(len(tickets), 1), 1),
+        "escalatedTicketCount": len([ticket for ticket in tickets if str(ticket.get("EscalationLevel") or "").lower() not in {"", "tier 1", "none"}]),
     }
 
 
@@ -126,11 +130,19 @@ def ensure_customer_service_storage() -> None:
             Status NVARCHAR(50) NOT NULL,
             OwnerName NVARCHAR(200) NULL,
             Summary NVARCHAR(MAX) NULL,
+            EscalationLevel NVARCHAR(50) NULL,
+            SlaTargetHours INT NULL,
+            ClosureReason NVARCHAR(400) NULL,
             CreatedBy NVARCHAR(200) NULL,
             CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
             UpdatedAtUtc DATETIME2 NULL,
+            ClosedAtUtc DATETIME2 NULL,
             IsDeleted BIT NOT NULL DEFAULT 0
         );
+        IF COL_LENGTH('care.Tickets', 'EscalationLevel') IS NULL ALTER TABLE care.Tickets ADD EscalationLevel NVARCHAR(50) NULL;
+        IF COL_LENGTH('care.Tickets', 'SlaTargetHours') IS NULL ALTER TABLE care.Tickets ADD SlaTargetHours INT NULL;
+        IF COL_LENGTH('care.Tickets', 'ClosureReason') IS NULL ALTER TABLE care.Tickets ADD ClosureReason NVARCHAR(400) NULL;
+        IF COL_LENGTH('care.Tickets', 'ClosedAtUtc') IS NULL ALTER TABLE care.Tickets ADD ClosedAtUtc DATETIME2 NULL;
         IF OBJECT_ID('care.TicketNotes', 'U') IS NULL CREATE TABLE care.TicketNotes (
             TicketNoteId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
             TicketId UNIQUEIDENTIFIER NOT NULL,
@@ -198,7 +210,7 @@ def seed_customer_service_data() -> None:
         for index, row in enumerate(seed_rows):
             ticket_id = stable_uuid(f"care-ticket-{index + 1}")
             cur.execute(
-                "INSERT INTO care.Tickets (TicketId, TicketNumber, CustomerNumber, AccountName, IssueType, Category, Priority, Status, OwnerName, Summary, CreatedBy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO care.Tickets (TicketId, TicketNumber, CustomerNumber, AccountName, IssueType, Category, Priority, Status, OwnerName, Summary, EscalationLevel, SlaTargetHours, CreatedBy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     ticket_id,
                     row["TicketNumber"],
@@ -210,6 +222,8 @@ def seed_customer_service_data() -> None:
                     row.get("Status") or "Open",
                     row.get("OwnerName") or "Care Ops",
                     row.get("Summary") or "Seed care ticket.",
+                    row.get("EscalationLevel") or "Tier 1",
+                    row.get("SlaTargetHours") or 24,
                     "Seed",
                 ),
             )
@@ -234,6 +248,29 @@ def list_tickets() -> list[dict[str, Any]]:
         ORDER BY CreatedAtUtc DESC
         """
     )
+
+
+def _add_note(ticket_id: str, note: str, note_type: str = "Update", created_by: str = "Care Ops") -> dict[str, Any]:
+    note_row = {
+        "TicketNoteId": str(uuid.uuid4()),
+        "TicketId": ticket_id,
+        "NoteType": note_type,
+        "Note": note,
+        "CreatedBy": created_by,
+        "CreatedAtUtc": smoke_data.utc_now_iso(),
+    }
+    if smoke_data.smoke_mode_enabled():
+        return note_row
+    conn = get_sql_connection()
+    try:
+        conn.cursor().execute(
+            "INSERT INTO care.TicketNotes (TicketNoteId, TicketId, NoteType, Note, CreatedBy) VALUES (?, ?, ?, ?, ?)",
+            (note_row["TicketNoteId"], ticket_id, note_type, note, created_by),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return note_row
 
 
 @router.get("/overview")
@@ -268,6 +305,9 @@ def create_ticket(payload: dict[str, Any]) -> dict[str, Any]:
         "AgeHours": 0,
         "OwnerName": payload.get("ownerName") or "Care Ops",
         "Summary": payload.get("summary") or payload.get("notes") or "Customer service ticket created from the portal.",
+        "EscalationLevel": payload.get("escalationLevel") or "Tier 1",
+        "SlaTargetHours": payload.get("slaTargetHours") or 24,
+        "ClosureReason": payload.get("closureReason"),
         "CreatedBy": payload.get("createdBy") or "Care Ops",
         "CreatedAtUtc": smoke_data.utc_now_iso(),
     }
@@ -279,7 +319,7 @@ def create_ticket(payload: dict[str, Any]) -> dict[str, Any]:
     try:
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO care.Tickets (TicketId, TicketNumber, CustomerNumber, AccountName, IssueType, Category, Priority, Status, OwnerName, Summary, CreatedBy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO care.Tickets (TicketId, TicketNumber, CustomerNumber, AccountName, IssueType, Category, Priority, Status, OwnerName, Summary, EscalationLevel, SlaTargetHours, ClosureReason, CreatedBy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 ticket_id,
                 ticket["TicketNumber"],
@@ -291,6 +331,9 @@ def create_ticket(payload: dict[str, Any]) -> dict[str, Any]:
                 ticket["Status"],
                 ticket["OwnerName"],
                 ticket["Summary"],
+                ticket["EscalationLevel"],
+                ticket["SlaTargetHours"],
+                ticket["ClosureReason"],
                 ticket["CreatedBy"],
             ),
         )
@@ -323,22 +366,29 @@ def update_ticket(ticket_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         ticket = _find_smoke_ticket(ticket_id)
         if not ticket:
             raise HTTPException(status_code=404, detail="Ticket not found.")
-        for source, target in (("status", "Status"), ("priority", "Priority"), ("ownerName", "OwnerName"), ("summary", "Summary")):
+        for source, target in (("status", "Status"), ("priority", "Priority"), ("ownerName", "OwnerName"), ("summary", "Summary"), ("escalationLevel", "EscalationLevel"), ("slaTargetHours", "SlaTargetHours"), ("closureReason", "ClosureReason")):
             if payload.get(source) is not None:
                 ticket[target] = payload[source]
+        if ticket.get("Status") == "Closed":
+            ticket["ClosedAtUtc"] = smoke_data.utc_now_iso()
         return ticket
     ensure_customer_service_storage()
     current = _require_ticket(ticket_id)
+    next_status = payload.get("status", current.get("Status"))
+    close_clause = "ClosedAtUtc = SYSUTCDATETIME()," if next_status == "Closed" else "ClosedAtUtc = NULL,"
     conn = get_sql_connection()
     try:
         cur = conn.cursor()
         cur.execute(
-            "UPDATE care.Tickets SET Status = ?, Priority = ?, OwnerName = ?, Summary = ?, UpdatedAtUtc = SYSUTCDATETIME() WHERE TicketId = ?",
+            f"UPDATE care.Tickets SET Status = ?, Priority = ?, OwnerName = ?, Summary = ?, EscalationLevel = ?, SlaTargetHours = ?, ClosureReason = ?, {close_clause} UpdatedAtUtc = SYSUTCDATETIME() WHERE TicketId = ?",
             (
-                payload.get("status", current.get("Status")),
+                next_status,
                 payload.get("priority", current.get("Priority")),
                 payload.get("ownerName", current.get("OwnerName")),
                 payload.get("summary", current.get("Summary")),
+                payload.get("escalationLevel", current.get("EscalationLevel")),
+                payload.get("slaTargetHours", current.get("SlaTargetHours")),
+                payload.get("closureReason", current.get("ClosureReason")),
                 current["TicketId"],
             ),
         )
@@ -351,3 +401,18 @@ def update_ticket(ticket_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     finally:
         conn.close()
     return _require_ticket(str(current["TicketId"]))
+
+
+@router.post("/tickets/{ticket_id}/notes")
+def add_ticket_note(ticket_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    note = payload.get("note") or payload.get("notes")
+    if not note:
+        raise HTTPException(status_code=400, detail="Note is required.")
+    if smoke_data.smoke_mode_enabled():
+        ticket = _find_smoke_ticket(ticket_id)
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Ticket not found.")
+        return _add_note(ticket.get("TicketId"), note, payload.get("noteType") or "Comment", payload.get("createdBy") or "Care Ops")
+    ensure_customer_service_storage()
+    ticket = _require_ticket(ticket_id)
+    return _add_note(str(ticket["TicketId"]), note, payload.get("noteType") or "Comment", payload.get("createdBy") or "Care Ops")
