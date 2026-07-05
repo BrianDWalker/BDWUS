@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import LegacyPortal from "./LegacyPortal";
 import { Shell } from "./components/Shell";
 import DashboardModule from "./modules/dashboard/DashboardModule";
 import KnowledgeModule from "./modules/knowledge/KnowledgeModule";
@@ -75,6 +74,19 @@ function ExtractedRoute({ route, setRoute, showToast }) {
   return null;
 }
 
+function UnknownRoute({ route, setRoute }) {
+  return (
+    <section className="page-stack">
+      <div className="empty-state">
+        Route "{route}" is not available in the API-backed portal.
+      </div>
+      <button className="button" type="button" onClick={() => setRoute("dashboard")}>
+        Back to Home
+      </button>
+    </section>
+  );
+}
+
 export default function App() {
   const [route, setRoute] = useRoute();
   const [toast, setToast] = useState("");
@@ -85,13 +97,11 @@ export default function App() {
     showToast.timer = window.setTimeout(() => setToast(""), 2200);
   }
 
-  if (!isExtractedRoute(route)) {
-    return <LegacyPortal />;
-  }
-
   return (
     <Shell activeRoute={route} setRoute={setRoute}>
-      <ExtractedRoute route={route} setRoute={setRoute} showToast={showToast} />
+      {isExtractedRoute(route)
+        ? <ExtractedRoute route={route} setRoute={setRoute} showToast={showToast} />
+        : <UnknownRoute route={route} setRoute={setRoute} />}
       <Toast toast={toast} />
     </Shell>
   );
