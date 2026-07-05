@@ -1,4 +1,5 @@
 export const roles = {
+  Viewer: [],
   Executive: ["view:dashboard", "view:reports", "view:customers", "view:billing", "view:orders", "view:care", "view:network"],
   Sales: ["view:dashboard", "view:sales", "view:customers", "create:quote", "create:order"],
   Care: ["view:dashboard", "view:care", "view:customers", "create:ticket", "update:ticket", "comment:ticket", "escalate:ticket", "close:ticket"],

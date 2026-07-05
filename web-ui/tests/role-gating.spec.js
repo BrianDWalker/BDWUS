@@ -52,6 +52,8 @@ async function mockQuote(page) {
 test("role selector controls care ticket actions", async ({ page }) => {
   await mockCare(page);
   await page.goto("/#/details/ticket/ticket-1");
+  await page.getByLabel("Active permission role").selectOption("Viewer");
+  await expect(page.getByRole("button", { name: "Close Ticket" })).toBeDisabled();
   await page.getByLabel("Active permission role").selectOption("Billing");
   await expect(page.getByRole("button", { name: "Close Ticket" })).toBeDisabled();
   await page.getByLabel("Active permission role").selectOption("Care");
@@ -62,6 +64,8 @@ test("role selector controls billing adjustment action", async ({ page }) => {
   await mockBilling(page);
   await page.goto("/#/billing");
   await page.getByRole("button", { name: "Adjustments" }).click();
+  await page.getByLabel("Active permission role").selectOption("Viewer");
+  await expect(page.getByRole("button", { name: "Create sample adjustment" })).toBeDisabled();
   await page.getByLabel("Active permission role").selectOption("Care");
   await expect(page.getByRole("button", { name: "Create sample adjustment" })).toBeDisabled();
   await page.getByLabel("Active permission role").selectOption("Billing");
@@ -71,6 +75,9 @@ test("role selector controls billing adjustment action", async ({ page }) => {
 test("role selector controls order and provisioning actions", async ({ page }) => {
   await mockOrders(page);
   await page.goto("/#/orders");
+  await page.getByLabel("Active permission role").selectOption("Viewer");
+  await expect(page.getByRole("button", { name: "New Order" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Provision" }).first()).toBeDisabled();
   await page.getByLabel("Active permission role").selectOption("Billing");
   await expect(page.getByRole("button", { name: "New Order" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Provision" }).first()).toBeDisabled();
@@ -81,6 +88,8 @@ test("role selector controls order and provisioning actions", async ({ page }) =
 test("role selector controls quote to order action", async ({ page }) => {
   await mockQuote(page);
   await page.goto("/#/details/quote/quote-1");
+  await page.getByLabel("Active permission role").selectOption("Viewer");
+  await expect(page.getByRole("button", { name: "Create Order from Quote" })).toBeDisabled();
   await page.getByLabel("Active permission role").selectOption("Care");
   await expect(page.getByRole("button", { name: "Create Order from Quote" })).toBeDisabled();
   await page.getByLabel("Active permission role").selectOption("Sales");

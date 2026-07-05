@@ -8,6 +8,13 @@ test("admin has wildcard permissions", () => {
   expect(can("create:provisioning-job", "Admin")).toBe(true);
 });
 
+test("viewer has no mutation permissions", () => {
+  expect(roleCapabilities("Viewer")).toEqual([]);
+  expect(can("create:order", "Viewer")).toBe(false);
+  expect(can("create:invoice-action", "Viewer")).toBe(false);
+  expect(can("close:ticket", "Viewer")).toBe(false);
+});
+
 test("billing can create billing workflow records but cannot close tickets", () => {
   expect(can("create:invoice-action", "Billing")).toBe(true);
   expect(can("create:adjustment", "Billing")).toBe(true);
@@ -33,5 +40,5 @@ test("sales can create orders from quotes but cannot close care tickets", () => 
 });
 
 test("roles registry includes expected personas", () => {
-  expect(Object.keys(roles)).toEqual(expect.arrayContaining(["Executive", "Sales", "Care", "Billing", "Ops", "Admin"]));
+  expect(Object.keys(roles)).toEqual(expect.arrayContaining(["Viewer", "Executive", "Sales", "Care", "Billing", "Ops", "Admin"]));
 });

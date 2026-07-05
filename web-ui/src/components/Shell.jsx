@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useEffect, useMemo, useRef, useState } from "react";
 import { navGroups, topNavSections } from "../data/mockData";
 import { activeRole, roles } from "../utils/permissions";
 import { Icon } from "./Icons";
+
+export const PermissionRoleContext = createContext(null);
 
 function useMediaQuery(query) {
   const [matches, setMatches] = useState(false);
@@ -54,8 +56,8 @@ function TopNavButton({ section, active, onNavigate }) {
 
 function RoleSelector({ role, onRoleChange }) {
   return (
-    <label className="role-selector" title="Demo permission role">
-      <span>Role</span>
+    <label className="role-selector" title="Demo permission role selector">
+      <span>Demo role</span>
       <select value={role} onChange={event => onRoleChange(event.target.value)} aria-label="Active permission role">
         {Object.keys(roles).map(item => <option key={item} value={item}>{item}</option>)}
       </select>
@@ -250,7 +252,8 @@ export function Shell({ activeRoute, setRoute, children }) {
   }
 
   return (
-    <div className="app-shell" ref={shellRef}>
+    <PermissionRoleContext.Provider value={role}>
+      <div className="app-shell" ref={shellRef}>
       <header className="app-topnav">
         <div className="topnav-left">
           {isMobile && (
@@ -385,8 +388,9 @@ export function Shell({ activeRoute, setRoute, children }) {
           />
         )}
       </header>
-      <main className="content">{children}</main>
-    </div>
+        <main className="content">{children}</main>
+      </div>
+    </PermissionRoleContext.Provider>
   );
 }
 

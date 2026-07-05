@@ -1,13 +1,15 @@
-import React from "react";
+import React, { useContext } from "react";
+import { PermissionRoleContext } from "./Shell";
 import { activeRole, can, permissionMessage } from "../utils/permissions";
 
 export function PermissionGate({ action, children, fallback = null }) {
-  return can(action) ? children : fallback;
+  const role = useContext(PermissionRoleContext) || activeRole();
+  return can(action, role) ? children : fallback;
 }
 
 export function GatedButton({ action, children, onClick, className = "button", disabled = false, title, ...props }) {
-  const allowed = can(action);
-  const role = activeRole();
+  const role = useContext(PermissionRoleContext) || activeRole();
+  const allowed = can(action, role);
   return (
     <button
       {...props}
