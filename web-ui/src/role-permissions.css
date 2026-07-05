@@ -1,0 +1,31 @@
+.role-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.86);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.role-selector select {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  outline: none;
+}
+
+.role-selector:focus-within {
+  outline: 3px solid rgba(37, 99, 235, 0.22);
+  outline-offset: 2px;
+}
+
+button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
