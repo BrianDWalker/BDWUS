@@ -1,13 +1,25 @@
 {
   "navigationFallback": {
-    "rewrite": "/index.html",
-    "exclude": ["/assets/*"]
+    "rewrite": "/index.html"
   },
   "routes": [
     {
       "route": "/*",
-      "serve": "/index.html",
+      "allowedRoles": ["anonymous"]
+    }
+  ],
+  "responseOverrides": {
+    "401": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    },
+    "403": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    },
+    "404": {
+      "rewrite": "/index.html",
       "statusCode": 200
     }
-  ]
+  }
 }
