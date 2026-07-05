@@ -3,61 +3,32 @@ name: Azure Static Web Apps CI/CD
 on:
   push:
     branches:
-      - main
-      - fc-gpt
       - fc-gpt-deep-review-audit
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
-    branches:
-      - main
-      - fc-gpt
-      - fc-gpt-deep-review-audit
+  workflow_dispatch:
 
 jobs:
   build_and_deploy_job:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
+    name: Build and Deploy Preview
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
           lfs: false
-      - name: Set environment name
-        id: env
-        run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "deployment_environment=production" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/fc-gpt" ]; then
-            echo "deployment_environment=preview-gpt" >> $GITHUB_OUTPUT
-          elif [ "${{ github.ref }}" = "refs/heads/fc-gpt-deep-review-audit" ]; then
-            echo "deployment_environment=preview" >> $GITHUB_OUTPUT
-          else
-            echo "deployment_environment=preview" >> $GITHUB_OUTPUT
-          fi
-      - name: Build And Deploy
-        id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_POLITE_CLIFF_080B22C0F }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }} # Used for Github integrations (i.e. PR comments)
-          action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "./web-ui" # App source code path
-          api_location: "" # Api source code path - optional
-          output_location: "dist" # Built app content directory - optional
-          deployment_environment: ${{ steps.env.outputs.deployment_environment }}
-          ###### End of Repository/Build Configurations ######
 
-  close_pull_request_job:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close Pull Request Job
-    steps:
-      - name: Close Pull Request
-        id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
+      - uses: actions/setup-node@v4
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_POLITE_CLIFF_080B22C0F }}
-          action: "close"
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: ./web-ui
+        run: npm ci
+
+      - name: Build web UI
+        working-directory: ./web-ui
+        run: npm run build
+
+      - name: Deploy to preview environment
+        env:
+          SWA_CLI_DEPLOYMENT_TOKEN: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_POLITE_CLIFF_080B22C0F }}
+        run: npx @azure/static-web-apps-cli deploy ./web-ui/dist --env preview
