@@ -3,6 +3,7 @@ import { PageHeader } from "../../components/Shell";
 import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "../../components/Primitives";
 import { fetchCarrierSettlements, fetchNetworkEvents, fetchOpsBootstrap, fetchProvisioningJobs } from "../../utils/opsApi";
 import { createCarrierSettlement, createNetworkEvent, createProvisioningJob } from "../../utils/opsMutations";
+import { arrayField, normalizeNetworkEvent, normalizeProvisioningJob, normalizeSettlement } from "../../utils/payloadMapping";
 
 const routeLabels = {
   network: "Network Events",
@@ -10,6 +11,12 @@ const routeLabels = {
   provisioning: "Provisioning",
   "carrier-settlement": "Carrier Settlement"
 };
+
+const normalizeOpsPayload = payload => ({
+  networkEvents: arrayField(payload, "networkEvents", "NetworkEvents", "events").map(normalizeNetworkEvent),
+  provisioningJobs: arrayField(payload, "provisioningJobs", "ProvisioningJobs", "jobs").map(normalizeProvisioningJob),
+  settlements: arrayField(payload, "settlements", "carrierSettlements", "CarrierSettlements").map(normalizeSettlement)
+});
 
 export default function ServiceOpsModule({ route = "network", showToast }) {
   const [data, setData] = useState({ networkEvents: [], provisioningJobs: [], settlements: [] });
@@ -22,11 +29,7 @@ export default function ServiceOpsModule({ route = "network", showToast }) {
     setError("");
     try {
       const bootstrap = await fetchOpsBootstrap();
-      setData({
-        networkEvents: bootstrap.networkEvents || [],
-        provisioningJobs: bootstrap.provisioningJobs || [],
-        settlements: bootstrap.settlements || []
-      });
+      setData(normalizeOpsPayload(bootstrap));
     } catch (err) {
       setError(err.message || "Unable to load service operations.");
     } finally {
@@ -49,7 +52,11 @@ export default function ServiceOpsModule({ route = "network", showToast }) {
         await createCarrierSettlement({ partnerName: "Carrier Partner", billingPeriod: "Current", exposureAmount: 1000, status: "Open", claimType: "Dispute" });
       }
       const [networkEvents, provisioningJobs, settlements] = await Promise.all([fetchNetworkEvents(), fetchProvisioningJobs(), fetchCarrierSettlements()]);
-      setData({ networkEvents: networkEvents || [], provisioningJobs: provisioningJobs || [], settlements: settlements || [] });
+      setData({
+        networkEvents: (networkEvents || []).map(normalizeNetworkEvent),
+        provisioningJobs: (provisioningJobs || []).map(normalizeProvisioningJob),
+        settlements: (settlements || []).map(normalizeSettlement)
+      });
       showToast?.("Service operation record created");
     } catch (err) {
       setError(err.message || "Unable to create service operation record.");
