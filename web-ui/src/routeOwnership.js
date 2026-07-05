@@ -3,6 +3,7 @@ export const extractedRoutes = [
   "administration",
   "product-pricing",
   "customer-360",
+  "customer-service",
   "billing",
   "orders",
   "network",
@@ -15,8 +16,7 @@ export const integratedSalesDetailTypes = ["lead", "opportunity", "quote", "cont
 
 export const legacyOwnedRoutes = [
   "dashboard",
-  "knowledge",
-  "customer-service"
+  "knowledge"
 ];
 
 export const intentionalLegacyDetailTypes = [
