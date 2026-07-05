@@ -33,5 +33,5 @@ test("quote detail exposes create order action", async ({ page }) => {
   await page.goto("/#/details/quote/quote-1");
   await expect(page.getByRole("button", { name: "Create Order from Quote" })).toBeVisible();
   await page.getByRole("button", { name: "Create Order from Quote" }).click();
-  await expect(page.getByText("Created ORD-1001 from quote")).toBeVisible();
+  await expect(page).toHaveURL(/#\/orders/);
 });

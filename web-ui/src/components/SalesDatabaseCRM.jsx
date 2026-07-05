@@ -420,6 +420,7 @@ export function SalesModule({ setRoute, showToast }) {
   const offers = state.offers || [];
   const promotions = state.promotions || [];
   const ratePlans = state.ratePlans || [];
+  const hasSalesRows = leads.length || accounts.length || opportunities.length || quotes.length || customPricing.length || approvals.length || contracts.length;
 
   const filteredLeads = leads.filter(item => {
     const rowStatus = String(fieldValue(item, "Status")).trim();
@@ -435,7 +436,7 @@ export function SalesModule({ setRoute, showToast }) {
   const filteredApprovals = approvals.filter(item => matchAny(item, query, [r => fieldValue(r, "EntityType"), r => fieldValue(r, "StepName"), r => fieldValue(r, "Status")]) && (status === "All statuses" || fieldValue(item, "Status") === status));
   const filteredContracts = contracts.filter(item => matchAny(item, query, [r => fieldValue(r, "ContractNumber"), r => fieldValue(r, "ContractName"), r => fieldValue(r, "AccountName"), r => fieldValue(r, "OpportunityName")]) && (status === "All statuses" || fieldValue(item, "Status") === status));
   const filteredCustomPricing = customPricing.filter(row => matchAny(row, query, [r => fieldValue(r, "RequestNumber"), r => fieldValue(r, "Status"), r => fieldValue(r, "RequestedBy"), r => fieldValue(r, "Reason")]) && (status === "All statuses" || fieldValue(row, "Status") === status));
-  const queueWarnings = loading ? ["Loading sales data from Azure SQL..."] : state.error ? [state.error] : state.warnings;
+  const queueWarnings = loading ? ["Loading sales data from Azure SQL..."] : state.error ? [state.error] : state.warnings.length ? state.warnings : !hasSalesRows ? ["No sales records returned from Azure SQL yet."] : [];
 
   const leadColumns = [
     { key: "LeadNumber", label: "Lead" },
@@ -498,7 +499,7 @@ export function SalesModule({ setRoute, showToast }) {
       <PageHeader
         title="Sales"
         description="Database-backed telecom sales, pricing, approvals, and contracts."
-        actions={<div className="module-toolbar sales-header-actions"><ActionButton icon="leads" onClick={() => setNewLead(true)}>New Lead</ActionButton><ActionButton icon="opportunities" onClick={() => setNewOpportunity(true)}>New Opportunity</ActionButton></div>}
+        actions={<div className="module-toolbar sales-header-actions"><ActionButton icon="workflow" onClick={refresh}>Refresh</ActionButton><ActionButton icon="leads" onClick={() => setNewLead(true)}>New Lead</ActionButton><ActionButton icon="opportunities" onClick={() => setNewOpportunity(true)}>New Opportunity</ActionButton></div>}
       />
       {queueWarnings.length ? (
         <Panel title="Sales sync status" description="Azure SQL connectivity and workspace loading status." className="sales-warning-panel">
