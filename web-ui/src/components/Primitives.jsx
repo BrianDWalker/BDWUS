@@ -60,6 +60,10 @@ export function StatusTag({ children, tone = "blue" }) {
   return <span className={`mini-tag ${tone}`.trim()}>{children || "-"}</span>;
 }
 
+export function WarningBanner({ children }) {
+  return children ? <div className="warning-banner" role="status">{children}</div> : null;
+}
+
 export function formatMoney(value) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",

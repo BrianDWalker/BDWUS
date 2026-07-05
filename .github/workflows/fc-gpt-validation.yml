@@ -190,7 +190,7 @@ jobs:
         working-directory: ./web-ui
         env:
           PLAYWRIGHT_BASE_URL: ${{ vars.STAGING_WEB_BASE_URL || 'https://polite-cliff-080b22c0f-previewgpt.eastus2.7.azurestaticapps.net' }}
-        run: npx playwright test portal-routes.spec.js deployed-visual-smoke.spec.js --config=playwright.deployed.config.js
+        run: npx playwright test portal-routes.spec.js deployed-visual-smoke.spec.js deployed-detail-visual-smoke.spec.js --config=playwright.deployed.config.js
       - name: Upload deployed web Playwright report
         if: always()
         uses: actions/upload-artifact@v4

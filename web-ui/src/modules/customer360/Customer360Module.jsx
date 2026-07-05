@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
-import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "../../components/Primitives";
-import { fetchCustomer360 } from "../../utils/platformApi";
+import { DataTable, MetricCard, Panel, StatusTag, WarningBanner, formatMoney } from "../../components/Primitives";
+import { fetchCustomer360, fetchPlatformBootstrap } from "../../utils/platformApi";
 import { getBillingCustomer, listBillingCustomers } from "../../utils/salesApi";
 import { arrayField, normalizeCustomer } from "../../utils/payloadMapping";
 
@@ -39,23 +39,52 @@ export default function Customer360Module({ setRoute, showToast }) {
   const [customer360, setCustomer360] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [warnings, setWarnings] = useState([]);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    listBillingCustomers()
-      .then(rows => {
-        if (!active) return;
-        const normalized = (rows || []).map(normalizeCustomer);
+    setError("");
+    setWarnings([]);
+
+    async function loadCustomerOptions() {
+      const platformResult = await fetchPlatformBootstrap()
+        .then(payload => ({ status: "fulfilled", value: arrayField(payload, "customers", "Customers") }))
+        .catch(err => ({ status: "rejected", reason: err }));
+
+      if (active && platformResult.status === "fulfilled" && platformResult.value.length) {
+        const normalized = platformResult.value.map(normalizeCustomer);
         setCustomers(normalized);
-        setSelectedCustomer(pickCustomerNumber(normalized?.[0]) || "");
-      })
+        setSelectedCustomer(current => current || pickCustomerNumber(normalized[0]) || "");
+        setLoading(false);
+      }
+
+      const billingResult = await listBillingCustomers()
+        .then(rows => ({ status: "fulfilled", value: rows || [] }))
+        .catch(err => ({ status: "rejected", reason: err }));
+
+      if (!active) return;
+
+      if (billingResult.status === "fulfilled" && billingResult.value.length) {
+        const normalized = billingResult.value.map(normalizeCustomer);
+        setCustomers(normalized);
+        setSelectedCustomer(current => current || pickCustomerNumber(normalized[0]) || "");
+        setLoading(false);
+      } else if (platformResult.status === "fulfilled" && platformResult.value.length) {
+        setWarnings([`Billing customer list is unavailable; showing ${platformResult.value.length} platform bootstrap customer record${platformResult.value.length === 1 ? "" : "s"}.`]);
+      } else {
+        const message = billingResult.reason?.message || platformResult.reason?.message || "Unable to load customers.";
+        setError(message);
+        setLoading(false);
+      }
+    }
+
+    loadCustomerOptions()
       .catch(err => {
-        if (active) setError(err.message || "Unable to load customers.");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
+        if (!active) return;
+        setError(err.message || "Unable to load customers.");
+        setLoading(false);
       });
     return () => {
       active = false;
@@ -67,11 +96,22 @@ export default function Customer360Module({ setRoute, showToast }) {
     let active = true;
     setLoading(true);
     setError("");
-    Promise.all([fetchCustomer360(selectedCustomer), getBillingCustomer(selectedCustomer)])
-      .then(([customerPayload, billingPayload]) => {
+    setWarnings([]);
+    Promise.allSettled([fetchCustomer360(selectedCustomer), getBillingCustomer(selectedCustomer)])
+      .then(([customerResult, billingResult]) => {
         if (!active) return;
+        const customerPayload = customerResult.status === "fulfilled" ? customerResult.value : {};
+        const billingPayload = billingResult.status === "fulfilled" ? billingResult.value : customers.find(row => pickCustomerNumber(row) === selectedCustomer) || {};
         setCustomer360(customerPayload || {});
         setCustomerProfile(normalizeCustomer(billingPayload || {}));
+        const failedSources = [
+          customerResult.status === "rejected" ? "customer 360 profile" : "",
+          billingResult.status === "rejected" ? "billing customer profile" : ""
+        ].filter(Boolean);
+        setWarnings(failedSources.length ? [`${failedSources.join(" and ")} unavailable; showing available customer data.`] : []);
+        if (customerResult.status === "rejected" && billingResult.status === "rejected") {
+          setError(customerResult.reason?.message || billingResult.reason?.message || "Unable to load customer 360.");
+        }
       })
       .catch(err => {
         if (active) setError(err.message || "Unable to load customer 360.");
@@ -108,6 +148,7 @@ export default function Customer360Module({ setRoute, showToast }) {
       <div className="module-toolbar">
         <label className="inline-search">Customer<select value={selectedCustomer} onChange={event => setSelectedCustomer(event.target.value)}>{customerOptions.map(item => <option key={item.number} value={item.number}>{item.name}</option>)}</select></label>
       </div>
+      {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading customer data...</div> : !customerOptions.length ? <div className="empty-state">No customers returned by the billing API.</div> : (
         <>

@@ -135,6 +135,16 @@
   line-height: 1.45;
 }
 
+.warning-banner {
+  border: 1px solid rgba(217, 119, 6, 0.22);
+  background: #fffbeb;
+  color: #92400e;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
 .mini-tag {
   white-space: nowrap;
 }

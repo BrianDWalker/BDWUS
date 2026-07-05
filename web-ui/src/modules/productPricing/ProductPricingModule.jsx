@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { PageHeader } from "../../components/Shell";
-import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "../../components/Primitives";
+import { DataTable, MetricCard, Panel, StatusTag, WarningBanner, formatMoney } from "../../components/Primitives";
 import { fetchProductPricingOverview } from "../../utils/platformApi";
 import {
   listBillingCodes,
@@ -34,12 +34,13 @@ export default function ProductPricingModule({ showToast }) {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [warnings, setWarnings] = useState([]);
 
   async function loadProductPricing() {
     setLoading(true);
     setError("");
-    try {
-      const [overview, products, hierarchy, billingCodes, billingElements, offers, promotions, ratePlans] = await Promise.all([
+    setWarnings([]);
+    const requests = [
         fetchProductPricingOverview(),
         listBillingProducts(),
         listBillingProductHierarchy(),
@@ -48,13 +49,27 @@ export default function ProductPricingModule({ showToast }) {
         listOffers(),
         listPromotions(),
         listRatePlans()
-      ]);
-      setData({ overview, products: products || [], hierarchy: hierarchy || [], billingCodes: billingCodes || [], billingElements: billingElements || [], offers: offers || [], promotions: promotions || [], ratePlans: ratePlans || [] });
-    } catch (err) {
-      setError(err.message || "Unable to load product and pricing data.");
-    } finally {
-      setLoading(false);
-    }
+      ];
+    const labels = ["overview", "products", "hierarchy", "billing codes", "billing elements", "offers", "promotions", "rate plans"];
+    const [overview, products, hierarchy, billingCodes, billingElements, offers, promotions, ratePlans] = await Promise.allSettled(requests);
+    const failures = [overview, products, hierarchy, billingCodes, billingElements, offers, promotions, ratePlans]
+      .map((result, index) => result.status === "rejected" ? labels[index] : "")
+      .filter(Boolean);
+    const nextData = {
+      overview: overview.status === "fulfilled" ? overview.value : null,
+      products: products.status === "fulfilled" ? products.value || [] : [],
+      hierarchy: hierarchy.status === "fulfilled" ? hierarchy.value || [] : [],
+      billingCodes: billingCodes.status === "fulfilled" ? billingCodes.value || [] : [],
+      billingElements: billingElements.status === "fulfilled" ? billingElements.value || [] : [],
+      offers: offers.status === "fulfilled" ? offers.value || [] : [],
+      promotions: promotions.status === "fulfilled" ? promotions.value || [] : [],
+      ratePlans: ratePlans.status === "fulfilled" ? ratePlans.value || [] : []
+    };
+    const loadedRows = nextData.products.length + nextData.hierarchy.length + nextData.billingCodes.length + nextData.billingElements.length + nextData.offers.length + nextData.promotions.length + nextData.ratePlans.length;
+    setData(nextData);
+    setWarnings(failures.length && loadedRows ? [`${failures.join(", ")} source${failures.length === 1 ? "" : "s"} unavailable; showing available product and billing records.`] : []);
+    setError(failures.length && !loadedRows ? "Unable to load product and pricing data from any configured source." : "");
+    setLoading(false);
   }
 
   useEffect(() => {
@@ -70,6 +85,7 @@ export default function ProductPricingModule({ showToast }) {
         description="API-backed catalog, hierarchy, billing elements, offers, promotions, and rate plans."
         actions={<button className="button" disabled={loading} type="button" onClick={() => { loadProductPricing(); showToast?.("Product pricing refreshed"); }}>Refresh</button>}
       />
+      {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading product and pricing data...</div> : (
         <>
