@@ -173,6 +173,16 @@ Completion criteria:
 
 ### Phase 3 - API database access layer and CRUD contracts
 
+Status:
+
+- Complete in `docs/fc-gpt-phase-3-api-contracts.md`.
+- Added shared SQL access helper `pricing-microservice/app/services/sql_access.py`.
+- Converted platform report definition, Knowledge, administration summary, and platform bootstrap slices from static/mock sources to Azure SQL-backed reads.
+- Added platform Knowledge API endpoints and moved the Knowledge module off direct `mockData.js` imports.
+- Existing admin, ops, billing-workflow, customer-service, and sales mutation routes continue to use Azure SQL write paths.
+- Local pytest remains blocked because `pytest` is not installed in the local Python environment.
+- Full `app.main` OpenAPI import remains blocked locally because the `openai` package is not installed in this Python environment.
+
 Goal:
 
 - Make the backend API the only production path for Azure SQL reads and mutations.
