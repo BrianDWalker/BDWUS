@@ -14,13 +14,36 @@ function docStatusTone(status) {
   return "blue";
 }
 
+function normalizeKnowledgeDocument(doc = {}) {
+  const status = doc.status || doc.Status || "Current";
+  const audience = doc.audience || doc.Audience || "Internal";
+  const category = doc.category || doc.Category || "General";
+  const owner = doc.owner || doc.Owner || "Knowledge Ops";
+  const tags = Array.isArray(doc.tags) && doc.tags.length ? doc.tags : [category, audience, owner]
+    .flatMap(value => String(value || "").split(","))
+    .map(value => value.trim())
+    .filter(Boolean);
+  return {
+    id: doc.id || doc.DocumentId || doc.title || "knowledge-doc",
+    title: doc.title || doc.Title || "Untitled knowledge document",
+    category,
+    audience,
+    owner,
+    status,
+    updated: doc.updated || doc.UpdatedAtUtc || doc.updatedAt || "Unscheduled",
+    summary: doc.summary || doc.Summary || "No summary captured for this knowledge document.",
+    tags
+  };
+}
+
 export default function KnowledgeModule({ setRoute }) {
   const [query, setQuery] = useState("");
+  const docs = useMemo(() => (knowledgeDocuments || []).map(normalizeKnowledgeDocument), []);
   const filteredDocs = useMemo(() => {
-    return (knowledgeDocuments || []).filter(doc => !query.trim() || [doc.title, doc.category, doc.owner, doc.status, doc.summary, doc.tags?.join(" ")].some(value => match(value, query)));
-  }, [query]);
-  const currentDocs = filteredDocs.filter(doc => ["Current", "Approved", "Active"].includes(doc.status));
-  const reviewDocs = filteredDocs.filter(doc => ["Review", "Draft", "Needs Update"].includes(doc.status));
+    return docs.filter(doc => !query.trim() || [doc.title, doc.category, doc.audience, doc.owner, doc.status, doc.summary, doc.tags.join(" ")].some(value => match(value, query)));
+  }, [docs, query]);
+  const currentDocs = docs.filter(doc => ["Current", "Approved", "Active"].includes(doc.status));
+  const reviewDocs = docs.filter(doc => ["Review", "Draft", "Needs Update"].includes(doc.status));
 
   return (
     <>
@@ -30,7 +53,7 @@ export default function KnowledgeModule({ setRoute }) {
         actions={<div className="module-toolbar"><button className="ghost-button" type="button" onClick={() => setRoute?.("reports")}>Open Reports</button><button className="button" type="button" onClick={() => setRoute?.("administration")}>Admin Settings</button></div>}
       />
       <section className="overview-grid">
-        <MetricCard label="Documents" value={knowledgeDocuments?.length || 0} delta="Knowledge records" />
+        <MetricCard label="Documents" value={docs.length} delta="Knowledge records" />
         <MetricCard label="Topics" value={knowledgeTopics?.length || 0} delta="Coverage areas" />
         <MetricCard label="Current" value={currentDocs.length} delta="Approved/current docs" />
         <MetricCard label="Needs Review" value={reviewDocs.length} delta="Draft or review docs" tone={reviewDocs.length ? "warn" : ""} />
@@ -40,6 +63,7 @@ export default function KnowledgeModule({ setRoute }) {
           {filteredDocs.length ? <DataTable columns={[
             { key: "title", label: "Document" },
             { key: "category", label: "Category" },
+            { key: "audience", label: "Audience" },
             { key: "owner", label: "Owner" },
             { key: "status", label: "Status", render: row => <StatusTag tone={docStatusTone(row.status)}>{row.status}</StatusTag> },
             { key: "updated", label: "Updated" }
