@@ -45,6 +45,7 @@ from app.services.quotes import (
     revise_quote,
 )
 from app.services.sales import billing_router, init_sales, router as sales_router, sales_dashboard
+from app.services.sales_compat import router as sales_compat_router
 from app.services.smoke_data import smoke_mode_enabled
 
 
@@ -76,6 +77,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Compatibility routes must be registered before the full sales router because they preserve
+# migrated UI flows for routes that existed conceptually before the API-backed sales module.
+app.include_router(sales_compat_router)
 app.include_router(sales_router)
 app.include_router(billing_router)
 app.include_router(platform_router)
@@ -261,90 +265,64 @@ def opportunity_details(opportunity_id: UUID):
     return get_opportunity_details(opportunity_id)
 
 
-@app.get("/customers/{customer_number}", response_model=CustomerProfileResponse)
-def customer_profile(customer_number: str):
-    profile = lookup_customer_profile(customer_number)
-    if not profile:
-        raise HTTPException(status_code=404, detail="Customer not found.")
-    return profile
+@app.post("/opportunities/{opportunity_id}/reprice", response_model=QuoteCreateResponse)
+def opportunity_reprice(opportunity_id: UUID):
+    return reprice_opportunity(opportunity_id)
 
 
-@app.get("/accounts/{account_id}", response_model=CustomerProfileResponse)
-def account_profile(account_id: str):
-    return customer_profile(account_id)
-
-
-@app.get("/billing/lookup-options", response_model=CustomerMetadataOptionsResponse)
-def billing_lookup_options():
+@app.get("/customers/options", response_model=CustomerMetadataOptionsResponse)
+def customer_options():
     return get_customer_metadata_options()
 
 
-@app.post("/opportunities/{opportunity_id}/reprice", response_model=QuoteCreateResponse)
-def opportunity_reprice(opportunity_id: UUID, request: QuoteReviseRequest):
-    return reprice_opportunity(opportunity_id, request)
+@app.get("/customers/{customer_number}", response_model=CustomerProfileResponse)
+def customer_lookup(customer_number: str):
+    customer = lookup_customer_profile(customer_number)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found in context view")
+    return customer
 
 
-@app.post("/api/assistant/chat", response_model=AssistantChatResponse)
+@app.post("/assistant/chat", response_model=AssistantChatResponse)
 def assistant_chat(request: AssistantChatRequest):
     return chat(request)
 
 
-@app.get("/api/assistant/change-requests/{change_request_id}", response_model=AssistantChangeRequest)
-def assistant_change_request(change_request_id: UUID):
-    record = get_change_request(change_request_id)
-    if not record:
-        raise HTTPException(status_code=404, detail="Change request not found.")
-    return record
+@app.get("/assistant/ui-overrides", response_model=list[AssistantUiOverride])
+def assistant_ui_overrides(page: str | None = None, slot: str | None = None):
+    return list_ui_overrides(page=page, slot=slot)
 
 
-@app.post("/api/assistant/change-requests/{change_request_id}/approve", response_model=AssistantChangeRequest)
-def assistant_approve_change_request(change_request_id: UUID, request: AssistantApprovalRequest):
-    try:
-        return approve_change_request(change_request_id, request)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
+@app.post("/assistant/change-requests")
+def assistant_change_request(request: AssistantChangeRequest):
+    return get_change_request(request)
 
 
-@app.post("/api/assistant/change-requests/{change_request_id}/reject", response_model=AssistantChangeRequest)
-def assistant_reject_change_request(change_request_id: UUID, request: AssistantApprovalRequest):
-    try:
-        return reject_change_request(change_request_id, request.approvedBy or "admin")
-    except ValueError as error:
-        raise HTTPException(status_code=404, detail=str(error)) from error
+@app.post("/assistant/change-requests/{change_id}/approve")
+def assistant_approve_change(change_id: UUID, request: AssistantApprovalRequest):
+    return approve_change_request(change_id, request)
 
 
-@app.get("/api/assistant/ui-overrides", response_model=list[AssistantUiOverride])
-def assistant_ui_overrides(scope: str = "knowledge"):
-    return list_ui_overrides(scope)
+@app.post("/assistant/change-requests/{change_id}/reject")
+def assistant_reject_change(change_id: UUID, request: AssistantApprovalRequest):
+    return reject_change_request(change_id, request)
 
 
-@app.get("/api/assistant/github/branches")
-def assistant_github_branches(repository: str):
-    try:
-        return get_github_branches(repository)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
+@app.get("/assistant/github/branches")
+def assistant_github_branches():
+    return get_github_branches()
 
 
-@app.get("/api/assistant/github/tree")
-def assistant_github_tree(repository: str, branch: str, path: str = ""):
-    try:
-        return get_github_tree(repository, branch, path)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
+@app.get("/assistant/github/tree")
+def assistant_github_tree(ref: str = "main"):
+    return get_github_tree(ref)
 
 
-@app.get("/api/assistant/github/file")
-def assistant_github_file(repository: str, branch: str, path: str):
-    try:
-        return get_github_file(repository, branch, path)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
+@app.get("/assistant/github/file")
+def assistant_github_file(path: str, ref: str = "main"):
+    return get_github_file(path, ref)
 
 
-@app.get("/api/assistant/github/commits")
-def assistant_github_commits(repository: str, branch: str, limit: int = 5):
-    try:
-        return get_github_commits(repository, branch, limit)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
+@app.get("/assistant/github/commits")
+def assistant_github_commits(branch: str = "main", limit: int = 20):
+    return get_github_commits(branch, limit)
