@@ -32,7 +32,23 @@ function rowKey(row, index) {
 export function DataTable({ columns, rows = [], onRowClick, emptyMessage = "No rows returned." }) {
   return (
     <div className="table-wrap" role="region" aria-label="Data table" tabIndex={0}>
-      <table className="table">
+      <div className="table-mobile">
+        {rows.length ? rows.map((row, index) => (
+          <article
+            className={onRowClick ? "table-card interactive-row" : "table-card"}
+            key={rowKey(row, index)}
+            onClick={() => onRowClick?.(row)}
+          >
+            {columns.map(column => (
+              <div className="table-card-field" key={column.key}>
+                <span>{column.label || column.key}</span>
+                <div className="table-card-value">{column.render ? column.render(row, index) : row[column.key]}</div>
+              </div>
+            ))}
+          </article>
+        )) : <div className="table-empty-row">{emptyMessage}</div>}
+      </div>
+      <table className="table table-desktop">
         <thead>
           <tr>{columns.map(column => <th key={column.key} scope="col">{column.label}</th>)}</tr>
         </thead>
