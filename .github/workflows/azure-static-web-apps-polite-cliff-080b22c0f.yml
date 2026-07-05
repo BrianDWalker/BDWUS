@@ -4,14 +4,12 @@ on:
   push:
     branches:
       - main
-      - feature-change
       - fc-gpt
       - fc-gpt-deep-review-audit
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches:
       - main
-      - feature-change
       - fc-gpt
       - fc-gpt-deep-review-audit
 
@@ -33,7 +31,7 @@ jobs:
           elif [ "${{ github.ref }}" = "refs/heads/fc-gpt" ]; then
             echo "deployment_environment=preview-gpt" >> $GITHUB_OUTPUT
           elif [ "${{ github.ref }}" = "refs/heads/fc-gpt-deep-review-audit" ]; then
-            echo "deployment_environment=deep-review" >> $GITHUB_OUTPUT
+            echo "deployment_environment=preview" >> $GITHUB_OUTPUT
           else
             echo "deployment_environment=preview" >> $GITHUB_OUTPUT
           fi
