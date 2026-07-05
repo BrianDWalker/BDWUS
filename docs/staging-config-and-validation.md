@@ -42,6 +42,8 @@ The `fc-gpt Validation` workflow and the `Platform Build Validation` workflow ar
 
 For optional live smoke validation, configure the repository variable `STAGING_API_BASE_URL` to the deployed API base URL. When that variable is present, `fc-gpt Validation` hits the staging smoke endpoints.
 
+`fc-gpt Validation` also runs a Chromium route smoke suite from `web-ui/tests/portal-routes.spec.js`. That suite mocks API payloads and verifies the extracted routes render without browser console errors. It is not a replacement for live staging, but it gives GitHub-visible runtime evidence for the React route layer.
+
 ```bash
 cd web-ui
 npm ci
