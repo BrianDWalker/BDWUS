@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./fetchTimeout";
+
 const DEFAULT_PLATFORM_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
 
 const platformApiBase = (
@@ -12,7 +14,7 @@ function platformUrl(path) {
 }
 
 async function requestJson(path, options = {}) {
-  const response = await fetch(platformUrl(path), {
+  const response = await fetchWithTimeout(platformUrl(path), {
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {})
