@@ -65,19 +65,25 @@ export default function Customer360Module({ setRoute, showToast }) {
   const locations = customer360?.serviceLocations || [];
   const accountRows = customer360?.accounts || [];
   const customerOptions = useMemo(() => customers.map(row => ({ number: pickCustomerNumber(row), name: row.CustomerName || row.customerName || row.name || pickCustomerNumber(row) })).filter(item => item.number), [customers]);
+  const commercialRows = [
+    ...accountRows.map(row => ({ id: row.AccountId, type: "Account", name: row.AccountName || row.AccountNameResolved, status: row.Status, amount: row.EstimatedValue })),
+    ...opportunities.map(row => ({ id: row.OpportunityId, type: "Opportunity", name: row.OpportunityName, status: row.Status, amount: row.EstimatedValue })),
+    ...quotes.map(row => ({ id: row.QuoteId, type: "Quote", name: row.QuoteNumber, status: row.Status || row.ApprovalStatus, amount: row.TotalMrc })),
+    ...contracts.map(row => ({ id: row.ContractId, type: "Contract", name: row.ContractNumber || row.Title, status: row.Status, amount: row.ContractValue }))
+  ];
 
   return (
     <>
       <PageHeader
         title="Customer 360"
         description="API-backed customer profile, account, location, opportunity, quote, and contract context."
-        actions={<button className="button" type="button" onClick={() => { setRoute?.("orders"); showToast?.("Opening order workspace"); }}>Create Order</button>}
+        actions={<div className="button-cluster"><button className="ghost-button" disabled={loading || !selectedCustomer} type="button" onClick={() => setSelectedCustomer(current => current)}>Refresh</button><button className="button" type="button" onClick={() => { setRoute?.("orders"); showToast?.("Opening order workspace"); }}>Create Order</button></div>}
       />
       <div className="module-toolbar">
         <label className="inline-search">Customer<select value={selectedCustomer} onChange={event => setSelectedCustomer(event.target.value)}>{customerOptions.map(item => <option key={item.number} value={item.number}>{item.name}</option>)}</select></label>
       </div>
       {error && <div className="empty-state">{error}</div>}
-      {loading ? <div className="empty-state">Loading customer data...</div> : (
+      {loading ? <div className="empty-state">Loading customer data...</div> : !customerOptions.length ? <div className="empty-state">No customers returned by the billing API.</div> : (
         <>
           <section className="overview-grid">
             <MetricCard label="MRR" value={formatMoney(customer.Mrr || customer.mrr || 0)} delta={customer.Segment || customer.segment || "Segment"} />
@@ -94,18 +100,9 @@ export default function Customer360Module({ setRoute, showToast }) {
                 <MetricCard label="Primary Contact" value={customer.PrimaryContact || "-"} delta="Contact" />
               </div>
             </Panel>
-            <Panel title="Locations" description="Service locations returned by the platform API.">
-              <DataTable columns={[{ key: "LocationName", label: "Location" }, { key: "AddressLine1", label: "Address" }, { key: "City", label: "City" }, { key: "StateProvince", label: "State" }, { key: "ServiceabilityType", label: "Serviceability" }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Active" ? "success" : "blue"}>{row.Status}</StatusTag> }]} rows={locations} />
-            </Panel>
+            <Panel title="Locations" description="Service locations returned by the platform API.">{locations.length ? <DataTable columns={[{ key: "LocationName", label: "Location" }, { key: "AddressLine1", label: "Address" }, { key: "City", label: "City" }, { key: "StateProvince", label: "State" }, { key: "ServiceabilityType", label: "Serviceability" }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Active" ? "success" : "blue"}>{row.Status}</StatusTag> }]} rows={locations} /> : <div className="empty-state">No service locations returned for this customer.</div>}</Panel>
           </section>
-          <Panel title="Commercial Records" description="Accounts, opportunities, quotes, and contracts tied to the selected customer.">
-            <DataTable columns={[{ key: "type", label: "Type" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }, { key: "amount", label: "Amount", render: row => row.amount ? formatMoney(row.amount) : "-" }]} rows={[
-              ...accountRows.map(row => ({ id: row.AccountId, type: "Account", name: row.AccountName || row.AccountNameResolved, status: row.Status, amount: row.EstimatedValue })),
-              ...opportunities.map(row => ({ id: row.OpportunityId, type: "Opportunity", name: row.OpportunityName, status: row.Status, amount: row.EstimatedValue })),
-              ...quotes.map(row => ({ id: row.QuoteId, type: "Quote", name: row.QuoteNumber, status: row.Status || row.ApprovalStatus, amount: row.TotalMrc })),
-              ...contracts.map(row => ({ id: row.ContractId, type: "Contract", name: row.ContractNumber || row.Title, status: row.Status, amount: row.ContractValue }))
-            ]} />
-          </Panel>
+          <Panel title="Commercial Records" description="Accounts, opportunities, quotes, and contracts tied to the selected customer.">{commercialRows.length ? <DataTable columns={[{ key: "type", label: "Type" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }, { key: "amount", label: "Amount", render: row => row.amount ? formatMoney(row.amount) : "-" }]} rows={commercialRows} /> : <div className="empty-state">No commercial records returned for this customer.</div>}</Panel>
         </>
       )}
     </>
