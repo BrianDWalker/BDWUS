@@ -10,8 +10,10 @@ import {
   normalizeRoute
 } from "../src/routeOwnership";
 
-test("route ownership registry documents extracted and legacy owners", () => {
+test("route ownership registry documents extracted owners", () => {
   expect(extractedRoutes).toEqual(expect.arrayContaining([
+    "dashboard",
+    "knowledge",
     "reports",
     "administration",
     "product-pricing",
@@ -24,9 +26,9 @@ test("route ownership registry documents extracted and legacy owners", () => {
     "provisioning",
     "carrier-settlement"
   ]));
-  expect(legacyOwnedRoutes).toEqual(["dashboard", "knowledge"]);
+  expect(legacyOwnedRoutes).toEqual([]);
   expect(integratedSalesDetailTypes).toEqual(["lead", "opportunity", "quote", "contract"]);
-  expect(intentionalLegacyDetailTypes).toEqual(["network", "record"]);
+  expect(intentionalLegacyDetailTypes).toEqual([]);
 });
 
 test("migrated detail routes normalize away from LegacyPortal", () => {
@@ -41,18 +43,23 @@ test("migrated detail routes normalize away from LegacyPortal", () => {
   expect(normalizeRoute("details/order/ORD-1001")).toBe("orders");
   expect(normalizeRoute("details/product/FIBER-1G")).toBe("product-pricing");
   expect(normalizeRoute("details/ticket/TKT-1001")).toBe("details/ticket/TKT-1001");
+  expect(normalizeRoute("details/network/NE-1001")).toBe("details/network/NE-1001");
+  expect(normalizeRoute("details/record/admin:USR-1001")).toBe("details/record/admin:USR-1001");
 });
 
 test("ownership predicates classify route families", () => {
+  expect(isExtractedRoute("dashboard")).toBe(true);
+  expect(isExtractedRoute("knowledge")).toBe(true);
   expect(isExtractedRoute("billing")).toBe(true);
   expect(isExtractedRoute("customer-service")).toBe(true);
   expect(isExtractedRoute("details/ticket/TKT-1001")).toBe(true);
+  expect(isExtractedRoute("details/network/NE-1001")).toBe(true);
+  expect(isExtractedRoute("details/record/admin:USR-1001")).toBe(true);
   expect(isIntegratedSalesRoute("sales")).toBe(true);
   expect(isIntegratedSalesRoute("details/opportunity/OPP-1001")).toBe(true);
-  expect(isIntentionalLegacyRoute("dashboard")).toBe(true);
-  expect(isIntentionalLegacyRoute("knowledge")).toBe(true);
-  expect(isIntentionalLegacyRoute("customer-service")).toBe(false);
+  expect(isIntentionalLegacyRoute("dashboard")).toBe(false);
+  expect(isIntentionalLegacyRoute("knowledge")).toBe(false);
   expect(isIntentionalLegacyRoute("details/ticket/TKT-1001")).toBe(false);
-  expect(isIntentionalLegacyRoute("details/network/NE-1001")).toBe(true);
+  expect(isIntentionalLegacyRoute("details/network/NE-1001")).toBe(false);
   expect(isIntentionalLegacyRoute("details/invoice/INV-1001")).toBe(false);
 });
