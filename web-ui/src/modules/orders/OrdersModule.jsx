@@ -66,7 +66,7 @@ export default function OrdersModule({ showToast }) {
 
   return (
     <>
-      <PageHeader title="Orders" description="API-backed service delivery queue, provisioning jobs, and order mutations." actions={<button className="button" disabled={saving} type="button" onClick={createSampleOrder}>New Order</button>} />
+      <PageHeader title="Orders" description="API-backed service delivery queue, provisioning jobs, and order mutations." actions={<div className="button-cluster"><button className="ghost-button" disabled={loading || saving} type="button" onClick={loadOrders}>Refresh</button><button className="button" disabled={saving} type="button" onClick={createSampleOrder}>New Order</button></div>} />
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading orders...</div> : (
         <>
@@ -77,12 +77,8 @@ export default function OrdersModule({ showToast }) {
             <MetricCard label="Teams" value={new Set(orders.map(row => row.AssignedTeam).filter(Boolean)).size} delta="Assigned teams" />
           </section>
           <section className="record-main-layout">
-            <Panel title="Orders" description="Orders returned by /api/ops/orders.">
-              <DataTable columns={[{ key: "OrderNumber", label: "Order" }, { key: "AccountName", label: "Account" }, { key: "ServiceName", label: "Service" }, { key: "LifecycleStage", label: "Stage" }, { key: "OverallStatus", label: "Status", render: row => <StatusTag tone={statusTone(row.OverallStatus)}>{row.OverallStatus}</StatusTag> }, { key: "SlaStatus", label: "SLA", render: row => <StatusTag tone={statusTone(row.SlaStatus)}>{row.SlaStatus}</StatusTag> }, { key: "DueDate", label: "Due" }, { key: "action", label: "", render: row => <button className="link-button compact-action" type="button" disabled={saving} onClick={() => progressOrder(row)}>Provision</button> }]} rows={orders} />
-            </Panel>
-            <Panel title="Provisioning Jobs" description="Jobs returned by /api/ops/provisioning-jobs.">
-              <DataTable columns={[{ key: "JobNumber", label: "Job" }, { key: "JobType", label: "Type" }, { key: "OwnerName", label: "Owner" }, { key: "Status", label: "Status" }, { key: "DueDate", label: "Due" }]} rows={jobs} />
-            </Panel>
+            <Panel title="Orders" description="Orders returned by /api/ops/orders.">{orders.length ? <DataTable columns={[{ key: "OrderNumber", label: "Order" }, { key: "AccountName", label: "Account" }, { key: "ServiceName", label: "Service" }, { key: "LifecycleStage", label: "Stage" }, { key: "OverallStatus", label: "Status", render: row => <StatusTag tone={statusTone(row.OverallStatus)}>{row.OverallStatus}</StatusTag> }, { key: "SlaStatus", label: "SLA", render: row => <StatusTag tone={statusTone(row.SlaStatus)}>{row.SlaStatus}</StatusTag> }, { key: "DueDate", label: "Due" }, { key: "action", label: "", render: row => <button className="link-button compact-action" type="button" disabled={saving} onClick={() => progressOrder(row)}>Provision</button> }]} rows={orders} /> : <div className="empty-state">No orders returned by the ops API.</div>}</Panel>
+            <Panel title="Provisioning Jobs" description="Jobs returned by /api/ops/provisioning-jobs.">{jobs.length ? <DataTable columns={[{ key: "JobNumber", label: "Job" }, { key: "JobType", label: "Type" }, { key: "OwnerName", label: "Owner" }, { key: "Status", label: "Status" }, { key: "DueDate", label: "Due" }]} rows={jobs} /> : <div className="empty-state">No provisioning jobs returned by the ops API.</div>}</Panel>
           </section>
         </>
       )}
