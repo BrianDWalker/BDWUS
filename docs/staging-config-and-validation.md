@@ -40,7 +40,9 @@ Run these checks on pushes to `fc-gpt`:
 
 The `fc-gpt Validation` workflow and the `Platform Build Validation` workflow are intentionally configured without push path filters so every commit on `fc-gpt` gets attached validation runs, including documentation-only handoff commits.
 
-For optional live smoke validation, configure the repository variable `STAGING_API_BASE_URL` to the deployed API base URL. When that variable is present, `fc-gpt Validation` hits the staging smoke endpoints.
+`fc-gpt Validation` always runs a deployed API baseline smoke. By default it uses `https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io`, which currently exposes health, sales, pricing-context, and billing customer endpoints. Set the repository variable `STAGING_API_BASE_URL` to a newer full-platform API deployment to run the stricter platform/ops smoke endpoints.
+
+Set `STAGING_WEB_BASE_URL` to a deployed web app URL if browser route smoke should run against the deployed frontend instead of the local preview build.
 
 `fc-gpt Validation` also runs a Chromium route smoke suite from `web-ui/tests/portal-routes.spec.js`. That suite mocks API payloads and verifies the extracted routes render without browser console errors. It is not a replacement for live staging, but it gives GitHub-visible runtime evidence for the React route layer.
 
@@ -56,7 +58,7 @@ python -m pip install -r requirements.txt
 python -m compileall app
 ```
 
-If a live staging URL is available, add smoke checks:
+If a full-platform staging API URL is available, add smoke checks:
 
 ```bash
 curl -fsS "$API_BASE_URL/health"

@@ -85,12 +85,29 @@ jobs:
         working-directory: ./assistant-service
         run: python -m pytest tests -q
 
-  staging-smoke:
-    name: optional staging smoke
+  deployed-api-baseline-smoke:
+    name: deployed API baseline smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hit deployed API baseline endpoints
+        env:
+          API_BASE_URL: ${{ vars.STAGING_API_BASE_URL || 'https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io' }}
+        run: |
+          set -euo pipefail
+          base="${API_BASE_URL%/}"
+          curl -fsS "$base/health"
+          curl -fsS "$base/health/assistant"
+          curl -fsS "$base/health/sales"
+          curl -fsS "$base/health/pricing-context"
+          curl -fsS "$base/api/sales/bootstrap"
+          curl -fsS "$base/api/billing/customers"
+
+  full-platform-staging-smoke:
+    name: optional full platform staging smoke
     runs-on: ubuntu-latest
     if: ${{ vars.STAGING_API_BASE_URL != '' }}
     steps:
-      - name: Hit staging smoke endpoints
+      - name: Hit full platform staging endpoints
         env:
           API_BASE_URL: ${{ vars.STAGING_API_BASE_URL }}
         run: |
@@ -100,5 +117,27 @@ jobs:
           curl -fsS "$base/health/ready"
           curl -fsS "$base/health/sales"
           curl -fsS "$base/api/sales/bootstrap"
+          curl -fsS "$base/api/billing/customers"
           curl -fsS "$base/api/platform/bootstrap"
           curl -fsS "$base/api/ops/bootstrap"
+
+  optional-deployed-web-smoke:
+    name: optional deployed web route smoke
+    runs-on: ubuntu-latest
+    if: ${{ vars.STAGING_WEB_BASE_URL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        working-directory: ./web-ui
+        run: npm ci
+      - name: Install Chromium
+        working-directory: ./web-ui
+        run: npx playwright install --with-deps chromium
+      - name: Run route smoke tests against deployed web app
+        working-directory: ./web-ui
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ vars.STAGING_WEB_BASE_URL }}
+        run: npm run test:e2e -- --config=playwright.deployed.config.js
