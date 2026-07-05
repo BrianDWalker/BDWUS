@@ -63,6 +63,10 @@ async function installFullChainMocks(page) {
     const body = method === "GET" ? null : request.postDataJSON?.() ?? null;
     calls.push({ method, path, body });
 
+    if (method === "POST" && path === "/api/auth/demo-token") {
+      return route.fulfill(json({ token: "test-token", role: "Admin", expiresAt: 4102444800, capabilities: ["*"] }));
+    }
+
     if (method === "GET" && path === "/api/sales/bootstrap") return route.fulfill(json(salesBootstrap()));
     if (method === "POST" && path === `/api/sales/leads/${leadId}/convert`) {
       state.lead = { ...state.lead, Status: "Converted", Qualification: "Converted" };
@@ -125,22 +129,22 @@ test("lead to billing chain stays connected across modules", async ({ page }) =>
   const calls = await installFullChainMocks(page);
 
   await page.goto("/#/sales");
-  await expect(page.getByRole("heading", { name: "Sales" })).toBeVisible();
-  await expect(page.getByText("LEAD-1001")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sales", exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "LEAD-1001" })).toBeVisible();
 
   await page.locator("tr", { hasText: "LEAD-1001" }).getByRole("button", { name: "Convert" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Convert" }).click();
   await expect.poll(() => calls.some(call => call.method === "POST" && call.path === `/api/sales/leads/${leadId}/convert`)).toBeTruthy();
 
   await page.getByRole("button", { name: "Opportunities" }).click();
-  await expect(page.getByText("OPP-1001")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "OPP-1001" })).toBeVisible();
   await page.locator("tr", { hasText: "OPP-1001" }).getByRole("button", { name: "Create Quote" }).click();
   await page.getByLabel("Quote Number").fill("Q-1001");
   await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
   await expect.poll(() => calls.some(call => call.method === "POST" && call.path === "/api/sales/quotes")).toBeTruthy();
 
   await page.getByRole("button", { name: "Approvals" }).click();
-  await expect(page.getByText("Pending")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Pending" }).first()).toBeVisible();
   await page.locator("tr", { hasText: "Pricing" }).getByRole("button", { name: "Approve" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Approve" }).click();
   await expect.poll(() => calls.some(call => call.method === "POST" && call.path === `/api/sales/approvals/${approvalId}/approve`)).toBeTruthy();

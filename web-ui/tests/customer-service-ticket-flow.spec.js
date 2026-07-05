@@ -9,7 +9,9 @@ async function mockCustomerServiceApis(page) {
     const method = route.request().method();
     let body = {};
 
-    if (method === "GET" && path === "/api/platform/customer-service/overview") {
+    if (method === "POST" && path === "/api/auth/demo-token") {
+      body = { token: "test-token", role: "Care", expiresAt: 4102444800, capabilities: ["create:ticket", "update:ticket", "comment:ticket", "close:ticket"] };
+    } else if (method === "GET" && path === "/api/platform/customer-service/overview") {
       body = { tickets: [ticket], customerReportedOutages: [], summary: { openTicketCount: 1, networkTicketCount: 0, billingTicketCount: 1, averageAgeHours: 2, escalatedTicketCount: 0 } };
     } else if (method === "POST" && path === "/api/platform/customer-service/tickets") {
       body = { ...ticket, TicketId: "ticket-new", TicketNumber: "TKT-NEW" };
@@ -36,7 +38,7 @@ test("customer service creates and opens persistent ticket detail", async ({ pag
   await mockCustomerServiceApis(page);
   await page.goto("/#/customer-service");
   await expect(page.getByRole("heading", { name: "Customer Service" })).toBeVisible();
-  await expect(page.getByText("TKT-1001")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "TKT-1001" })).toBeVisible();
   await page.getByRole("button", { name: "Create ticket" }).click();
   await expect(page.getByText("Ticket TKT-NEW saved")).toBeVisible();
   await expect(page.getByRole("heading", { name: "TKT-NEW" })).toBeVisible();

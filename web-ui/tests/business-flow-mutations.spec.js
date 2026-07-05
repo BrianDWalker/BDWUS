@@ -142,6 +142,10 @@ async function installPlatformApiMocks(page) {
     const body = method === "GET" ? null : request.postDataJSON?.() ?? null;
     calls.push({ method, path, body });
 
+    if (method === "POST" && path === "/api/auth/demo-token") {
+      return route.fulfill(json({ token: "test-token", role: "Admin", expiresAt: 4102444800, capabilities: ["*"] }));
+    }
+
     if (method === "GET" && path === "/api/sales/bootstrap") {
       return route.fulfill(json({
         dashboard: state.salesDashboard,

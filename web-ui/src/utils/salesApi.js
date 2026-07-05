@@ -1,5 +1,5 @@
 import { fetchWithTimeout } from "./fetchTimeout";
-import { demoRoleHeaders } from "./permissions";
+import { roleAuthHeaders } from "./permissions";
 
 const DEFAULT_SALES_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
 
@@ -10,10 +10,12 @@ function salesUrl(path) {
 }
 
 async function requestJson(path, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const authHeaders = ["GET", "HEAD", "OPTIONS"].includes(method) ? {} : await roleAuthHeaders(salesApiBase);
   const response = await fetchWithTimeout(salesUrl(path), {
     headers: {
       "Content-Type": "application/json",
-      ...demoRoleHeaders(),
+      ...authHeaders,
       ...(options.headers || {})
     },
     ...options

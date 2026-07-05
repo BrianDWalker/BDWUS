@@ -1,6 +1,7 @@
 import React, { createContext, useEffect, useMemo, useRef, useState } from "react";
 import { navGroups, topNavSections } from "../navigationConfig";
-import { activeRole, roles } from "../utils/permissions";
+import { activeRole, roles, synchronizeRoleToken } from "../utils/permissions";
+import { platformApiBase } from "../utils/platformApi";
 import { Icon } from "./Icons";
 
 export const PermissionRoleContext = createContext(null);
@@ -230,6 +231,10 @@ export function Shell({ activeRoute, setRoute, children }) {
   useEffect(() => {
     if (!isMobile) setDrawerOpen(false);
   }, [isMobile]);
+
+  useEffect(() => {
+    synchronizeRoleToken(platformApiBase, role).catch(() => {});
+  }, [role]);
 
   useEffect(() => {
     function handlePointerDown(event) {

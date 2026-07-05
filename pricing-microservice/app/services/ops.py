@@ -80,28 +80,41 @@ def ensure_ops_storage() -> None:
     with SCHEMA_LOCK:
         if SCHEMA_READY:
             return
-        ddl = """
-        IF SCHEMA_ID('ops') IS NULL EXEC('CREATE SCHEMA ops');
-        IF SCHEMA_ID('admin') IS NULL EXEC('CREATE SCHEMA admin');
-        IF SCHEMA_ID('billingops') IS NULL EXEC('CREATE SCHEMA billingops');
-        IF OBJECT_ID('ops.Orders', 'U') IS NULL CREATE TABLE ops.Orders (OrderId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY, OrderNumber NVARCHAR(32) NOT NULL, CustomerNumber NVARCHAR(32) NULL, AccountName NVARCHAR(200) NOT NULL, ServiceName NVARCHAR(200) NOT NULL, LifecycleStage NVARCHAR(100) NOT NULL, OverallStatus NVARCHAR(100) NOT NULL, SlaStatus NVARCHAR(100) NOT NULL, DueDate DATE NULL, AssignedTeam NVARCHAR(200) NULL, CircuitId NVARCHAR(64) NULL, Location NVARCHAR(200) NULL, CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(), IsDeleted BIT NOT NULL DEFAULT 0);
-        IF OBJECT_ID('ops.NetworkEvents', 'U') IS NULL CREATE TABLE ops.NetworkEvents (EventId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY, EventNumber NVARCHAR(32) NOT NULL, Market NVARCHAR(100) NOT NULL, Type NVARCHAR(100) NOT NULL, Impacted NVARCHAR(200) NOT NULL, Severity NVARCHAR(50) NOT NULL, SlaExposure DECIMAL(18,2) NOT NULL DEFAULT 0, Status NVARCHAR(50) NOT NULL, CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME());
-        IF OBJECT_ID('ops.ProvisioningJobs', 'U') IS NULL CREATE TABLE ops.ProvisioningJobs (ProvisioningJobId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY, OrderId UNIQUEIDENTIFIER NULL, JobNumber NVARCHAR(32) NOT NULL, JobType NVARCHAR(100) NOT NULL, OwnerName NVARCHAR(200) NULL, Status NVARCHAR(50) NOT NULL, DueDate DATE NULL, CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME());
-        IF OBJECT_ID('ops.Settlements', 'U') IS NULL CREATE TABLE ops.Settlements (SettlementId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY, SettlementNumber NVARCHAR(32) NOT NULL, PartnerName NVARCHAR(200) NOT NULL, BillingPeriod NVARCHAR(32) NOT NULL, ExposureAmount DECIMAL(18,2) NOT NULL DEFAULT 0, Status NVARCHAR(50) NOT NULL, ClaimType NVARCHAR(100) NULL, CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME());
-        IF OBJECT_ID('admin.Users', 'U') IS NULL CREATE TABLE admin.Users (UserId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY, UserNumber NVARCHAR(32) NOT NULL, UserName NVARCHAR(200) NOT NULL, Email NVARCHAR(200) NULL, RoleName NVARCHAR(200) NOT NULL, Status NVARCHAR(50) NOT NULL, LastLoginAtUtc DATETIME2 NULL, CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME());
-        IF OBJECT_ID('admin.Roles', 'U') IS NULL CREATE TABLE admin.Roles (RoleId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY, RoleNumber NVARCHAR(32) NOT NULL, RoleName NVARCHAR(200) NOT NULL, PermissionsJson NVARCHAR(MAX) NOT NULL, Status NVARCHAR(50) NOT NULL, CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME());
-        IF OBJECT_ID('admin.Integrations', 'U') IS NULL CREATE TABLE admin.Integrations (IntegrationId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY, IntegrationNumber NVARCHAR(32) NOT NULL, IntegrationName NVARCHAR(200) NOT NULL, OwnerName NVARCHAR(200) NULL, Status NVARCHAR(50) NOT NULL, Detail NVARCHAR(400) NULL, CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME());
-        IF OBJECT_ID('billingops.Invoices', 'U') IS NULL CREATE TABLE billingops.Invoices (InvoiceId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY, InvoiceNumber NVARCHAR(32) NOT NULL, CustomerNumber NVARCHAR(32) NULL, AccountName NVARCHAR(200) NOT NULL, Amount DECIMAL(18,2) NOT NULL, Balance DECIMAL(18,2) NOT NULL, Status NVARCHAR(50) NOT NULL, InvoiceDate DATE NULL, DueDate DATE NULL, BillingProfile NVARCHAR(200) NULL, CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME());
-        IF OBJECT_ID('billingops.InvoiceActions', 'U') IS NULL CREATE TABLE billingops.InvoiceActions (InvoiceActionId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY, InvoiceId UNIQUEIDENTIFIER NOT NULL, ActionType NVARCHAR(100) NOT NULL, Status NVARCHAR(50) NOT NULL, RequestedBy NVARCHAR(200) NULL, Notes NVARCHAR(MAX) NULL, CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME());
-        IF OBJECT_ID('billingops.Adjustments', 'U') IS NULL CREATE TABLE billingops.Adjustments (AdjustmentId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY, InvoiceId UNIQUEIDENTIFIER NULL, AdjustmentNumber NVARCHAR(32) NOT NULL, AdjustmentType NVARCHAR(100) NOT NULL, Amount DECIMAL(18,2) NOT NULL, Status NVARCHAR(50) NOT NULL, Reason NVARCHAR(MAX) NULL, CreatedBy NVARCHAR(200) NULL, CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME());
-        """
         conn = get_sql_connection()
         try:
-            conn.cursor().execute(ddl)
-            conn.commit()
+            cursor = conn.cursor()
+            required_checks = [
+                ("ops", "Orders"),
+                ("ops", "NetworkEvents"),
+                ("ops", "ProvisioningJobs"),
+                ("ops", "Settlements"),
+                ("admin", "Users"),
+                ("admin", "Roles"),
+                ("admin", "Integrations"),
+                ("billingops", "Invoices"),
+                ("billingops", "InvoiceActions"),
+                ("billingops", "Adjustments"),
+            ]
+            missing = []
+            for schema, name in required_checks:
+                row = cursor.execute(
+                    """
+                    SELECT 1
+                    FROM INFORMATION_SCHEMA.TABLES
+                    WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+                    """,
+                    (schema, name),
+                ).fetchone()
+                if not row:
+                    missing.append(f"{schema}.{name}")
+            if missing:
+                raise RuntimeError(
+                    "Ops/admin/billing workflow storage is not ready. Apply the source-controlled Azure SQL migrations "
+                    "and, if needed, run pricing-microservice/scripts/bootstrap_demo_data.py explicitly. "
+                    f"Missing objects: {', '.join(missing)}"
+                )
         finally:
             conn.close()
-        seed_ops_data()
         SCHEMA_READY = True
 
 

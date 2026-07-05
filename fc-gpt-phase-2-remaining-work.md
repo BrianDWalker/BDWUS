@@ -434,26 +434,39 @@ Completion criteria:
 - Database setup validation is automated where environment access allows it.
 - Final artifacts prove routes and important workflows render with API-backed data.
 
+### Phase 10 - Non-mobile blocker closure
+
+Status:
+
+- Complete for the current non-mobile blocker scope.
+- Backend role enforcement now prefers backend-signed demo-role bearer tokens issued by `/api/auth/demo-token`; raw role headers no longer grant access by default outside smoke/explicit compatibility mode.
+- API startup no longer performs storage creation or synthetic seeding. Sales, ops, and customer-service storage checks are now validation-only, and explicit bootstrap moved to `pricing-microservice/scripts/bootstrap_demo_data.py`.
+- Shared transaction handling now covers additional multi-write paths in Quotes, Sales compatibility writes, and Customer Service ticket mutations.
+- Structured lead/customer and contract terms editing now uses dedicated list/key-value form controls instead of JSON textareas in the extracted sales detail flows.
+- Deterministic workflow contract smoke now runs in CI for local/browser coverage, and preview-compatible submit smoke support now exists through:
+  - `/api/test-support/namespaces/{namespace}/workflow-seed`
+  - `/api/test-support/namespaces/{namespace}` cleanup
+  - `pricing-microservice/scripts/run_submit_workflow_smoke.py`
+  - optional `PREVIEW_SUBMIT_SMOKE_ENABLED=true` workflow execution in `fc-gpt Validation`
+- Shared `statusTone` handling now covers more extracted detail/customer-service surfaces, further reducing local status-tag duplication.
+
+Remaining blockers:
+
+- No active non-mobile implementation blockers remain in Phase 10.
+- Broader mobile/tablet redesign remains intentionally excluded from this phase per project direction.
+
 ## Consolidated Remaining Work
 
-This section is the current source of truth for everything still uncompleted across Phases 1 through 8. It intentionally excludes new execution under Phase 9 for now.
+This section is the current source of truth for what still remains after Phases 1 through 10.
 
 ### Ready to implement next
 
-These items are not blocked. They remain open simply because they have not yet been completed.
-
-- Replace startup-time DDL and synthetic seed insertion in API startup helpers with explicit migration/bootstrap steps that can be run outside app startup.
-- Expand shared transaction helper adoption beyond Sales lead conversion to other multi-table write flows.
-- Replace remaining JSON textarea editors with dedicated field-based forms where the payload structure is now stable enough to model directly.
-- Continue reducing local `statusTone` helper duplication where a shared rule set is appropriate and the remaining modules do not require genuinely different status semantics.
-- Add deterministic preview seed data, cleanup APIs or cleanup SQL, and isolated test namespaces needed to safely enable submit-style workflow coverage later.
+- No active non-mobile implementation items remain open in this tracker.
 
 ### Still blocked or deliberately deferred
 
 These items are open because they depend on a larger architectural decision, new environment support, or an intentional scope boundary.
 
-- Backend identity enforcement still depends on `X-User-Role` / `X-Demo-Role` headers instead of signed identity, sessions, or user-profile-backed authorization.
-- Deployed submit-style workflow tests remain blocked until deterministic seed/cleanup support exists for preview environments.
 - Broader mobile/tablet redesign remains intentionally out of scope per current project direction.
 
 ### Phase-by-phase open items
@@ -470,35 +483,31 @@ These items are open because they depend on a larger architectural decision, new
 
 #### Phase 3
 
-- Remaining implementation item: broaden `sql_transaction()` adoption to the rest of the write paths that still manage commits and rollbacks inline.
-- Remaining architecture item: continue tightening CRUD contract coverage so new or refactored endpoints land with response-shape and failure-path tests by default.
+- Completed follow-through: `sql_transaction()` now covers additional multi-write paths beyond the original Sales lead conversion adoption.
+- Ongoing hygiene expectation: keep new or refactored endpoints landing with response-shape and failure-path tests by default.
 
 #### Phase 4
 
-- Remaining hygiene item: continue preventing active production routes from importing local fixture data directly.
-- Remaining UX item: keep partial-data, empty-state, and hard-error behavior consistent as additional API-backed modules evolve.
+- Completed follow-through: active production routes remain isolated from local fixture data, and structured edit dialogs no longer rely on JSON textareas for the lead/customer and contract-terms flows.
+- Ongoing UX expectation: keep partial-data, empty-state, and hard-error behavior consistent as additional API-backed modules evolve.
 
 #### Phase 5
 
-- Remaining blocker: move from header-based demo/backend role resolution to a real identity-backed authorization source.
-- Remaining follow-through item: keep frontend role signaling aligned with backend enforcement until identity-backed auth replaces the current headers.
+- Completed follow-through: demo/backend role resolution now uses backend-signed bearer tokens from `/api/auth/demo-token` as the primary source, with raw role headers limited to smoke/explicit compatibility mode.
 
 #### Phase 6
 
-- Remaining blocker: submit-style deployed workflow coverage is still blocked by missing deterministic seed IDs, cleanup support, and isolated preview test namespaces.
-- Remaining documentation item: keep the blocked submit-workflow list current as new workflow surfaces are added or unblocked.
+- Completed follow-through: deterministic preview seed/cleanup support now exists through `/api/test-support/namespaces/{namespace}` and `run_submit_workflow_smoke.py`, and CI has deterministic local/browser workflow contract smoke plus optional preview submit smoke gating.
 
 #### Phase 7
 
-- Remaining implementation item: remove startup-time DDL and synthetic seed insertion from API startup helpers.
-- Remaining implementation item: extend shared transaction handling across the broader mutation surface.
-- Remaining blocker: backend auth still relies on role headers rather than signed identity.
+- Completed follow-through: startup helpers no longer perform runtime DDL/seed actions, shared transaction handling covers more multi-write mutations, and backend auth now prefers signed bearer tokens.
 
 #### Phase 8
 
-- Remaining implementation item: replace JSON textarea editing experiences where the data shape is stable and user-facing forms are feasible.
+- Completed follow-through: structured lead/customer and contract terms editing now uses dedicated controls instead of JSON textareas.
 - Remaining deferred scope item: broader mobile/tablet redesign stays out of scope.
-- Remaining consistency item: finish consolidating status-tone handling only where domain-specific local behavior is not actually needed.
+- Remaining consistency item: continue consolidating status-tone handling opportunistically where domain-specific local behavior is not actually needed.
 
 ## Suggested Next Execution Order
 

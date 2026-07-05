@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
 import { Icon } from "../../components/Icons";
-import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "../../components/Primitives";
+import { DataTable, MetricCard, Panel, StatusTag, formatMoney, statusTone } from "../../components/Primitives";
 import { createCustomerServiceTicket, fetchCustomerServiceOverview } from "../../utils/platformApi";
 import { arrayField, normalizeNetworkEvent, normalizeTicket } from "../../utils/payloadMapping";
 
@@ -9,12 +9,6 @@ function contains(row, query, keys) {
   const needle = String(query || "").trim().toLowerCase();
   if (!needle) return true;
   return keys.some(key => String(row[key] || "").toLowerCase().includes(needle));
-}
-
-function tone(value) {
-  if (["Urgent", "High", "Major", "Open", "In Progress"].includes(value)) return "warn";
-  if (["Closed", "Resolved", "Completed"].includes(value)) return "success";
-  return "blue";
 }
 
 function normalizeSummary(summary = {}, tickets = []) {
@@ -105,15 +99,15 @@ export default function CustomerServiceModule({ setRoute, showToast }) {
                 { key: "IssueType", label: "Issue" },
                 { key: "Category", label: "Category" },
                 { key: "AgeHours", label: "Age", render: row => `${row.AgeHours || 0}h` },
-                { key: "Priority", label: "Priority", render: row => <StatusTag tone={tone(row.Priority)}>{row.Priority}</StatusTag> },
-                { key: "Status", label: "Status", render: row => <StatusTag tone={tone(row.Status)}>{row.Status}</StatusTag> },
+                { key: "Priority", label: "Priority", render: row => <StatusTag tone={statusTone(row.Priority, { warn: ["Major"] })}>{row.Priority}</StatusTag> },
+                { key: "Status", label: "Status", render: row => <StatusTag tone={statusTone(row.Status)}>{row.Status}</StatusTag> },
                 { key: "OwnerName", label: "Owner" },
                 { key: "actions", label: "", render: row => <button className="link-button compact-action" type="button" onClick={() => setRoute?.(`details/ticket/${row.TicketId || row.TicketNumber}`)}>Details</button> }
               ]} rows={visibleTickets} /> : <div className="empty-state">No support tickets match the current search.</div>}
             </Panel>
             <Panel title="Customer-reported network issues" description="Care cases connected to operational impact and SLA exposure.">
               {data.customerReportedOutages?.length ? <div className="outage-map">
-                {data.customerReportedOutages.map(event => <button className="outage-card enhanced" type="button" key={event.EventId || event.EventNumber} onClick={() => setRoute?.(`details/network/${event.EventId || event.EventNumber}`)}><Icon name="network" className="button-icon" /><div><strong>{event.Market || "Market"}</strong><span>{event.Type} · {event.Impacted || event.AccountName} · {formatMoney(event.SlaExposure || 0)}</span></div><StatusTag tone={tone(event.Severity)}>{event.Severity || "Open"}</StatusTag></button>)}
+                {data.customerReportedOutages.map(event => <button className="outage-card enhanced" type="button" key={event.EventId || event.EventNumber} onClick={() => setRoute?.(`details/network/${event.EventId || event.EventNumber}`)}><Icon name="network" className="button-icon" /><div><strong>{event.Market || "Market"}</strong><span>{event.Type} · {event.Impacted || event.AccountName} · {formatMoney(event.SlaExposure || 0)}</span></div><StatusTag tone={statusTone(event.Severity, { warn: ["Major", "Critical"] })}>{event.Severity || "Open"}</StatusTag></button>)}
               </div> : <div className="empty-state">No customer-reported network issues returned by the customer service API.</div>}
             </Panel>
           </section>

@@ -120,19 +120,40 @@ def split_batches(script: str) -> list[str]:
 
 
 def ensure_sales_storage() -> None:
+    if smoke_data.smoke_mode_enabled():
+        return
     global SCHEMA_READY
     if SCHEMA_READY:
         return
     with SCHEMA_LOCK:
         if SCHEMA_READY:
             return
-        script = SCHEMA_FILE.read_text(encoding="utf-8")
         conn = get_sql_connection()
         try:
             cursor = conn.cursor()
-            for batch in split_batches(script):
-                cursor.execute(batch)
-            conn.commit()
+            required_checks = [
+                ("ms", "Leads", "BASE TABLE"),
+                ("ms", "vSalesModuleDashboard", "VIEW"),
+                ("billing", "Customers", "BASE TABLE"),
+            ]
+            missing = []
+            for schema, name, table_type in required_checks:
+                row = cursor.execute(
+                    """
+                    SELECT 1
+                    FROM INFORMATION_SCHEMA.TABLES
+                    WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND TABLE_TYPE = ?
+                    """,
+                    (schema, name, table_type),
+                ).fetchone()
+                if not row:
+                    missing.append(f"{schema}.{name}")
+            if missing:
+                raise RuntimeError(
+                    "Sales storage is not ready. Apply the source-controlled Azure SQL migrations "
+                    "and, if needed, run pricing-microservice/scripts/bootstrap_demo_data.py explicitly. "
+                    f"Missing objects: {', '.join(missing)}"
+                )
             SCHEMA_READY = True
         finally:
             conn.close()
@@ -910,7 +931,6 @@ def sales_dashboard():
     if smoke_data.smoke_mode_enabled():
         return smoke_data.sales_dashboard()
     ensure_sales_storage()
-    seed_if_empty()
     return fetch_one("SELECT TOP 1 * FROM ms.vSalesModuleDashboard") or {}
 
 
@@ -919,7 +939,6 @@ def sales_bootstrap():
     if smoke_data.smoke_mode_enabled():
         return smoke_data.sales_bootstrap()
     ensure_sales_storage()
-    seed_if_empty()
     cached = get_cached_bootstrap()
     if cached is not None:
         return cached
@@ -953,7 +972,6 @@ def sales_bootstrap():
 @router.get("/leads")
 def list_leads(q: str | None = None, status: str | None = None):
     ensure_sales_storage()
-    seed_if_empty()
     query = "SELECT * FROM ms.vLeadDetail WHERE 1=1"
     params: list[Any] = []
     if not status or status == "All":
@@ -972,7 +990,6 @@ def list_leads(q: str | None = None, status: str | None = None):
 @router.get("/leads/{lead_id}")
 def get_lead(lead_id: uuid.UUID):
     ensure_sales_storage()
-    seed_if_empty()
     return get_view_row("ms.vLeadDetail", "LeadId", str(lead_id))
 
 
@@ -2142,4 +2159,3 @@ def serviceability_check(payload: dict[str, Any]):
 
 def init_sales() -> None:
     ensure_sales_storage()
-    seed_if_empty()

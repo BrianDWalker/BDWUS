@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from "./fetchTimeout";
+import { roleAuthHeaders } from "./permissions";
 
 const DEFAULT_PLATFORM_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
 
@@ -22,9 +23,12 @@ async function readResponsePayload(response) {
 }
 
 async function requestJson(path, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  const authHeaders = ["GET", "HEAD", "OPTIONS"].includes(method) ? {} : await roleAuthHeaders(platformApiBase);
   const response = await fetchWithTimeout(platformUrl(path), {
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders,
       ...(options.headers || {})
     },
     ...options

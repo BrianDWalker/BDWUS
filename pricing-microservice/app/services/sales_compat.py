@@ -16,6 +16,7 @@ from app.services.sales import (
     trim,
     upsert_account_from_customer,
 )
+from app.services.sql_access import sql_transaction
 
 router = APIRouter(prefix="/api/sales", tags=["sales-compat"])
 
@@ -23,8 +24,7 @@ router = APIRouter(prefix="/api/sales", tags=["sales-compat"])
 def _create_placeholder_account(account_name: str | None = None, customer_number: str | None = None) -> str:
     account_id = str(uuid.uuid4())
     display_name = trim(account_name) or "New Account"
-    conn = get_sql_connection()
-    try:
+    with sql_transaction() as conn:
         conn.cursor().execute(
             """
             INSERT INTO ms.Accounts
@@ -44,10 +44,7 @@ def _create_placeholder_account(account_name: str | None = None, customer_number
                 "{}",
             ),
         )
-        conn.commit()
         invalidate_bootstrap_cache()
-    finally:
-        conn.close()
     return account_id
 
 
@@ -124,8 +121,7 @@ def create_opportunity_compat(payload: dict[str, Any]):
     ensure_sales_storage()
     account_id = _resolve_account_id(payload)
     opportunity_id = str(uuid.uuid4())
-    conn = get_sql_connection()
-    try:
+    with sql_transaction() as conn:
         conn.cursor().execute(
             """
             INSERT INTO ms.Opportunities
@@ -151,10 +147,7 @@ def create_opportunity_compat(payload: dict[str, Any]):
                 payload.get("convertedFromLeadId"),
             ),
         )
-        conn.commit()
         invalidate_bootstrap_cache()
-    finally:
-        conn.close()
     return get_view_row("ms.vOpportunityDetail", "OpportunityId", opportunity_id)
 
 
@@ -167,8 +160,7 @@ def convert_lead_compat(lead_id: uuid.UUID, payload: dict[str, Any]):
 
     account_id = _resolve_account_id(payload, lead.get("AccountName"))
     opportunity_id = str(uuid.uuid4())
-    conn = get_sql_connection()
-    try:
+    with sql_transaction() as conn:
         cur = conn.cursor()
         cur.execute(
             """
@@ -217,13 +209,7 @@ def convert_lead_compat(lead_id: uuid.UUID, payload: dict[str, Any]):
                 trim(payload.get("approvedBy")) or lead.get("OwnerName") or "Admin",
             ),
         )
-        conn.commit()
         invalidate_bootstrap_cache()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
     return get_view_row("ms.vOpportunityDetail", "OpportunityId", opportunity_id)
 
 
@@ -242,8 +228,7 @@ def create_opportunity_note_compat(opportunity_id: uuid.UUID, payload: dict[str,
         ]
         note = " | ".join(part for part in parts if part)
 
-    conn = get_sql_connection()
-    try:
+    with sql_transaction() as conn:
         conn.cursor().execute(
             """
             INSERT INTO ms.OpportunityNotes
@@ -258,10 +243,7 @@ def create_opportunity_note_compat(opportunity_id: uuid.UUID, payload: dict[str,
                 trim(payload.get("createdBy")) or "Admin",
             ),
         )
-        conn.commit()
         invalidate_bootstrap_cache()
-    finally:
-        conn.close()
 
     return fetch_all("SELECT * FROM ms.OpportunityNotes WHERE OpportunityId = ? AND IsDeleted = 0 ORDER BY CreatedAtUtc DESC", (str(opportunity_id),))
 

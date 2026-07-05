@@ -57,7 +57,9 @@ async function mockApi(page) {
     const method = route.request().method();
     let body;
 
-    if (method !== "GET") {
+    if (method === "POST" && path === "/api/auth/demo-token") {
+      body = { token: "test-token", role: "Admin", expiresAt: 4102444800, capabilities: ["*"] };
+    } else if (method !== "GET") {
       body = { id: "created", status: "ok" };
     } else if (path === "/api/platform/bootstrap") {
       body = { dashboard: { PipelineValue: 10000, QuoteMrcValue: 1200, OpportunityCount: 1, QuoteCount: 1 }, customers, opportunities: [{ OpportunityId: "opp-1" }], quotes: [{ QuoteId: "quote-1" }], approvals: [] };

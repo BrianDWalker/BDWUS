@@ -1,14 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { PageHeader } from "../../components/Shell";
-import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "../../components/Primitives";
+import { DataTable, MetricCard, Panel, StatusTag, formatMoney, statusTone } from "../../components/Primitives";
 import { fetchOpsBootstrap } from "../../utils/opsApi";
 import { arrayField, normalizeNetworkEvent } from "../../utils/payloadMapping";
-
-function tone(value) {
-  if (["Major", "Critical", "Open", "Risk", "Breached"].includes(value)) return "warn";
-  if (["Closed", "Resolved", "Completed"].includes(value)) return "success";
-  return "blue";
-}
 
 export default function NetworkDetailModule({ id, setRoute }) {
   const [event, setEvent] = useState(null);
@@ -55,11 +49,11 @@ export default function NetworkDetailModule({ id, setRoute }) {
                 <MetricCard label="Impacted" value={event.Impacted || event.AccountName || "-"} delta="Affected service/customer" />
                 <MetricCard label="Customer" value={event.AccountName || "-"} delta={event.CustomerNumber || "Customer"} />
                 <MetricCard label="Customer Reported" value={event.CustomerReported ? "Yes" : "No"} delta="Source" />
-                <MetricCard label="State" value={<StatusTag tone={tone(event.Status)}>{event.Status}</StatusTag>} delta="Ops status" />
+                <MetricCard label="State" value={<StatusTag tone={statusTone(event.Status, { warn: ["Breached"] })}>{event.Status}</StatusTag>} delta="Ops status" />
               </div>
             </Panel>
             <Panel title="Related Network Events" description="Other events returned by the operations API.">
-              {events.length ? <DataTable columns={[{ key: "EventNumber", label: "Event" }, { key: "Market", label: "Market" }, { key: "Type", label: "Type" }, { key: "Severity", label: "Severity", render: row => <StatusTag tone={tone(row.Severity)}>{row.Severity}</StatusTag> }, { key: "Status", label: "Status" }]} rows={events.slice(0, 8)} /> : <div className="empty-state">No related events returned.</div>}
+              {events.length ? <DataTable columns={[{ key: "EventNumber", label: "Event" }, { key: "Market", label: "Market" }, { key: "Type", label: "Type" }, { key: "Severity", label: "Severity", render: row => <StatusTag tone={statusTone(row.Severity, { warn: ["Major", "Critical", "Breached"] })}>{row.Severity}</StatusTag> }, { key: "Status", label: "Status" }]} rows={events.slice(0, 8)} /> : <div className="empty-state">No related events returned.</div>}
             </Panel>
           </section>
         </>

@@ -5,7 +5,9 @@ async function mockCare(page) {
   await page.route("**/api/**", async route => {
     const path = new URL(route.request().url()).pathname;
     let body = {};
-    if (path === "/api/platform/customer-service/tickets/ticket-1") {
+    if (path === "/api/auth/demo-token") {
+      body = { token: "test-token", role: "Care", expiresAt: 4102444800, capabilities: ["create:ticket", "update:ticket", "comment:ticket", "close:ticket"] };
+    } else if (path === "/api/platform/customer-service/tickets/ticket-1") {
       body = { ticket, notes: [{ NoteType: "Created", Note: "Initial context", CreatedBy: "Care Ops" }] };
     }
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
@@ -16,6 +18,7 @@ async function mockBilling(page) {
   await page.route("**/api/**", async route => {
     const path = new URL(route.request().url()).pathname;
     let body = [];
+    if (path === "/api/auth/demo-token") body = { token: "test-token", role: "Billing", expiresAt: 4102444800, capabilities: ["create:adjustment"] };
     if (path === "/api/billing/customers") body = [{ CustomerNumber: "CUST-1001", CustomerName: "Apex Health", Status: "Active" }];
     if (path === "/api/billing-workflows/invoices") body = [{ InvoiceId: "invoice-1", InvoiceNumber: "INV-1001", AccountName: "Apex Health", Amount: 100, Balance: 50, Status: "Open" }];
     if (path === "/api/billing-workflows/adjustments") body = [];
@@ -30,6 +33,7 @@ async function mockOrders(page) {
   await page.route("**/api/**", async route => {
     const path = new URL(route.request().url()).pathname;
     let body = {};
+    if (path === "/api/auth/demo-token") body = { token: "test-token", role: "Ops", expiresAt: 4102444800, capabilities: ["create:order", "create:provisioning-job", "update:order"] };
     if (path === "/api/ops/bootstrap") body = { orders, provisioningJobs: [] };
     if (path === "/api/ops/orders") body = orders;
     if (path === "/api/ops/provisioning-jobs") body = [];
@@ -41,6 +45,7 @@ async function mockQuote(page) {
   await page.route("**/api/**", async route => {
     const path = new URL(route.request().url()).pathname;
     let body = {};
+    if (path === "/api/auth/demo-token") body = { token: "test-token", role: "Sales", expiresAt: 4102444800, capabilities: ["create:quote", "create:order"] };
     if (path === "/api/sales/quotes/quote-1") body = { QuoteId: "quote-1", QuoteNumber: "Q-1001", OpportunityId: "opp-1", AccountName: "Apex Health", OpportunityName: "Fiber Expansion", TotalMrc: 1200, TotalNrc: 500, MarginPct: 35, ApprovalStatus: "Approved", Status: "Approved" };
     if (path === "/api/sales/quotes/quote-1/line-items") body = [{ QuoteLineItemId: "line-1", ProductName: "Fiber 1G", Quantity: 1, Mrc: 1200, Nrc: 500 }];
     if (path === "/api/sales/approvals") body = [];

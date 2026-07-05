@@ -7,7 +7,9 @@ async function mockSalesApis(page) {
     const method = route.request().method();
     let body = {};
 
-    if (method === "POST" && path === "/api/sales/quotes/quote-1/convert-to-order") {
+    if (method === "POST" && path === "/api/auth/demo-token") {
+      body = { token: "test-token", role: "Sales", expiresAt: 4102444800, capabilities: ["create:quote", "create:order"] };
+    } else if (method === "POST" && path === "/api/sales/quotes/quote-1/convert-to-order") {
       body = {
         order: { OrderId: "order-1", OrderNumber: "ORD-1001", AccountName: "Apex Health", ServiceName: "Fiber 1G" },
         source: { QuoteId: "quote-1", QuoteNumber: "Q-1001", ApprovalStatus: "Approved" }

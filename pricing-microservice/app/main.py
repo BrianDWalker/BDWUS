@@ -23,7 +23,6 @@ from app.models import (
 from app.services.assistant import (
     approve_change_request,
     chat,
-    ensure_ai_storage,
     get_change_request,
     get_github_branches,
     get_github_commits,
@@ -32,10 +31,11 @@ from app.services.assistant import (
     list_ui_overrides,
     reject_change_request,
 )
+from app.services.auth_api import router as auth_router
 from app.services.authz import active_role_from_request, required_capability_for_request, role_can
 from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
-from app.services.customer_service import ensure_customer_service_storage, router as customer_service_router
-from app.services.ops import admin_router, billing_workflow_router, ensure_ops_storage, ops_router
+from app.services.customer_service import router as customer_service_router
+from app.services.ops import admin_router, billing_workflow_router, ops_router
 from app.services.ops_write import admin_write_router, billing_write_router, ops_write_router
 from app.services.platform import router as platform_router
 from app.services.quotes import (
@@ -47,9 +47,10 @@ from app.services.quotes import (
     reprice_opportunity,
     revise_quote,
 )
-from app.services.sales import billing_router, init_sales, router as sales_router, sales_dashboard
+from app.services.sales import billing_router, router as sales_router, sales_dashboard
 from app.services.sales_compat import router as sales_compat_router
 from app.services.smoke_data import smoke_mode_enabled
+from app.services.test_support import router as test_support_router
 
 
 SERVICE_NAME = os.getenv("PLATFORM_API_SERVICE_NAME", "BDWUS Platform API")
@@ -101,6 +102,7 @@ async def enforce_role_permissions(request: Request, call_next):
 
 # Compatibility routes must be registered before the full sales router because they preserve
 # migrated UI flows for routes that existed conceptually before the API-backed sales module.
+app.include_router(auth_router)
 app.include_router(sales_compat_router)
 app.include_router(sales_router)
 app.include_router(billing_router)
@@ -112,16 +114,7 @@ app.include_router(billing_workflow_router)
 app.include_router(ops_write_router)
 app.include_router(admin_write_router)
 app.include_router(billing_write_router)
-
-
-@app.on_event("startup")
-def startup_assistant_storage():
-    if smoke_mode_enabled():
-        return
-    ensure_ai_storage()
-    init_sales()
-    ensure_ops_storage()
-    ensure_customer_service_storage()
+app.include_router(test_support_router)
 
 
 @app.get("/")

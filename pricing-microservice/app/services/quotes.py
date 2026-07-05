@@ -14,6 +14,7 @@ from app.models import (
 )
 from app.services.context import fetch_billing_context, lookup_customer_profile
 from app.services.pricing import calculate_price
+from app.services.sql_access import sql_transaction
 
 
 def _normalize_customer_status(status_value: str | None) -> str:
@@ -219,8 +220,7 @@ def create_quote(request: QuoteCreateRequest) -> QuoteCreateResponse:
         contract_term_months=request.pricingInput.contractTermMonthsInput,
     )
 
-    conn = get_sql_connection()
-    try:
+    with sql_transaction() as conn:
         cursor = conn.cursor()
 
         opportunity_seed["LatestPriceAmount"] = str(pricing.finalPrice)
@@ -305,18 +305,12 @@ def create_quote(request: QuoteCreateRequest) -> QuoteCreateResponse:
             ),
         )
 
-        conn.commit()
         return QuoteCreateResponse(
             opportunityId=opportunity_id,
             quoteId=quote_id,
             versionNo=1,
             pricing=pricing,
         )
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
 
 
 def _get_opportunity_account_id_by_quote_id(quote_id: UUID, conn=None) -> str | None:
@@ -358,8 +352,7 @@ def revise_quote(quote_id: UUID, request: QuoteReviseRequest) -> QuoteCreateResp
         contract_term_months=request.pricingInput.contractTermMonthsInput,
     )
 
-    conn = get_sql_connection()
-    try:
+    with sql_transaction() as conn:
         cursor = conn.cursor()
 
         current = cursor.execute(
@@ -433,21 +426,12 @@ def revise_quote(quote_id: UUID, request: QuoteReviseRequest) -> QuoteCreateResp
         params.append(str(opportunity_id))
         cursor.execute(update_sql, *params)
 
-        conn.commit()
         return QuoteCreateResponse(
             opportunityId=opportunity_id,
             quoteId=new_quote_id,
             versionNo=1,
             pricing=pricing,
         )
-    except HTTPException:
-        conn.rollback()
-        raise
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
 
 
 def get_quote_history(quote_id: UUID) -> list[QuoteHistoryRecord]:

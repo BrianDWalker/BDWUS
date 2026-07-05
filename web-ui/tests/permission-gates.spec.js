@@ -5,7 +5,9 @@ async function mockApi(page) {
     const url = new URL(route.request().url());
     const path = url.pathname;
     let body = {};
-    if (path === "/api/billing/customers") {
+    if (path === "/api/auth/demo-token") {
+      body = { token: "test-token", role: "Billing", expiresAt: 4102444800, capabilities: ["create:adjustment"] };
+    } else if (path === "/api/billing/customers") {
       body = [{ CustomerNumber: "CUST-1001", CustomerName: "Apex Health", CustomerType: "Enterprise", Region: "Midwest", Mrr: 1000, Status: "Active" }];
     } else if (path === "/api/billing-workflows/invoices") {
       body = [{ InvoiceId: "invoice-1", InvoiceNumber: "INV-1001", AccountName: "Apex Health", Amount: 1000, Balance: 100, Status: "Open" }];

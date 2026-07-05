@@ -118,6 +118,21 @@ function parseJsonField(value, fallback = {}) {
   }
 }
 
+function keyValueRows(value) {
+  const parsed = parseJsonField(value, {});
+  if (!parsed || Array.isArray(parsed)) return [];
+  return Object.entries(parsed).map(([key, entryValue]) => ({ key, value: String(entryValue ?? "") }));
+}
+
+function objectFromRows(rows) {
+  return (rows || []).reduce((result, row) => {
+    const key = String(row?.key || "").trim();
+    if (!key) return result;
+    result[key] = row?.value ?? "";
+    return result;
+  }, {});
+}
+
 function pageDate(value) {
   return formatDate(value, { empty: "" });
 }
@@ -362,7 +377,79 @@ function DataDialog({ open, onClose, title, subtitle, fields, values, onSave }) 
         {fields.map(field => (
           <label key={field.key}>
             {field.label}
-            {field.type === "textarea" ? (
+            {field.type === "string-list" ? (
+              <div className="modal-array-editor">
+                {((form[field.key] && form[field.key].length) ? form[field.key] : [""]).map((item, index) => (
+                  <div className="modal-array-row" key={`${field.key}-${index}`}>
+                    <input
+                      value={item ?? ""}
+                      placeholder={field.placeholder || `${field.label} ${index + 1}`}
+                      onChange={event => setForm(current => ({
+                        ...current,
+                        [field.key]: (current[field.key] || []).map((value, valueIndex) => valueIndex === index ? event.target.value : value),
+                      }))}
+                    />
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={() => setForm(current => ({
+                        ...current,
+                        [field.key]: (current[field.key] || []).filter((_, valueIndex) => valueIndex !== index),
+                      }))}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => setForm(current => ({ ...current, [field.key]: [...(current[field.key] || []), ""] }))}
+                >
+                  Add {field.addLabel || field.label}
+                </button>
+              </div>
+            ) : field.type === "key-value-list" ? (
+              <div className="modal-array-editor">
+                {((form[field.key] && form[field.key].length) ? form[field.key] : [{ key: "", value: "" }]).map((item, index) => (
+                  <div className="modal-array-row modal-key-value-row" key={`${field.key}-${index}`}>
+                    <input
+                      value={item?.key ?? ""}
+                      placeholder={field.keyPlaceholder || "Key"}
+                      onChange={event => setForm(current => ({
+                        ...current,
+                        [field.key]: (current[field.key] || []).map((value, valueIndex) => valueIndex === index ? { ...value, key: event.target.value } : value),
+                      }))}
+                    />
+                    <input
+                      value={item?.value ?? ""}
+                      placeholder={field.valuePlaceholder || "Value"}
+                      onChange={event => setForm(current => ({
+                        ...current,
+                        [field.key]: (current[field.key] || []).map((value, valueIndex) => valueIndex === index ? { ...value, value: event.target.value } : value),
+                      }))}
+                    />
+                    <button
+                      className="ghost-button"
+                      type="button"
+                      onClick={() => setForm(current => ({
+                        ...current,
+                        [field.key]: (current[field.key] || []).filter((_, valueIndex) => valueIndex !== index),
+                      }))}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <button
+                  className="ghost-button"
+                  type="button"
+                  onClick={() => setForm(current => ({ ...current, [field.key]: [...(current[field.key] || []), { key: "", value: "" }] }))}
+                >
+                  Add {field.addLabel || "Entry"}
+                </button>
+              </div>
+            ) : field.type === "textarea" ? (
               <textarea value={form[field.key] ?? ""} onChange={event => setForm(current => ({ ...current, [field.key]: event.target.value }))} />
             ) : field.type === "select" ? (
               <select value={form[field.key] ?? ""} onChange={event => setForm(current => ({ ...current, [field.key]: event.target.value }))}>
@@ -928,20 +1015,20 @@ export function SalesLeadDetail({ id, setRoute, showToast }) {
             { key: "Status", label: "Status" },
             { key: "EstimatedValue", label: "Estimated Value" },
             { key: "ProductInterest", label: "Product Interest" },
-            { key: "ServiceNeedsJson", label: "Service Needs", type: "textarea" },
-            { key: "CustomerInfoJson", label: "Customer Info", type: "textarea" },
+            { key: "ServiceNeedsJson", label: "Service Needs", type: "string-list", addLabel: "Service Need" },
+            { key: "CustomerInfoJson", label: "Customer Info", type: "key-value-list", addLabel: "Customer Field" },
             { key: "Notes", label: "Notes", type: "textarea" }
           ]}
           values={{
             ...lead,
-            ServiceNeedsJson: textArray(lead.ServiceNeedsJson),
-            CustomerInfoJson: JSON.stringify(parseJsonField(lead.CustomerInfoJson, {}), null, 2)
+            ServiceNeedsJson: firstArray(lead.ServiceNeedsJson),
+            CustomerInfoJson: keyValueRows(lead.CustomerInfoJson)
           }}
           onSave={async values => {
             await updateLead(id, {
               ...values,
-              serviceNeeds: parseTextArray(values.ServiceNeedsJson),
-              customerInfo: parseJsonField(values.CustomerInfoJson, {}),
+              serviceNeeds: values.ServiceNeedsJson || [],
+              customerInfo: objectFromRows(values.CustomerInfoJson),
             });
             setLead(await getLead(id));
             showToast("Lead updated");
@@ -1614,16 +1701,16 @@ export function SalesContractDetail({ id, setRoute, showToast }) {
             { key: "OpportunityId", label: "Opportunity ID" },
             { key: "QuoteId", label: "Quote ID" },
             { key: "SignedDate", label: "Signed Date" },
-            { key: "TermsJson", label: "Terms", type: "textarea" }
+            { key: "TermsJson", label: "Terms", type: "key-value-list", addLabel: "Term" }
           ]}
           values={{
             ...contract,
-            TermsJson: JSON.stringify(parseJsonField(contract.TermsJson, {}), null, 2)
+            TermsJson: keyValueRows(contract.TermsJson)
           }}
           onSave={async values => {
             await updateContract(id, {
               ...values,
-              terms: parseJsonField(values.TermsJson, {})
+              terms: objectFromRows(values.TermsJson)
             });
             setContract(await getContract(id));
             showToast("Contract updated");

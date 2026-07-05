@@ -10,6 +10,7 @@ from app.database import get_sql_connection
 from app.services import smoke_data
 from app.services.ops import row_to_dict, stable_uuid
 from app.services.sales import ensure_sales_storage, fetch_all
+from app.services.sql_access import sql_transaction
 
 router = APIRouter(prefix="/api/platform/customer-service", tags=["customer-service"])
 CARE_READY = False
@@ -117,48 +118,30 @@ def ensure_customer_service_storage() -> None:
     with CARE_LOCK:
         if CARE_READY:
             return
-        ddl = """
-        IF SCHEMA_ID('care') IS NULL EXEC('CREATE SCHEMA care');
-        IF OBJECT_ID('care.Tickets', 'U') IS NULL CREATE TABLE care.Tickets (
-            TicketId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
-            TicketNumber NVARCHAR(32) NOT NULL,
-            CustomerNumber NVARCHAR(32) NULL,
-            AccountName NVARCHAR(200) NOT NULL,
-            IssueType NVARCHAR(200) NOT NULL,
-            Category NVARCHAR(100) NOT NULL,
-            Priority NVARCHAR(50) NOT NULL,
-            Status NVARCHAR(50) NOT NULL,
-            OwnerName NVARCHAR(200) NULL,
-            Summary NVARCHAR(MAX) NULL,
-            EscalationLevel NVARCHAR(50) NULL,
-            SlaTargetHours INT NULL,
-            ClosureReason NVARCHAR(400) NULL,
-            CreatedBy NVARCHAR(200) NULL,
-            CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
-            UpdatedAtUtc DATETIME2 NULL,
-            ClosedAtUtc DATETIME2 NULL,
-            IsDeleted BIT NOT NULL DEFAULT 0
-        );
-        IF COL_LENGTH('care.Tickets', 'EscalationLevel') IS NULL ALTER TABLE care.Tickets ADD EscalationLevel NVARCHAR(50) NULL;
-        IF COL_LENGTH('care.Tickets', 'SlaTargetHours') IS NULL ALTER TABLE care.Tickets ADD SlaTargetHours INT NULL;
-        IF COL_LENGTH('care.Tickets', 'ClosureReason') IS NULL ALTER TABLE care.Tickets ADD ClosureReason NVARCHAR(400) NULL;
-        IF COL_LENGTH('care.Tickets', 'ClosedAtUtc') IS NULL ALTER TABLE care.Tickets ADD ClosedAtUtc DATETIME2 NULL;
-        IF OBJECT_ID('care.TicketNotes', 'U') IS NULL CREATE TABLE care.TicketNotes (
-            TicketNoteId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
-            TicketId UNIQUEIDENTIFIER NOT NULL,
-            NoteType NVARCHAR(100) NOT NULL,
-            Note NVARCHAR(MAX) NOT NULL,
-            CreatedBy NVARCHAR(200) NULL,
-            CreatedAtUtc DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
-        );
-        """
         conn = get_sql_connection()
         try:
-            conn.cursor().execute(ddl)
-            conn.commit()
+            cursor = conn.cursor()
+            required_checks = [("care", "Tickets"), ("care", "TicketNotes")]
+            missing = []
+            for schema, name in required_checks:
+                row = cursor.execute(
+                    """
+                    SELECT 1
+                    FROM INFORMATION_SCHEMA.TABLES
+                    WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+                    """,
+                    (schema, name),
+                ).fetchone()
+                if not row:
+                    missing.append(f"{schema}.{name}")
+            if missing:
+                raise RuntimeError(
+                    "Customer service storage is not ready. Apply the source-controlled Azure SQL migrations "
+                    "and, if needed, run pricing-microservice/scripts/bootstrap_demo_data.py explicitly. "
+                    f"Missing objects: {', '.join(missing)}"
+                )
         finally:
             conn.close()
-        seed_customer_service_data()
         CARE_READY = True
 
 
@@ -261,15 +244,11 @@ def _add_note(ticket_id: str, note: str, note_type: str = "Update", created_by: 
     }
     if smoke_data.smoke_mode_enabled():
         return note_row
-    conn = get_sql_connection()
-    try:
+    with sql_transaction() as conn:
         conn.cursor().execute(
             "INSERT INTO care.TicketNotes (TicketNoteId, TicketId, NoteType, Note, CreatedBy) VALUES (?, ?, ?, ?, ?)",
             (note_row["TicketNoteId"], ticket_id, note_type, note, created_by),
         )
-        conn.commit()
-    finally:
-        conn.close()
     return note_row
 
 
@@ -315,8 +294,7 @@ def create_ticket(payload: dict[str, Any]) -> dict[str, Any]:
         _smoke_tickets().insert(0, ticket)
         return ticket
     ensure_customer_service_storage()
-    conn = get_sql_connection()
-    try:
+    with sql_transaction() as conn:
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO care.Tickets (TicketId, TicketNumber, CustomerNumber, AccountName, IssueType, Category, Priority, Status, OwnerName, Summary, EscalationLevel, SlaTargetHours, ClosureReason, CreatedBy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -341,9 +319,6 @@ def create_ticket(payload: dict[str, Any]) -> dict[str, Any]:
             "INSERT INTO care.TicketNotes (TicketNoteId, TicketId, NoteType, Note, CreatedBy) VALUES (?, ?, ?, ?, ?)",
             (str(uuid.uuid4()), ticket_id, "Created", ticket["Summary"], ticket["CreatedBy"]),
         )
-        conn.commit()
-    finally:
-        conn.close()
     return _require_ticket(ticket_id)
 
 
@@ -376,8 +351,7 @@ def update_ticket(ticket_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     current = _require_ticket(ticket_id)
     next_status = payload.get("status", current.get("Status"))
     close_clause = "ClosedAtUtc = SYSUTCDATETIME()," if next_status == "Closed" else "ClosedAtUtc = NULL,"
-    conn = get_sql_connection()
-    try:
+    with sql_transaction() as conn:
         cur = conn.cursor()
         cur.execute(
             f"UPDATE care.Tickets SET Status = ?, Priority = ?, OwnerName = ?, Summary = ?, EscalationLevel = ?, SlaTargetHours = ?, ClosureReason = ?, {close_clause} UpdatedAtUtc = SYSUTCDATETIME() WHERE TicketId = ?",
@@ -397,9 +371,6 @@ def update_ticket(ticket_id: str, payload: dict[str, Any]) -> dict[str, Any]:
                 "INSERT INTO care.TicketNotes (TicketNoteId, TicketId, NoteType, Note, CreatedBy) VALUES (?, ?, ?, ?, ?)",
                 (str(uuid.uuid4()), current["TicketId"], payload.get("noteType") or "Update", payload["note"], payload.get("createdBy") or "Care Ops"),
             )
-        conn.commit()
-    finally:
-        conn.close()
     return _require_ticket(str(current["TicketId"]))
 
 

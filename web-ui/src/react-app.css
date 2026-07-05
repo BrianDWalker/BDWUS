@@ -736,6 +736,22 @@ button:disabled {
   resize: vertical;
 }
 
+.modal-array-editor {
+  display: grid;
+  gap: 10px;
+}
+
+.modal-array-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.modal-key-value-row {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) auto;
+}
+
 .workflow-modal {
   width: min(680px, 100%);
 }
