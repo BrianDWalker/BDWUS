@@ -69,53 +69,228 @@ Completed the route-evidence and smoke-alignment pass:
 - Added visual smoke coverage for the new detail pages
 - Removed a workflow smoke spec that did not match the static preview surface in this environment
 
-## What Remains
+## Active Scope Notes
 
-### Workstream 1 - Artifact inspection
+- The main technical direction is to move away from fake/demo-only data and make Azure SQL Database the authoritative data source where practical.
+- The API should own all database access. The web UI should call API endpoints for reads and mutations instead of importing local mock data for production workflows.
+- Any remaining demo data should be clearly isolated as local development fallback data, not mixed into production API behavior.
 
-Remaining:
+## Phased Execution Plan
 
-- Manually inspect artifact `8093650837` from run `28747284401`.
+### Phase 0 - Artifact inspection and baseline capture
+
+Goal:
+
+- Confirm the current deployed artifact is visually useful before changing the data layer.
+
+Tasks:
+
+- Manually inspect artifact `8093650837` from GitHub Actions run `28747284401`.
 - Confirm screenshots are not loading-shell-only.
-- Confirm screenshots cover the intended desktop routes and the important detail pages.
+- Confirm screenshots cover the intended desktop routes and important detail pages.
+- Record any visual or route evidence gaps that need to be preserved while the API/data layer changes.
 
-### Workstream 4 - Workflow interactions
+Completion criteria:
 
-Remaining:
+- A short artifact inspection note is added to this plan or a linked validation note.
+- Any blocking visual regressions are filed as follow-up tasks before backend/data work starts.
 
-- Add non-destructive workflow visual coverage only where it fits the deployed preview surface.
-- Decide which workflows are safe as visual-only tests versus seeded submit tests.
-- Add cleanup or deterministic seed strategy before adding deployed submit tests.
+### Phase 1 - Fake data inventory and migration map
 
-### Workstream 5 - Mobile and responsive redesign
+Goal:
 
-Remaining:
+- Identify every place where the app still depends on fake data and decide the target Azure SQL/API replacement.
 
-- Finish the broader mobile/tablet redesign for the dense modules that still need it.
-- Reduce horizontal scrolling on smaller screens where it still exists.
-- Add the remaining mobile screenshots if the preview surface supports them cleanly.
+Tasks:
 
-### Workstream 7 - Role and security model
+- Inventory frontend imports and usage of `web-ui/src/data/mockData.js`.
+- Inventory backend service modules that still use in-memory, smoke, generated, or static records.
+- Map each module to its required API endpoints:
+  - Dashboard
+  - Knowledge
+  - Sales
+  - Customer 360
+  - Customer Service
+  - Orders
+  - Product & Pricing
+  - Billing
+  - Network Events
+  - Service Management
+  - Provisioning
+  - Carrier Settlement
+  - Reports
+  - Administration
+- Decide which data remains local-only for development and which must be moved to Azure SQL.
+- Define a temporary fallback strategy for local development that cannot mask production API failures.
 
-Remaining:
+Completion criteria:
 
-- Define the authoritative role model.
-- Decide whether roles come from auth token, API session, user profile endpoint, or mock/demo only.
-- Add backend/API enforcement for protected mutations.
+- A module-by-module data source matrix exists.
+- Each fake data dependency has an owner phase for replacement, retention as local-only seed data, or removal.
 
-### Workstream 8 - API/data maturity
+### Phase 2 - Azure SQL schema, views, and migration readiness
 
-Remaining:
+Goal:
+
+- Ensure Azure SQL Database has the required schemas, tables, views, constraints, and seed/migration process for the app surface.
+
+Tasks:
+
+- Review existing SQL assets, including `pricing-microservice/sql/sales_schema.sql`, `web-ui/azure-sql-sales-data-model.md`, and billing seed scripts.
+- Define canonical schemas for the app, likely including:
+  - `billing`
+  - `ms`
+  - `ai`
+  - `dbo`
+  - any needed operational/admin schema
+- Create or update tables for customers/accounts, invoices, orders, products/pricing, sales entities, tickets, network/service records, admin records, and role/permission metadata.
+- Create views that match read-heavy module needs and detail page payloads.
+- Add indexes, primary keys, foreign keys, soft-delete columns, timestamps, and row status conventions.
+- Make migrations idempotent and safe to rerun.
+- Add validation queries for table existence, view existence, required columns, and baseline row counts.
+
+Completion criteria:
+
+- Azure SQL setup can be applied from source-controlled scripts.
+- Required schemas, tables, views, and indexes are present.
+- A validation command or script proves the database shape matches API expectations.
+
+### Phase 3 - API database access layer and CRUD contracts
+
+Goal:
+
+- Make the backend API the only production path for Azure SQL reads and mutations.
+
+Tasks:
+
+- Establish a shared Azure SQL connection/configuration pattern for the API.
+- Add repository/data-access helpers for `SELECT`, `INSERT`, `UPDATE`, and soft-delete or status-change operations.
+- Convert read endpoints from fake/static sources to Azure SQL-backed queries.
+- Convert mutation endpoints to Azure SQL transactions where records span multiple tables.
+- Standardize API response shapes for:
+  - list endpoints
+  - detail endpoints
+  - create responses
+  - update responses
+  - validation errors
+  - permission errors
+  - upstream/database failures
+- Add backend tests for successful reads, inserts, updates, validation failures, and database error handling.
+
+Completion criteria:
+
+- Core module endpoints use Azure SQL for production reads.
+- High-value mutations use Azure SQL with transaction boundaries where needed.
+- API contract tests pass without relying on frontend mock data.
+
+### Phase 4 - Frontend API integration and mock-data removal
+
+Goal:
+
+- Move production UI workflows off local mock data and onto API-backed data loading.
+
+Tasks:
+
+- Replace production usage of `mockData.js` with API calls.
+- Keep any mock fixtures in test-only or local-dev-only locations.
+- Update detail pages to load from API detail endpoints instead of normalized route fallbacks or local records.
+- Normalize frontend data states across modules:
+  - loading
+  - loaded with data
+  - loaded empty
+  - loaded partial
+  - hard error
+- Audit modules that still show raw endpoint timeout messages directly to users.
+- Add user-facing partial-data behavior where API aggregation can partially succeed.
+
+Completion criteria:
+
+- Production app flows do not depend on `web-ui/src/data/mockData.js`.
+- Frontend route and detail tests pass against API-shaped fixtures or deployed API responses.
+- Timeout and database errors are shown through consistent UI states.
+
+### Phase 5 - Backend role enforcement
+
+Goal:
+
+- Move role gating beyond frontend/demo controls and enforce protected operations in the API.
+
+Tasks:
+
+- Define the authoritative role source:
+  - auth token
+  - API session
+  - user profile endpoint
+  - explicit demo/testing mode
+- Define backend permissions for protected mutations.
+- Add API enforcement for high-risk actions:
+  - order creation and progression
+  - invoice actions and billing adjustments
+  - admin user, role, and integration changes
+  - sales create/convert/quote actions
+- Add negative-path API tests:
+  - Viewer cannot create order
+  - Viewer cannot create invoice action
+  - Viewer cannot create admin records
+  - Billing role can access billing actions
+  - Admin role can access admin functions
+  - Sales role can access sales creation actions
+- Keep the demo role selector clearly labeled as demo/testing when it is active.
+
+Completion criteria:
+
+- API rejects unauthorized mutations even if the frontend is bypassed.
+- Frontend permission behavior matches backend enforcement.
+- Role/permission tests cover both allowed and denied paths.
+
+### Phase 6 - Preview-compatible workflow coverage
+
+Goal:
+
+- Add workflow test coverage only where the deployed preview surface can support it reliably.
+
+Tasks:
+
+- Identify workflows safe for non-destructive deployed visual coverage.
+- Identify workflows that need seeded data and cleanup before submit tests can be enabled.
+- Add preview-compatible visual smoke coverage for safe workflows.
+- Avoid deployed submit tests until deterministic seed and cleanup are in place.
+- Keep route evidence rich enough to prove the loaded state beyond URL/title/viewport.
+
+Completion criteria:
+
+- Workflow visual smoke tests cover only stable preview-compatible paths.
+- Any submit-style workflow tests have deterministic setup and cleanup.
+- Deployed smoke remains strict on hard failures while allowing documented partial-data warnings.
+
+### Phase 7 - API/data documentation
+
+Goal:
+
+- Make the data model and API behavior understandable enough to maintain.
+
+Tasks:
 
 - Document endpoint usage for every module.
-- Normalize data states across modules.
-- Audit modules that still show raw endpoint timeout messages directly to users.
-- Decide whether Knowledge should become API-backed.
-- Add explicit documentation for known partial-data behavior in staging.
+- Document Azure SQL schemas, tables, views, and ownership boundaries.
+- Document mutation flows and transaction expectations.
+- Document known partial-data behavior in staging.
+- Decide whether Knowledge becomes API-backed and document that decision.
+- Document local development seed data versus production database data.
 
-### Workstream 9 - UI consistency and design polish
+Completion criteria:
 
-Remaining:
+- Developers can trace each UI module to API endpoints and database objects.
+- Known staging limitations and partial-data behavior are explicit.
+- Fake/local data is documented as local-only where retained.
+
+### Phase 8 - UI consistency and desktop polish
+
+Goal:
+
+- Keep UI quality consistent while data and API behavior become more real.
+
+Tasks:
 
 - Normalize warning, error, and empty-state styling across modules.
 - Normalize date/timestamp, currency, percentage, and status formatting.
@@ -123,18 +298,39 @@ Remaining:
 - Polish admin tables and settings cards.
 - Remove or replace raw JSON dumps where they are not intentional debug output.
 
-### Workstream 10 - Test and artifact strategy
+Completion criteria:
 
-Remaining:
+- Desktop workflows remain visually coherent after API-backed data changes.
+- Raw debug output does not appear in user-facing production surfaces unless intentional.
 
-- Add a workflow visual smoke suite only if it matches the real preview surface.
-- Add responsive visual smoke coverage only where the preview surface can validate it reliably.
-- Keep deployed tests strict on hard failures while allowing documented partial-data warnings.
+### Phase 9 - Final test and artifact strategy
+
+Goal:
+
+- Make the validation suite prove the Azure SQL/API-backed app is stable.
+
+Tasks:
+
+- Align unit, API contract, and Playwright tests with Azure SQL-backed API contracts.
+- Add database migration/schema validation to CI if credentials and environment allow it.
+- Keep deployed visual tests focused on stable preview-compatible behavior.
+- Keep artifact screenshots and route evidence easy to inspect.
+- Split deployed jobs only if runtime or artifact readability becomes a problem.
+
+Completion criteria:
+
+- CI validates frontend, API contracts, role enforcement, and deployed route smoke.
+- Database setup validation is automated where environment access allows it.
+- Final artifacts prove routes and important workflows render with API-backed data.
 
 ## Suggested Next Execution Order
 
 1. Inspect the `deployed-web-playwright-report` artifact from run `28747284401`.
-2. Finish any remaining non-destructive workflow coverage.
-3. Continue the broader mobile/tablet redesign only if the preview surface can verify it cleanly.
-4. Document module data sources and partial-data behavior.
-5. Start backend role enforcement for high-risk mutations.
+2. Build the fake data inventory and module-to-endpoint/database matrix.
+3. Harden Azure SQL schema, views, migrations, and validation scripts.
+4. Convert API reads and mutations to Azure SQL-backed repository functions.
+5. Replace frontend production mock-data usage with API calls.
+6. Add backend role enforcement for high-risk mutations.
+7. Add preview-compatible workflow coverage with deterministic seed/cleanup only where safe.
+8. Document API/data ownership and staging partial-data behavior.
+9. Finish desktop UI consistency polish and final artifact strategy.
