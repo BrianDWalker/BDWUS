@@ -98,7 +98,12 @@ for (const [hash, heading] of [
   ["network", "Network Events"],
   ["service-management", "Service Management"],
   ["provisioning", "Provisioning"],
-  ["carrier-settlement", "Carrier Settlement"]
+  ["carrier-settlement", "Carrier Settlement"],
+  ["details/customer/CUST-1001", "Customer 360"],
+  ["details/billing-account/CUST-1001", "Customer 360"],
+  ["details/invoice/invoice-1", "Billing"],
+  ["details/order/order-1", "Orders"],
+  ["details/product/prod-1", "Product & Pricing"]
 ]) {
   test(`${hash} renders without console errors`, async ({ page }) => {
     const consoleErrors = [];
