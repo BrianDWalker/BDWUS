@@ -13,6 +13,7 @@
 .detail-hero-panel,
 .profile-hero,
 .invoice-brand {
+  position: relative;
   min-width: 0;
 }
 
@@ -126,7 +127,36 @@
   line-height: 1.4;
 }
 
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.panel .empty-state:first-child {
+  margin-top: 0;
+}
+
+.inline-search {
+  max-width: 100%;
+}
+
 .role-selector { flex: 0 0 auto; }
+
+@media (max-width: 920px) {
+  .record-main-layout,
+  .order-detail-layout,
+  .billing-detail-grid,
+  .customer360-layout,
+  .care-layout,
+  .orders-layout,
+  .ops-split,
+  .report-studio,
+  .field-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
 
 @media (max-width: 760px) {
   .content { padding: 14px 12px 20px !important; }
