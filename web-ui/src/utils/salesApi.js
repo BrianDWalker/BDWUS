@@ -69,6 +69,7 @@ export const updateQuoteLineItem = (quoteId, lineItemId, payload) => requestJson
 export const deleteQuoteLineItem = (quoteId, lineItemId) => requestJson(`/api/sales/quotes/${quoteId}/line-items/${lineItemId}`, { method: "DELETE" });
 export const priceQuote = (id, payload) => requestJson(`/api/sales/quotes/${id}/price`, { method: "POST", body: JSON.stringify(payload) });
 export const submitQuoteApproval = (id, payload) => requestJson(`/api/sales/quotes/${id}/submit-approval`, { method: "POST", body: JSON.stringify(payload) });
+export const convertQuoteToOrder = (id, payload = {}) => requestJson(`/api/sales/quotes/${id}/convert-to-order`, { method: "POST", body: JSON.stringify(payload) });
 
 export const listApprovals = () => requestJson("/api/sales/approvals");
 export const getApproval = id => requestJson(`/api/sales/approvals/${id}`);
