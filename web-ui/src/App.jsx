@@ -17,6 +17,7 @@ import RecordDetailModule from "./modules/details/RecordDetailModule";
 import BillingModule from "./modules/billing/BillingModule";
 import OrdersModule from "./modules/orders/OrdersModule";
 import ServiceOpsModule from "./modules/ops/ServiceOpsModule";
+import { SalesContractDetail, SalesLeadDetail, SalesModule, SalesOpportunityDetail, SalesQuoteDetail } from "./components/SalesDatabaseCRM";
 import { isExtractedRoute, normalizeRoute } from "./routeOwnership";
 
 function currentHashRoute() {
@@ -53,6 +54,7 @@ function Toast({ toast }) {
 function ExtractedRoute({ route, setRoute, showToast }) {
   if (route === "dashboard") return <DashboardModule setRoute={setRoute} showToast={showToast} />;
   if (route === "knowledge") return <KnowledgeModule setRoute={setRoute} showToast={showToast} />;
+  if (route === "sales") return <SalesModule setRoute={setRoute} showToast={showToast} />;
   if (route === "reports") return <ReportsModule setRoute={setRoute} showToast={showToast} />;
   if (route === "administration") return <AdministrationModule setRoute={setRoute} showToast={showToast} />;
   if (route === "product-pricing") return <ProductPricingModule setRoute={setRoute} showToast={showToast} />;
@@ -66,6 +68,10 @@ function ExtractedRoute({ route, setRoute, showToast }) {
   if (route.startsWith("details/product/")) return <ProductDetailModule id={detailId(route, "details/product/")} setRoute={setRoute} showToast={showToast} />;
   if (route.startsWith("details/product-pricing/")) return <ProductDetailModule id={detailId(route, "details/product-pricing/")} setRoute={setRoute} showToast={showToast} />;
   if (route.startsWith("details/ticket/")) return <CustomerServiceTicketDetail id={route.split("/")[2]} setRoute={setRoute} showToast={showToast} />;
+  if (route.startsWith("details/lead/")) return <SalesLeadDetail id={route.split("/")[2]} setRoute={setRoute} showToast={showToast} />;
+  if (route.startsWith("details/opportunity/")) return <SalesOpportunityDetail id={route.split("/")[2]} setRoute={setRoute} showToast={showToast} />;
+  if (route.startsWith("details/quote/")) return <SalesQuoteDetail id={route.split("/")[2]} setRoute={setRoute} showToast={showToast} />;
+  if (route.startsWith("details/contract/")) return <SalesContractDetail id={route.split("/")[2]} setRoute={setRoute} showToast={showToast} />;
   if (route.startsWith("details/network/")) return <NetworkDetailModule id={route.split("/")[2]} setRoute={setRoute} showToast={showToast} />;
   if (route.startsWith("details/record/")) return <RecordDetailModule id={route.split("/")[2]} setRoute={setRoute} showToast={showToast} />;
   if (route === "billing") return <BillingModule setRoute={setRoute} showToast={showToast} />;

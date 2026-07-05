@@ -69,6 +69,16 @@ Completed the route-evidence and smoke-alignment pass:
 - Added visual smoke coverage for the new detail pages
 - Removed a workflow smoke spec that did not match the static preview surface in this environment
 
+### API and data documentation
+
+Completed the API/data ownership documentation pass:
+
+- Added `docs/fc-gpt-phase-7-api-data-documentation.md`
+- Documented module-to-endpoint-to-Azure SQL ownership
+- Documented schema boundaries, mutation expectations, and partial-data behavior
+- Corrected the extracted Sales route graph so `sales` and sales detail routes are mounted from `App.jsx`
+- Captured remaining Knowledge partial-data and seed-maturity blockers
+
 ## Active Scope Notes
 
 - The main technical direction is to move away from fake/demo-only data and make Azure SQL Database the authoritative data source where practical.
@@ -332,6 +342,16 @@ Completion criteria:
 
 ### Phase 7 - API/data documentation
 
+Status:
+
+- Complete in `docs/fc-gpt-phase-7-api-data-documentation.md`.
+- The extracted Sales route graph was corrected while documenting branch ownership, so `sales` and the sales detail routes now render from `App.jsx`.
+- Remaining blockers are documented explicitly:
+  - Knowledge still lacks a partial-data warning path for knowledge-side `404` responses.
+  - Startup-time DDL and synthetic seed insertion still live inside API startup helpers.
+  - Multi-table writes still rely on inline transaction handling instead of one shared transaction helper.
+  - Active backend role enforcement still depends on role headers, not signed identity.
+
 Goal:
 
 - Make the data model and API behavior understandable enough to maintain.
@@ -342,7 +362,7 @@ Tasks:
 - Document Azure SQL schemas, tables, views, and ownership boundaries.
 - Document mutation flows and transaction expectations.
 - Document known partial-data behavior in staging.
-- Decide whether Knowledge becomes API-backed and document that decision.
+- Document the Knowledge ownership decision and keep the module API-backed.
 - Document local development seed data versus production database data.
 
 Completion criteria:

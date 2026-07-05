@@ -1,6 +1,7 @@
 export const extractedRoutes = [
   "dashboard",
   "knowledge",
+  "sales",
   "reports",
   "administration",
   "product-pricing",
@@ -40,6 +41,10 @@ export function detailType(route) {
 
 export function isExtractedRoute(route) {
   return extractedRoutes.includes(route)
+    || route.startsWith("details/lead/")
+    || route.startsWith("details/opportunity/")
+    || route.startsWith("details/quote/")
+    || route.startsWith("details/contract/")
     || route.startsWith("details/customer/")
     || route.startsWith("details/account/")
     || route.startsWith("details/billing-account/")
