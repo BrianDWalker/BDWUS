@@ -26,6 +26,11 @@ GitHub/Azure validation needs these values configured outside the repo:
 | Setting | Purpose |
 | --- | --- |
 | `VITE_SALES_API_BASE_URL` | Frontend API base URL for the FastAPI service |
+| `SQL_SCHEMA_VALIDATION_ENABLED` | Repository variable gate for the live Azure SQL schema-validation CI job in `fc-gpt Validation` |
+| `SQL_SERVER` | Optional repository variable overriding the Azure SQL server for schema validation |
+| `SQL_DATABASE` | Optional repository variable overriding the Azure SQL database for schema validation |
+| `SQL_USER` or `SQL_USERNAME` | GitHub Actions secret for SQL-auth schema validation |
+| `SQL_PASSWORD` | GitHub Actions secret for SQL-auth schema validation |
 | Azure deployment credentials | Required by Azure deployment workflows |
 | Azure Container Registry settings | Required if backend images are built and pushed |
 | Azure SQL connection settings | Required by backend runtime and integration tests |
@@ -47,6 +52,8 @@ The `fc-gpt Validation` workflow and the `Platform Build Validation` workflow ar
 `fc-gpt Validation` also runs deployed frontend browser smoke by default against `https://polite-cliff-080b22c0f-previewgpt.eastus2.7.azurestaticapps.net`, the Static Web App preview environment for the `fc-gpt` branch. Set `STAGING_WEB_BASE_URL` only when the workflow should validate a different deployed frontend.
 
 `fc-gpt Validation` also runs a Chromium route smoke suite from `web-ui/tests/portal-routes.spec.js`. That suite mocks API payloads and verifies the extracted routes render without browser console errors. It is not a replacement for live staging, but it gives GitHub-visible runtime evidence for the React route layer.
+
+When the repository variable `SQL_SCHEMA_VALIDATION_ENABLED=true` is present, `fc-gpt Validation` also runs the live Azure SQL validator at `pricing-microservice/scripts/validate_phase2_schema.py`. That job installs the Microsoft ODBC driver, connects with `SQL_USER`/`SQL_PASSWORD` (or `SQL_USERNAME`/`SQL_PASSWORD`) secrets, and verifies the Phase 2 schemas, views, columns, row-count floors, and migration marker against the configured Azure SQL target.
 
 ```bash
 cd web-ui

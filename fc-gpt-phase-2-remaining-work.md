@@ -404,6 +404,18 @@ Completion criteria:
 
 ### Phase 9 - Final test and artifact strategy
 
+Status:
+
+- Complete for the current branch CI/documentation scope.
+- `fc-gpt Validation` now includes an optional live Azure SQL schema-validation job gated by repository variable `SQL_SCHEMA_VALIDATION_ENABLED`.
+- The schema-validation job installs the Microsoft ODBC driver and runs `pricing-microservice/scripts/validate_phase2_schema.py` against the configured Azure SQL target using SQL-auth GitHub secrets when enabled.
+- Validation documentation and the final verification checklist now reflect the current extracted route ownership and current accepted gaps instead of the older LegacyPortal-era assumptions.
+- Remaining blockers are documented explicitly:
+  - Live schema validation in GitHub Actions still depends on repository-side variables/secrets being configured.
+  - Deployed submit-style workflow coverage remains blocked by deterministic preview seed/cleanup gaps.
+  - Backend identity enforcement still relies on role headers rather than signed identity.
+  - Startup-time DDL/seed behavior and remaining JSON-textarea editors still need follow-through work outside this phase.
+
 Goal:
 
 - Make the validation suite prove the Azure SQL/API-backed app is stable.
@@ -421,6 +433,72 @@ Completion criteria:
 - CI validates frontend, API contracts, role enforcement, and deployed route smoke.
 - Database setup validation is automated where environment access allows it.
 - Final artifacts prove routes and important workflows render with API-backed data.
+
+## Consolidated Remaining Work
+
+This section is the current source of truth for everything still uncompleted across Phases 1 through 8. It intentionally excludes new execution under Phase 9 for now.
+
+### Ready to implement next
+
+These items are not blocked. They remain open simply because they have not yet been completed.
+
+- Replace startup-time DDL and synthetic seed insertion in API startup helpers with explicit migration/bootstrap steps that can be run outside app startup.
+- Expand shared transaction helper adoption beyond Sales lead conversion to other multi-table write flows.
+- Replace remaining JSON textarea editors with dedicated field-based forms where the payload structure is now stable enough to model directly.
+- Continue reducing local `statusTone` helper duplication where a shared rule set is appropriate and the remaining modules do not require genuinely different status semantics.
+- Add deterministic preview seed data, cleanup APIs or cleanup SQL, and isolated test namespaces needed to safely enable submit-style workflow coverage later.
+
+### Still blocked or deliberately deferred
+
+These items are open because they depend on a larger architectural decision, new environment support, or an intentional scope boundary.
+
+- Backend identity enforcement still depends on `X-User-Role` / `X-Demo-Role` headers instead of signed identity, sessions, or user-profile-backed authorization.
+- Deployed submit-style workflow tests remain blocked until deterministic seed/cleanup support exists for preview environments.
+- Broader mobile/tablet redesign remains intentionally out of scope per current project direction.
+
+### Phase-by-phase open items
+
+#### Phase 1
+
+- No active blocker remains from the inventory/migration-map phase.
+- Ongoing follow-through item: keep newly discovered fake-data usage isolated to legacy or test-only paths instead of reintroducing it into active production routes.
+
+#### Phase 2
+
+- No current Azure SQL schema blocker is known from this phase.
+- Ongoing follow-through item: keep new table/view/index changes source-controlled and validated against the live target before API features depend on them.
+
+#### Phase 3
+
+- Remaining implementation item: broaden `sql_transaction()` adoption to the rest of the write paths that still manage commits and rollbacks inline.
+- Remaining architecture item: continue tightening CRUD contract coverage so new or refactored endpoints land with response-shape and failure-path tests by default.
+
+#### Phase 4
+
+- Remaining hygiene item: continue preventing active production routes from importing local fixture data directly.
+- Remaining UX item: keep partial-data, empty-state, and hard-error behavior consistent as additional API-backed modules evolve.
+
+#### Phase 5
+
+- Remaining blocker: move from header-based demo/backend role resolution to a real identity-backed authorization source.
+- Remaining follow-through item: keep frontend role signaling aligned with backend enforcement until identity-backed auth replaces the current headers.
+
+#### Phase 6
+
+- Remaining blocker: submit-style deployed workflow coverage is still blocked by missing deterministic seed IDs, cleanup support, and isolated preview test namespaces.
+- Remaining documentation item: keep the blocked submit-workflow list current as new workflow surfaces are added or unblocked.
+
+#### Phase 7
+
+- Remaining implementation item: remove startup-time DDL and synthetic seed insertion from API startup helpers.
+- Remaining implementation item: extend shared transaction handling across the broader mutation surface.
+- Remaining blocker: backend auth still relies on role headers rather than signed identity.
+
+#### Phase 8
+
+- Remaining implementation item: replace JSON textarea editing experiences where the data shape is stable and user-facing forms are feasible.
+- Remaining deferred scope item: broader mobile/tablet redesign stays out of scope.
+- Remaining consistency item: finish consolidating status-tone handling only where domain-specific local behavior is not actually needed.
 
 ## Suggested Next Execution Order
 

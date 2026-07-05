@@ -8,6 +8,7 @@ Use this checklist before calling `fc-gpt` ready for demo or release review.
 - [ ] Confirm web UI build passed.
 - [ ] Confirm web route smoke passed.
 - [ ] Confirm pricing microservice compile/tests passed.
+- [ ] Confirm Azure SQL schema validation passed, or confirm it was intentionally skipped because `SQL_SCHEMA_VALIDATION_ENABLED` is not enabled for this repo/environment.
 - [ ] Confirm full platform runtime smoke passed.
 - [ ] Confirm assistant-service tests passed.
 - [ ] Confirm full platform staging smoke passed.
@@ -76,8 +77,8 @@ Check staging payloads for casing and collection names:
 
 Do not block internal review on these unless the release scope changes:
 
-- `dashboard` still uses LegacyPortal.
-- `knowledge` still uses LegacyPortal.
-- Ticket, network, record, and unknown stale detail routes still use fallback detail rendering.
-- Customer Service ticket creation is a UI draft action only.
-- Live quote-to-order persistence handoff is not fully implemented yet.
+- Backend authorization still derives roles from `X-User-Role` / `X-Demo-Role` headers rather than signed identity or session-backed auth.
+- Some mutation/edit workflows still expose JSON textarea fields where dedicated field-by-field editors have not been built yet.
+- Deployed submit-style workflow smoke remains intentionally blocked until deterministic preview seed IDs, cleanup support, and isolated test namespaces exist.
+- API startup still contains runtime DDL/seed behavior that should move to explicit migration/bootstrap steps.
+- Broader mobile/tablet redesign remains outside the current completion scope.
