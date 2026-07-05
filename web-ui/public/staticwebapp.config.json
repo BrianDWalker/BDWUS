@@ -1,6 +1,6 @@
 {
   "globalHeaders": {
-    "Cache-Control": "public, max-age=300, stale-while-revalidate=86400",
+    "Cache-Control": "no-store, max-age=0, must-revalidate",
     "X-Content-Type-Options": "nosniff",
     "X-Robots-Tag": "index, follow"
   },
