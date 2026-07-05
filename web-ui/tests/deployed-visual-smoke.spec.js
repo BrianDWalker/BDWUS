@@ -86,6 +86,9 @@ function captureConsoleErrors(page) {
 async function attachRouteEvidence(testInfo, page, name, consoleErrors) {
   await page.waitForTimeout(SCREENSHOT_SETTLE_MS);
   const screenshot = await page.screenshot({ fullPage: true });
+  const activeGroup = await page.locator(".topnav-brand-copy span").textContent().catch(() => "");
+  const activeRole = await page.getByLabel("Active permission role").inputValue().catch(() => "");
+  const mainHeading = await page.getByRole("heading", { level: 1 }).first().textContent().catch(() => "");
   await testInfo.attach(`${name}-screenshot`, {
     body: screenshot,
     contentType: "image/png"
@@ -95,6 +98,9 @@ async function attachRouteEvidence(testInfo, page, name, consoleErrors) {
       url: page.url(),
       title: await page.title(),
       viewport: page.viewportSize(),
+      activeGroup,
+      activeRole,
+      mainHeading,
       consoleErrors
     }, null, 2),
     contentType: "application/json"

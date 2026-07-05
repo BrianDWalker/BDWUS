@@ -99,7 +99,7 @@ async function mockApi(page) {
 }
 
 for (const [hash, heading] of [
-  ["dashboard", "Workday Command Center"],
+  ["dashboard", "Home"],
   ["knowledge", "Knowledge"],
   ["reports", "Reports"],
   ["administration", "Administration"],
