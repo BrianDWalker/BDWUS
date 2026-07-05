@@ -3,6 +3,7 @@ import { PageHeader } from "../../components/Shell";
 import { Icon } from "../../components/Icons";
 import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "../../components/Primitives";
 import { fetchCustomerServiceOverview } from "../../utils/platformApi";
+import { arrayField, normalizeNetworkEvent, normalizeTicket } from "../../utils/payloadMapping";
 
 function contains(row, query, keys) {
   const needle = String(query || "").trim().toLowerCase();
@@ -16,6 +17,14 @@ function tone(value) {
   return "blue";
 }
 
+function normalizeSummary(summary = {}, tickets = []) {
+  const networkTicketCount = summary.networkTicketCount ?? summary.NetworkTicketCount ?? tickets.filter(row => row.Category === "Network").length;
+  const billingTicketCount = summary.billingTicketCount ?? summary.BillingTicketCount ?? tickets.filter(row => row.Category === "Billing").length;
+  const openTicketCount = summary.openTicketCount ?? summary.OpenTicketCount ?? tickets.filter(row => row.Status !== "Closed").length;
+  const averageAgeHours = summary.averageAgeHours ?? summary.AverageAgeHours ?? Math.round(tickets.reduce((sum, row) => sum + Number(row.AgeHours || 0), 0) / Math.max(tickets.length, 1));
+  return { openTicketCount, networkTicketCount, billingTicketCount, averageAgeHours };
+}
+
 export default function CustomerServiceModule({ setRoute, showToast }) {
   const [data, setData] = useState({ tickets: [], customerReportedOutages: [], summary: {} });
   const [query, setQuery] = useState("");
@@ -27,11 +36,9 @@ export default function CustomerServiceModule({ setRoute, showToast }) {
     setError("");
     try {
       const overview = await fetchCustomerServiceOverview();
-      setData({
-        tickets: overview.tickets || [],
-        customerReportedOutages: overview.customerReportedOutages || [],
-        summary: overview.summary || {}
-      });
+      const tickets = arrayField(overview, "tickets", "Tickets").map(normalizeTicket);
+      const customerReportedOutages = arrayField(overview, "customerReportedOutages", "CustomerReportedOutages", "networkEvents", "NetworkEvents").map(normalizeNetworkEvent);
+      setData({ tickets, customerReportedOutages, summary: normalizeSummary(overview.summary || overview.Summary, tickets) });
     } catch (err) {
       setError(err.message || "Unable to load customer service data.");
     } finally {
@@ -48,7 +55,7 @@ export default function CustomerServiceModule({ setRoute, showToast }) {
   }, [data.tickets, query]);
 
   function captureDraft() {
-    const next = {
+    const next = normalizeTicket({
       TicketId: `draft-${Date.now()}`,
       TicketNumber: `TKT-DRAFT-${(data.tickets.length + 1).toString().padStart(3, "0")}`,
       CustomerNumber: "Draft",
@@ -59,7 +66,7 @@ export default function CustomerServiceModule({ setRoute, showToast }) {
       Status: "Draft",
       AgeHours: 0,
       OwnerName: "Care Ops"
-    };
+    });
     setData(current => ({ ...current, tickets: [next, ...current.tickets], summary: { ...current.summary, openTicketCount: Number(current.summary.openTicketCount || 0) + 1 } }));
     showToast?.("Ticket draft captured");
   }
