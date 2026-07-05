@@ -22,18 +22,29 @@ Added frontend API client support in `web-ui/src/utils/salesApi.js`:
 
 - `convertQuoteToOrder(id, payload)`
 
+Added visible Sales UI support in `web-ui/src/SalesAppRouter.jsx`:
+
+- Quote detail routes render `Create Order from Quote`.
+- The action calls `convertQuoteToOrder`.
+- On success, the UI shows a toast and routes to Orders.
+- On failure, the UI shows the error message as a toast.
+
+Added styling in `web-ui/src/quote-to-order.css` and imported it from `web-ui/src/main.jsx`.
+
 Added backend contract tests in `pricing-microservice/tests/test_quote_to_order_contract.py`:
 
 - route registration
 - quote/order payload context derivation
 - rejection of non-approved quotes
 
-## Could not complete from here
+Added browser smoke coverage in `web-ui/tests/sales-quote-action.spec.js`:
 
-- I did not add a visible Sales UI button because `SalesDatabaseCRM.jsx` is a large high-risk full-file replacement through the connector without local test execution.
-- A small browser-side handoff test was attempted, but the connector safety filter blocked creation.
-- The endpoint still needs GitHub Actions confirmation and live staging proof.
+- quote detail route exposes the create-order action
+- action calls the mocked handoff endpoint
+- success toast is displayed
 
-## Recommended next small follow-up
+## Still not completed from here
 
-After CI is checked, add a visible `Create Order` action for approved quotes in `SalesDatabaseCRM.jsx` and wire it to `convertQuoteToOrder`. Then update the full-chain browser test to use that button instead of standalone order creation.
+- I still cannot confirm GitHub Actions pass/fail status from this chat.
+- I still cannot prove the endpoint against live staging data from this chat.
+- The original full-chain browser spec still uses standalone order creation; it should be updated later to use the visible quote-to-order button once CI is available.
