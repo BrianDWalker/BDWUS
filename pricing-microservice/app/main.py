@@ -32,7 +32,7 @@ from app.services.assistant import (
     reject_change_request,
 )
 from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
-from app.services.customer_service import router as customer_service_router
+from app.services.customer_service import ensure_customer_service_storage, router as customer_service_router
 from app.services.ops import admin_router, billing_workflow_router, ensure_ops_storage, ops_router
 from app.services.ops_write import admin_write_router, billing_write_router, ops_write_router
 from app.services.platform import router as platform_router
@@ -100,6 +100,7 @@ def startup_assistant_storage():
     ensure_ai_storage()
     init_sales()
     ensure_ops_storage()
+    ensure_customer_service_storage()
 
 
 @app.get("/")
@@ -146,6 +147,7 @@ def ready():
                 "assistantStorage": True,
                 "salesStorage": True,
                 "opsStorage": True,
+                "careStorage": True,
             },
             "details": {
                 "mode": "PLATFORM_RUNTIME_SMOKE_MODE",
@@ -161,6 +163,7 @@ def ready():
         "assistantStorage": False,
         "salesStorage": False,
         "opsStorage": False,
+        "careStorage": False,
     }
     details = {
         "sqlServer": SQL_SERVER,
@@ -188,6 +191,9 @@ def ready():
 
             cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ops' AND TABLE_NAME = 'Orders'")
             checks["opsStorage"] = cursor.fetchone() is not None
+
+            cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'care' AND TABLE_NAME = 'Tickets'")
+            checks["careStorage"] = cursor.fetchone() is not None
         finally:
             conn.close()
     except Exception as exc:
@@ -226,106 +232,38 @@ def health_sales():
 
 @app.get("/health/pricing-context")
 def health_pricing_context():
-    conn = get_sql_connection()
     try:
-        row = conn.cursor().execute(f"SELECT TOP 1 * FROM {BILLING_CONTEXT_OBJECT}").fetchone()
+        conn = get_sql_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT TOP 1 * FROM {BILLING_CONTEXT_OBJECT}")
+            columns = [column[0] for column in cursor.description]
+            row = cursor.fetchone()
+        finally:
+            conn.close()
+    except Exception as exc:
         return {
-            "status": "healthy",
+            "status": "error",
+            "sqlServer": SQL_SERVER,
+            "sqlDatabase": SQL_DATABASE,
             "billingContextObject": BILLING_CONTEXT_OBJECT,
-            "sampleRowFound": row is not None,
+            "error": str(exc),
         }
-    finally:
-        conn.close()
 
+    if not row:
+        return {
+            "status": "empty",
+            "sqlServer": SQL_SERVER,
+            "sqlDatabase": SQL_DATABASE,
+            "billingContextObject": BILLING_CONTEXT_OBJECT,
+            "columns": columns,
+        }
 
-@app.post("/quotes", response_model=QuoteCreateResponse)
-def post_quote(request: QuoteCreateRequest):
-    return create_quote(request)
-
-
-@app.post("/quotes/{quote_id}/reprice", response_model=QuoteCreateResponse)
-def post_quote_reprice(quote_id: UUID, request: QuoteReviseRequest):
-    return revise_quote(quote_id, request)
-
-
-@app.get("/quotes/{quote_id}/history")
-def quote_history(quote_id: UUID):
-    return get_quote_history(quote_id)
-
-
-@app.get("/opportunities/{opportunity_id}")
-def opportunity_latest(opportunity_id: UUID):
-    return get_opportunity_latest(opportunity_id)
-
-
-@app.get("/opportunities", response_model=list[OpportunityListItem])
-def opportunities():
-    return list_opportunities()
-
-
-@app.get("/opportunities/{opportunity_id}/details", response_model=OpportunityDetailsResponse)
-def opportunity_details(opportunity_id: UUID):
-    return get_opportunity_details(opportunity_id)
-
-
-@app.post("/opportunities/{opportunity_id}/reprice", response_model=QuoteCreateResponse)
-def opportunity_reprice(opportunity_id: UUID):
-    return reprice_opportunity(opportunity_id)
-
-
-@app.get("/customers/options", response_model=CustomerMetadataOptionsResponse)
-def customer_options():
-    return get_customer_metadata_options()
-
-
-@app.get("/customers/{customer_number}", response_model=CustomerProfileResponse)
-def customer_lookup(customer_number: str):
-    customer = lookup_customer_profile(customer_number)
-    if not customer:
-        raise HTTPException(status_code=404, detail="Customer not found in context view")
-    return customer
-
-
-@app.post("/assistant/chat", response_model=AssistantChatResponse)
-def assistant_chat(request: AssistantChatRequest):
-    return chat(request)
-
-
-@app.get("/assistant/ui-overrides", response_model=list[AssistantUiOverride])
-def assistant_ui_overrides(page: str | None = None, slot: str | None = None):
-    return list_ui_overrides(page=page, slot=slot)
-
-
-@app.post("/assistant/change-requests")
-def assistant_change_request(request: AssistantChangeRequest):
-    return get_change_request(request)
-
-
-@app.post("/assistant/change-requests/{change_id}/approve")
-def assistant_approve_change(change_id: UUID, request: AssistantApprovalRequest):
-    return approve_change_request(change_id, request)
-
-
-@app.post("/assistant/change-requests/{change_id}/reject")
-def assistant_reject_change(change_id: UUID, request: AssistantApprovalRequest):
-    return reject_change_request(change_id, request)
-
-
-@app.get("/assistant/github/branches")
-def assistant_github_branches():
-    return get_github_branches()
-
-
-@app.get("/assistant/github/tree")
-def assistant_github_tree(ref: str = "main"):
-    return get_github_tree(ref)
-
-
-@app.get("/assistant/github/file")
-def assistant_github_file(path: str, ref: str = "main"):
-    return get_github_file(path, ref)
-
-
-@app.get("/assistant/github/commits")
-def assistant_github_commits(branch: str = "main", limit: int = 20):
-    return get_github_commits(branch, limit)
+    return {
+        "status": "healthy",
+        "sqlServer": SQL_SERVER,
+        "sqlDatabase": SQL_DATABASE,
+        "billingContextObject": BILLING_CONTEXT_OBJECT,
+        "columns": columns,
+        "sample": dict(zip(columns, row)),
+    }
