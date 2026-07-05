@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./fetchTimeout";
+
 const DEFAULT_OPS_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
 
 const opsApiBase = (
@@ -12,7 +14,7 @@ function url(path) {
 }
 
 async function requestJson(path, options = {}) {
-  const response = await fetch(url(path), {
+  const response = await fetchWithTimeout(url(path), {
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options
   });
@@ -42,4 +44,4 @@ export const createAdminUser = payload => postJson('/api/admin/users', payload);
 export const createAdminRole = payload => postJson('/api/admin/roles', payload);
 export const createAdminIntegration = payload => postJson('/api/admin/integrations', payload);
 export const createInvoiceAction = (invoiceId, payload) => postJson(`/api/billing-workflows/invoices/${encodeURIComponent(invoiceId)}/actions`, payload);
-export const createBillingAdjustment = payload => postJson('/api/billing-workflows/adjustments', payload);
+export const createBillingAdjustment = payload => postJson('/api/billing-workflows/adjustments');
