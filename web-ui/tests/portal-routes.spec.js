@@ -28,12 +28,16 @@ async function mockApi(page) {
 
     if (method !== "GET") {
       body = { id: "created", status: "ok" };
+    } else if (path === "/api/platform/bootstrap") {
+      body = { dashboard: { PipelineValue: 10000, QuoteMrcValue: 1200, OpportunityCount: 1, QuoteCount: 1 }, customers, opportunities: [{ OpportunityId: "opp-1" }], quotes: [{ QuoteId: "quote-1" }], approvals: [] };
     } else if (path === "/api/platform/customer-service/overview") {
       body = {
-        tickets: [{ TicketId: "ticket-1", TicketNumber: "TKT-1001", CustomerNumber: "CUST-1001", AccountName: "Apex Health", IssueType: "Network outage", Category: "Network", Priority: "Urgent", Status: "Open", AgeHours: 18, OwnerName: "Care Ops" }],
+        tickets: [{ TicketId: "ticket-1", TicketNumber: "TKT-1001", CustomerNumber: "CUST-1001", AccountName: "Apex Health", IssueType: "Network outage", Category: "Network", Priority: "Urgent", Status: "Open", AgeHours: 18, OwnerName: "Care Ops", EscalationLevel: "Tier 2" }],
         customerReportedOutages: [{ EventId: "event-1", EventNumber: "NE-1001", Market: "Midwest", Type: "Capacity", Impacted: "Apex Health", Severity: "Major", Status: "Open", SlaExposure: 25000 }],
-        summary: { openTicketCount: 1, networkTicketCount: 1, billingTicketCount: 0, averageAgeHours: 18 }
+        summary: { openTicketCount: 1, networkTicketCount: 1, billingTicketCount: 0, averageAgeHours: 18, escalatedTicketCount: 1 }
       };
+    } else if (path === "/api/platform/customer-service/tickets/ticket-1") {
+      body = { ticket: { TicketId: "ticket-1", TicketNumber: "TKT-1001", AccountName: "Apex Health", IssueType: "Network outage", Status: "Open", Priority: "Urgent", OwnerName: "Care Ops" }, notes: [{ NoteType: "Created", Note: "Initial context", CreatedBy: "Care Ops" }] };
     } else if (path === "/api/platform/reports/definitions") {
       body = [{ id: "executive-scorecard", name: "Executive scorecard", area: "Executive", description: "Pipeline and revenue." }];
     } else if (path === "/api/platform/reports/executive-scorecard") {
@@ -95,6 +99,8 @@ async function mockApi(page) {
 }
 
 for (const [hash, heading] of [
+  ["dashboard", "Home"],
+  ["knowledge", "Knowledge"],
   ["reports", "Reports"],
   ["administration", "Administration"],
   ["product-pricing", "Product & Pricing"],
@@ -110,7 +116,10 @@ for (const [hash, heading] of [
   ["details/billing-account/CUST-1001", "Customer 360"],
   ["details/invoice/invoice-1", "Billing"],
   ["details/order/order-1", "Orders"],
-  ["details/product/prod-1", "Product & Pricing"]
+  ["details/product/prod-1", "Product & Pricing"],
+  ["details/ticket/ticket-1", "TKT-1001"],
+  ["details/network/event-1", "NE-1001"],
+  ["details/record/admin:USR-1001", "Record Detail"]
 ]) {
   test(`${hash} renders without console errors`, async ({ page }) => {
     const consoleErrors = [];
