@@ -3,10 +3,14 @@ import { PageHeader } from "../../components/Shell";
 import { DataTable, MetricCard, Panel, StatusTag } from "../../components/Primitives";
 import { fetchOpsBootstrap, fetchOrders, fetchProvisioningJobs } from "../../utils/opsApi";
 import { createOrder, createProvisioningJob, updateOrder } from "../../utils/opsMutations";
+import { arrayField, normalizeOrder, normalizeProvisioningJob } from "../../utils/payloadMapping";
 
 function statusTone(status) {
   return ["Completed", "Validated"].includes(status) ? "success" : ["Blocked", "Pending Network", "Provisioning", "In Progress"].includes(status) ? "warn" : "blue";
 }
+
+const normalizeOrders = rows => (rows || []).map(normalizeOrder);
+const normalizeJobs = rows => (rows || []).map(normalizeProvisioningJob);
 
 export default function OrdersModule({ showToast }) {
   const [orders, setOrders] = useState([]);
@@ -20,8 +24,8 @@ export default function OrdersModule({ showToast }) {
     setError("");
     try {
       const bootstrap = await fetchOpsBootstrap();
-      setOrders(bootstrap.orders || []);
-      setJobs(bootstrap.provisioningJobs || []);
+      setOrders(normalizeOrders(arrayField(bootstrap, "orders", "Orders")));
+      setJobs(normalizeJobs(arrayField(bootstrap, "provisioningJobs", "ProvisioningJobs", "jobs")));
     } catch (err) {
       setError(err.message || "Unable to load orders.");
     } finally {
@@ -37,7 +41,7 @@ export default function OrdersModule({ showToast }) {
     setSaving(true);
     try {
       await createOrder({ accountName: "New Customer", serviceName: "Fiber 1G", lifecycleStage: "Design", overallStatus: "Draft", slaStatus: "On Track" });
-      setOrders(await fetchOrders());
+      setOrders(normalizeOrders(await fetchOrders()));
       showToast?.("Sample order created");
     } catch (err) {
       setError(err.message || "Unable to create order.");
@@ -52,8 +56,8 @@ export default function OrdersModule({ showToast }) {
       await updateOrder(order.OrderId, { lifecycleStage: "Provisioning", overallStatus: "Provisioning", slaStatus: order.SlaStatus || "On Track" });
       await createProvisioningJob({ orderId: order.OrderId, jobType: "Provisioning", ownerName: order.AssignedTeam || "Provisioning Ops", status: "Queued" });
       const [orderRows, jobRows] = await Promise.all([fetchOrders(), fetchProvisioningJobs()]);
-      setOrders(orderRows || []);
-      setJobs(jobRows || []);
+      setOrders(normalizeOrders(orderRows));
+      setJobs(normalizeJobs(jobRows));
       showToast?.("Order moved to provisioning");
     } catch (err) {
       setError(err.message || "Unable to update order.");
