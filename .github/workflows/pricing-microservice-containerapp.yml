@@ -23,7 +23,6 @@ jobs:
       CONTAINER_APP_NAME: "bdwusca"
       ACR_NAME: "bdwuscr"
       ACR_LOGIN_SERVER: "bdwuscr.azurecr.io"
-      STAGING_API_BASE_URL: "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -60,7 +59,12 @@ jobs:
       - name: Smoke check deployed API
         run: |
           set -euo pipefail
-          base="${STAGING_API_BASE_URL%/}"
+          revision_fqdn="$(az containerapp show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$CONTAINER_APP_NAME" \
+            --query properties.latestRevisionFqdn \
+            --output tsv)"
+          base="https://${revision_fqdn%/}"
           endpoints=(
             "/health"
             "/health/ready"
