@@ -211,6 +211,16 @@ Completion criteria:
 
 ### Phase 4 - Frontend API integration and mock-data removal
 
+Status:
+
+- Complete in `docs/fc-gpt-phase-4-frontend-api-integration.md`.
+- Moved active shell navigation out of `web-ui/src/data/mockData.js` and into `web-ui/src/navigationConfig.js`.
+- Removed the production `LegacyPortal` fallback from `App.jsx`.
+- Active production routes now render extracted/API-backed modules or an API-backed unknown-route state.
+- Route ownership tests now import navigation from the real navigation config, not mock data.
+- Current emitted JavaScript bundle has no `mockData`, `LegacyPortal`, or old fixture-data string matches.
+- Blocker: retired source files `web-ui/src/LegacyPortal.jsx` and `web-ui/src/components/SalesCRM.jsx` still import `web-ui/src/data/mockData.js`, but they are no longer imported by the production route graph.
+
 Goal:
 
 - Move production UI workflows off local mock data and onto API-backed data loading.
