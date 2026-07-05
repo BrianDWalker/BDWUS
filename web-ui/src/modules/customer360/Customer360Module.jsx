@@ -3,9 +3,33 @@ import { PageHeader } from "../../components/Shell";
 import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "../../components/Primitives";
 import { fetchCustomer360 } from "../../utils/platformApi";
 import { getBillingCustomer, listBillingCustomers } from "../../utils/salesApi";
+import { arrayField, normalizeCustomer } from "../../utils/payloadMapping";
 
 function pickCustomerNumber(row) {
   return row?.CustomerNumber || row?.customerNumber || row?.id;
+}
+
+function normalizeCommercial(row = {}, type) {
+  return {
+    id: row.AccountId || row.accountId || row.OpportunityId || row.opportunityId || row.QuoteId || row.quoteId || row.ContractId || row.contractId || row.id,
+    type,
+    name: row.AccountName || row.accountName || row.AccountNameResolved || row.accountNameResolved || row.OpportunityName || row.opportunityName || row.QuoteNumber || row.quoteNumber || row.ContractNumber || row.contractNumber || row.Title || row.title,
+    status: row.Status || row.status || row.ApprovalStatus || row.approvalStatus,
+    amount: row.EstimatedValue ?? row.estimatedValue ?? row.TotalMrc ?? row.totalMrc ?? row.ContractValue ?? row.contractValue
+  };
+}
+
+function normalizeLocation(row = {}) {
+  return {
+    ...row,
+    ServiceLocationId: row.ServiceLocationId || row.serviceLocationId || row.id,
+    LocationName: row.LocationName || row.locationName || row.name,
+    AddressLine1: row.AddressLine1 || row.addressLine1 || row.address,
+    City: row.City || row.city,
+    StateProvince: row.StateProvince || row.stateProvince || row.state,
+    ServiceabilityType: row.ServiceabilityType || row.serviceabilityType || row.serviceability,
+    Status: row.Status || row.status
+  };
 }
 
 export default function Customer360Module({ setRoute, showToast }) {
@@ -23,8 +47,9 @@ export default function Customer360Module({ setRoute, showToast }) {
     listBillingCustomers()
       .then(rows => {
         if (!active) return;
-        setCustomers(rows || []);
-        setSelectedCustomer(pickCustomerNumber(rows?.[0]) || "");
+        const normalized = (rows || []).map(normalizeCustomer);
+        setCustomers(normalized);
+        setSelectedCustomer(pickCustomerNumber(normalized?.[0]) || "");
       })
       .catch(err => {
         if (active) setError(err.message || "Unable to load customers.");
@@ -45,8 +70,8 @@ export default function Customer360Module({ setRoute, showToast }) {
     Promise.all([fetchCustomer360(selectedCustomer), getBillingCustomer(selectedCustomer)])
       .then(([customerPayload, billingPayload]) => {
         if (!active) return;
-        setCustomer360(customerPayload);
-        setCustomerProfile(billingPayload);
+        setCustomer360(customerPayload || {});
+        setCustomerProfile(normalizeCustomer(billingPayload || {}));
       })
       .catch(err => {
         if (active) setError(err.message || "Unable to load customer 360.");
@@ -59,18 +84,18 @@ export default function Customer360Module({ setRoute, showToast }) {
     };
   }, [selectedCustomer, reloadKey]);
 
-  const customer = customer360?.customer || customerProfile || {};
-  const opportunities = customer360?.opportunities || [];
-  const quotes = customer360?.quotes || [];
-  const contracts = customer360?.contracts || [];
-  const locations = customer360?.serviceLocations || [];
-  const accountRows = customer360?.accounts || [];
+  const customer = normalizeCustomer(customer360?.customer || customer360?.Customer || customerProfile || {});
+  const opportunities = arrayField(customer360, "opportunities", "Opportunities");
+  const quotes = arrayField(customer360, "quotes", "Quotes");
+  const contracts = arrayField(customer360, "contracts", "Contracts");
+  const locations = arrayField(customer360, "serviceLocations", "ServiceLocations", "locations").map(normalizeLocation);
+  const accountRows = arrayField(customer360, "accounts", "Accounts");
   const customerOptions = useMemo(() => customers.map(row => ({ number: pickCustomerNumber(row), name: row.CustomerName || row.customerName || row.name || pickCustomerNumber(row) })).filter(item => item.number), [customers]);
   const commercialRows = [
-    ...accountRows.map(row => ({ id: row.AccountId, type: "Account", name: row.AccountName || row.AccountNameResolved, status: row.Status, amount: row.EstimatedValue })),
-    ...opportunities.map(row => ({ id: row.OpportunityId, type: "Opportunity", name: row.OpportunityName, status: row.Status, amount: row.EstimatedValue })),
-    ...quotes.map(row => ({ id: row.QuoteId, type: "Quote", name: row.QuoteNumber, status: row.Status || row.ApprovalStatus, amount: row.TotalMrc })),
-    ...contracts.map(row => ({ id: row.ContractId, type: "Contract", name: row.ContractNumber || row.Title, status: row.Status, amount: row.ContractValue }))
+    ...accountRows.map(row => normalizeCommercial(row, "Account")),
+    ...opportunities.map(row => normalizeCommercial(row, "Opportunity")),
+    ...quotes.map(row => normalizeCommercial(row, "Quote")),
+    ...contracts.map(row => normalizeCommercial(row, "Contract"))
   ];
 
   return (
@@ -87,13 +112,13 @@ export default function Customer360Module({ setRoute, showToast }) {
       {loading ? <div className="empty-state">Loading customer data...</div> : !customerOptions.length ? <div className="empty-state">No customers returned by the billing API.</div> : (
         <>
           <section className="overview-grid">
-            <MetricCard label="MRR" value={formatMoney(customer.Mrr || customer.mrr || 0)} delta={customer.Segment || customer.segment || "Segment"} />
-            <MetricCard label="Credit" value={customer.CreditRating || customer.creditRating || "-"} delta="Credit rating" />
+            <MetricCard label="MRR" value={formatMoney(customer.Mrr || 0)} delta={customer.Segment || "Segment"} />
+            <MetricCard label="Credit" value={customer.CreditRating || "-"} delta="Credit rating" />
             <MetricCard label="Locations" value={locations.length} delta="Service footprint" />
             <MetricCard label="Open quotes" value={quotes.length} delta="Commercial activity" />
           </section>
           <section className="record-main-layout">
-            <Panel title={customer.CustomerName || customer.customerName || "Customer"} description={customer.BillingProfile || customer.billingProfile || "Billing profile"}>
+            <Panel title={customer.CustomerName || "Customer"} description={customer.BillingProfile || "Billing profile"}>
               <div className="field-grid">
                 <MetricCard label="Customer Number" value={selectedCustomer || "-"} delta={customer.Status || "Status"} />
                 <MetricCard label="Industry" value={customer.Industry || "-"} delta={customer.Region || "Region"} />
