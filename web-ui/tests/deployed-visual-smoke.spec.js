@@ -21,9 +21,58 @@ const responsiveRoutes = ["dashboard", "sales", "customer-service", "orders"]
   .map(hash => desktopRoutes.find(route => route.hash === hash))
   .filter(Boolean);
 
+const tabValidationRoutes = [
+  {
+    hash: "sales",
+    routeName: "sales",
+    tabs: [
+      { name: "Opportunities", expected: /Opportunity detail|Pipeline records|Search opportunities/i },
+      { name: "Accounts", expected: /Customer records|Search accounts|Account Number/i },
+      { name: "Custom Pricing", expected: /custom pricing requests|Search custom pricing|Request/i },
+      { name: "Approvals", expected: /Quote, pricing, and contract approvals|Search approvals|Requested By/i },
+      { name: "Contracts", expected: /Contract files|Search contracts|Contract/i }
+    ]
+  },
+  {
+    hash: "product-pricing",
+    routeName: "product-pricing",
+    tabs: [
+      { name: "Hierarchy", expected: /Product Hierarchy|No hierarchy rows/i },
+      { name: "Billing Codes", expected: /Billing Codes|No billing codes/i },
+      { name: "Billing Elements", expected: /Billing Elements|No billing elements/i },
+      { name: "Offers", expected: /Offer positioning|No offers/i },
+      { name: "Promotions", expected: /promotion records|No promotions/i },
+      { name: "Rate Plans", expected: /Rate Plans|No rate plans/i }
+    ]
+  },
+  {
+    hash: "billing",
+    routeName: "billing",
+    tabs: [
+      { name: "Actions", expected: /Invoice Actions|Select an invoice|Workflow actions/i },
+      { name: "Adjustments", expected: /Adjustments|No adjustments/i },
+      { name: "Customers", expected: /Billing Customers|No billing customers/i }
+    ]
+  },
+  {
+    hash: "administration",
+    routeName: "administration",
+    tabs: [
+      { name: "Roles", expected: /Permission groups|Role ID|Create sample role/i },
+      { name: "Integrations", expected: /Platform connections|Integration ID|Create sample integration/i },
+      { name: "Audit", expected: /System actions|Role updated|Integration synced/i },
+      { name: "Settings", expected: /Platform defaults|MFA required|Release mode/i }
+    ]
+  }
+];
+
 const ROUTE_LOAD_TIMEOUT_MS = 12_000;
 const SCREENSHOT_SETTLE_MS = Number(process.env.PLAYWRIGHT_SCREENSHOT_SETTLE_MS || 1_000);
 const HARD_ERROR_TEXT = /Unable to|failed|timed out/i;
+
+function routeByHash(hash) {
+  return desktopRoutes.find(route => route.hash === hash);
+}
 
 function captureConsoleErrors(page) {
   const consoleErrors = [];
@@ -75,6 +124,14 @@ async function openLoadedRoute(page, route, options = {}) {
   await assertLoadedRoute(page, route);
 }
 
+async function clickTabAndAssert(page, tab) {
+  const root = page.locator("#root");
+  await root.locator(".record-tabs").getByRole("button", { name: tab.name }).click();
+  await expect(root.getByText(tab.expected).first()).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS });
+  await expect(root.locator(".empty-state").filter({ hasText: /^Loading/i })).toHaveCount(0, { timeout: ROUTE_LOAD_TIMEOUT_MS });
+  await expect(root.locator(".empty-state").filter({ hasText: HARD_ERROR_TEXT })).toHaveCount(0);
+}
+
 test.describe("deployed visual smoke", () => {
   for (const route of desktopRoutes) {
     test(`${route.name} renders loaded deployed preview`, async ({ page }, testInfo) => {
@@ -99,9 +156,39 @@ test.describe("deployed visual smoke", () => {
     });
   }
 
+  for (const route of tabValidationRoutes) {
+    test(`${route.routeName} tab states render on deployed preview`, async ({ page }, testInfo) => {
+      const consoleErrors = captureConsoleErrors(page);
+
+      await openLoadedRoute(page, routeByHash(route.hash));
+      for (const tab of route.tabs) {
+        await clickTabAndAssert(page, tab);
+      }
+      await attachRouteEvidence(testInfo, page, `${route.routeName}-tabs-loaded`, consoleErrors);
+
+      expect(consoleErrors).toEqual([]);
+    });
+  }
+
+  test("sales create modals open on deployed preview", async ({ page }, testInfo) => {
+    const consoleErrors = captureConsoleErrors(page);
+    await openLoadedRoute(page, routeByHash("sales"));
+
+    await page.getByRole("button", { name: /New Lead/i }).click();
+    await expect(page.getByRole("dialog").getByText(/New lead/i)).toBeVisible();
+    await attachRouteEvidence(testInfo, page, "sales-new-lead-modal-loaded", consoleErrors);
+    await page.getByRole("button", { name: /Cancel/i }).click();
+
+    await page.getByRole("button", { name: /New Opportunity/i }).click();
+    await expect(page.getByRole("dialog").getByText(/New opportunity/i)).toBeVisible();
+    await attachRouteEvidence(testInfo, page, "sales-new-opportunity-modal-loaded", consoleErrors);
+
+    expect(consoleErrors).toEqual([]);
+  });
+
   test("mobile navigation opens on deployed preview", async ({ page }, testInfo) => {
     const consoleErrors = captureConsoleErrors(page);
-    const dashboard = desktopRoutes.find(route => route.hash === "dashboard");
+    const dashboard = routeByHash("dashboard");
 
     await page.setViewportSize({ width: 390, height: 844 });
     await openLoadedRoute(page, dashboard, { expectDesktopNav: false });
@@ -117,7 +204,7 @@ test.describe("deployed visual smoke", () => {
 
   test("global search opens on deployed preview", async ({ page }, testInfo) => {
     const consoleErrors = captureConsoleErrors(page);
-    const dashboard = desktopRoutes.find(route => route.hash === "dashboard");
+    const dashboard = routeByHash("dashboard");
 
     await openLoadedRoute(page, dashboard);
     const search = page.getByPlaceholder("Search modules and workspaces").first();
