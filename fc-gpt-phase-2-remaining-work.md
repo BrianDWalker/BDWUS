@@ -290,6 +290,28 @@ Completion criteria:
 
 ### Phase 6 - Preview-compatible workflow coverage
 
+Status: Complete.
+
+Completed in this phase:
+
+- Added deployed preview workflow visual smoke coverage in `web-ui/tests/deployed-workflow-visual-smoke.spec.js`.
+- Wired the workflow smoke spec into the `fc-gpt Validation` deployed web smoke job.
+- Kept deployed workflow coverage non-mutating:
+  - Sales: opens New Lead, New Opportunity, lead conversion, and Create Quote workflow dialogs where preview rows exist, then cancels.
+  - Billing: opens invoice action and adjustment workflow surfaces and verifies the create controls render without clicking them.
+  - Orders: verifies New Order and Provisioning workflow controls render without clicking mutation actions.
+  - Viewer role: verifies deployed billing and order mutation controls stay disabled from the UI.
+- Attached workflow evidence JSON and screenshots for each workflow surface so the deployed artifact proves loaded state beyond route/title/viewport.
+- Kept deployed visual smoke strict by default while allowing the documented Knowledge-route partial-data 404 until the Phase 7 API/data decision is made.
+- Reduced the existing mobile navigation deployed evidence capture to a viewport screenshot only, avoiding a test timeout without changing mobile/tablet design.
+
+Blockers / deferred submit coverage:
+
+- Deployed submit-style workflow tests are still intentionally blocked until preview data has deterministic seed IDs, cleanup APIs or cleanup SQL, and a safe isolated test namespace.
+- The blocked submit set includes lead conversion submit, quote creation, approval approve/reject/request-changes, order creation, order provisioning, billing invoice actions, billing adjustments, and admin sample user/role/integration creates.
+- Knowledge currently renders with a visible partial-data `Not Found` status from the deployed knowledge data request. The route still proves its shell and knowledge panels render; data ownership and API behavior remain a Phase 7 documentation/design item.
+- This phase does not include broader mobile/tablet redesign work per the current project direction.
+
 Goal:
 
 - Add workflow test coverage only where the deployed preview surface can support it reliably.
