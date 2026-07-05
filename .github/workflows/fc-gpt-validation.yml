@@ -105,6 +105,7 @@ jobs:
           curl -fsS "$base/api/billing/customers"
           curl -fsS "$base/api/platform/bootstrap"
           curl -fsS "$base/api/platform/customer-service/overview"
+          curl -fsS "$base/api/platform/customer-service/tickets"
           curl -fsS "$base/api/ops/bootstrap"
       - name: Stop seeded platform API
         if: always()
@@ -168,6 +169,7 @@ jobs:
           curl -fsS "$base/api/billing/customers"
           curl -fsS "$base/api/platform/bootstrap"
           curl -fsS "$base/api/platform/customer-service/overview"
+          curl -fsS "$base/api/platform/customer-service/tickets"
           curl -fsS "$base/api/ops/bootstrap"
 
   deployed-web-smoke:
