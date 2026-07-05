@@ -19,6 +19,7 @@ The current app entrypoint renders `SalesAppRouter`, which owns Sales and Sales 
 | `administration` | `App.jsx` + `AdministrationModule` | Migrated, keep | API-backed admin summary/users/roles/integrations. |
 | `product-pricing` | `App.jsx` + `ProductPricingModule` | Migrated, keep | API-backed catalog/pricing/billing references. |
 | `customer-360` | `App.jsx` + `Customer360Module` | Migrated, keep | API-backed customer profile/commercial context. |
+| `customer-service` | `App.jsx` + `CustomerServiceModule` | Migrated, keep | API-backed ticket/outage/care queue extraction added after the Phase 2 inventory. |
 | `billing` | `App.jsx` + `BillingModule` | Migrated, keep | API-backed billing workflow surface. |
 | `orders` | `App.jsx` + `OrdersModule` | Migrated, keep | API-backed order/provisioning workflow surface. |
 | `network` | `App.jsx` + `ServiceOpsModule` | Migrated, keep | API-backed service operations surface. |
@@ -40,19 +41,20 @@ The current app entrypoint renders `SalesAppRouter`, which owns Sales and Sales 
 |---|---|---|---|
 | `dashboard` | `LegacyPortal` | Accept temporarily | Home dashboard is role/workday aggregation. It is not yet API-backed or extracted, but it is still useful as a launchpad. |
 | `knowledge` | `LegacyPortal` | Accept temporarily, later migrate | Knowledge uses `KnowledgeAssistant` and assistant UI merge helpers. It should remain available until a dedicated API-backed Knowledge module is created. |
-| `customer-service` | `LegacyPortal` | Migrate next | Customer service/case/ticket workflows remain important and should become the next extracted module. |
-| `details/ticket/*` | `LegacyPortal` generic detail fallback | Migrate with Customer Service | Ticket detail should move with the customer-service extraction. |
-| `details/network/*` | `LegacyPortal` generic detail fallback | Review after Customer Service | Network detail may belong to ServiceOps after a deeper operations detail route is designed. |
+| `details/ticket/*` | `LegacyPortal` generic detail fallback | Accept temporarily | Customer-service list is extracted; ticket detail still needs a dedicated detail page or normalized ticket route. |
+| `details/network/*` | `LegacyPortal` generic detail fallback | Review after ServiceOps detail design | Network detail may belong to ServiceOps after a deeper operations detail route is designed. |
 | `details/record/*` | `LegacyPortal` generic detail fallback | Accept temporarily | Used by admin-style generic record links; not yet important enough to extract before Customer Service. |
 | Unknown `details/*` | `LegacyPortal` generic detail fallback | Accept temporarily | Kept as a safety net for stale links until full route telemetry/testing exists. |
 
-## Phase 2 recommendation
+## Updated Phase 2 result
 
-Do not delete `LegacyPortal` yet. The next safe implementation step is to extract `customer-service` into `web-ui/src/modules/customerService/CustomerServiceModule.jsx` and add API endpoints or smoke-backed platform data for tickets/cases. That would reduce the remaining meaningful legacy surface to only `dashboard`, `knowledge`, and generic stale-detail fallback.
+Customer Service has now moved out of intentional LegacyPortal ownership and into `web-ui/src/modules/customerService/CustomerServiceModule.jsx`, backed by `GET /api/platform/customer-service/overview`.
 
-## What could not be fully completed in Phase 2
+Do not delete `LegacyPortal` yet. The remaining meaningful legacy surfaces are now only `dashboard`, `knowledge`, and generic/stale detail fallbacks.
 
-- I could not prove all legacy routes in a browser because CI/run access is still not available from this chat.
+## What could not be fully completed in this extraction step
+
+- I could not prove all routes in a browser because CI/run access is still not available from this chat.
 - I did not remove legacy dashboard or knowledge because they are still useful and not yet replaced by extracted modules.
-- I did not extract customer-service in this pass because that is larger than an inventory/ownership pass and should be done as the next focused implementation step.
+- I did not build a persistent ticket table/write API; the extracted Customer Service module preserves create-ticket as a UI draft action for now.
 - I did not delete any LegacyPortal detail components because stale deep links may still rely on the generic fallback.
