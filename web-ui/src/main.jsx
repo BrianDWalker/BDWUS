@@ -7,6 +7,8 @@ import "./sales-crm.css";
 import "./ui-consistency.css";
 import "./quote-to-order.css";
 import "./role-permissions.css";
+import "./topnav-stabilization.css";
+import "./layout-stabilization.css";
 import SalesAppRouter from "./SalesAppRouter";
 
 createRoot(document.getElementById("root")).render(
