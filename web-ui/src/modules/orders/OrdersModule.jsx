@@ -70,7 +70,7 @@ export default function OrdersModule({ showToast }) {
   const atRisk = useMemo(() => orders.filter(row => row.SlaStatus !== "On Track").length, [orders]);
 
   return (
-    <>
+    <section className="orders-compact">
       <PageHeader title="Orders" description="API-backed service delivery queue, provisioning jobs, and order mutations." actions={<div className="button-cluster"><button className="ghost-button" disabled={loading || saving} type="button" onClick={loadOrders}>Refresh</button><GatedButton action="create:order" disabled={saving} onClick={createSampleOrder}>New Order</GatedButton></div>} />
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading orders...</div> : (
@@ -87,6 +87,6 @@ export default function OrdersModule({ showToast }) {
           </section>
         </>
       )}
-    </>
+    </section>
   );
 }

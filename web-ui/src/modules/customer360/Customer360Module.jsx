@@ -139,7 +139,7 @@ export default function Customer360Module({ setRoute, showToast }) {
   ];
 
   return (
-    <>
+    <section className="customer360-compact">
       <PageHeader
         title="Customer 360"
         description="API-backed customer profile, account, location, opportunity, quote, and contract context."
@@ -172,6 +172,6 @@ export default function Customer360Module({ setRoute, showToast }) {
           <Panel title="Commercial Records" description="Accounts, opportunities, quotes, and contracts tied to the selected customer.">{commercialRows.length ? <DataTable columns={[{ key: "type", label: "Type" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }, { key: "amount", label: "Amount", render: row => row.amount ? formatMoney(row.amount) : "-" }]} rows={commercialRows} /> : <div className="empty-state">No commercial records returned for this customer.</div>}</Panel>
         </>
       )}
-    </>
+    </section>
   );
 }
