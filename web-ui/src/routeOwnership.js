@@ -18,10 +18,7 @@ export const integratedSalesDetailTypes = ["lead", "opportunity", "quote", "cont
 
 export const legacyOwnedRoutes = [];
 
-export const intentionalLegacyDetailTypes = [
-  "network",
-  "record"
-];
+export const intentionalLegacyDetailTypes = [];
 
 export const routeAliases = {
   pricing: "product-pricing",
@@ -47,7 +44,7 @@ export function detailType(route) {
 }
 
 export function isExtractedRoute(route) {
-  return extractedRoutes.includes(route) || route.startsWith("details/ticket/");
+  return extractedRoutes.includes(route) || route.startsWith("details/ticket/") || route.startsWith("details/network/") || route.startsWith("details/record/");
 }
 
 export function isIntegratedSalesRoute(route) {
