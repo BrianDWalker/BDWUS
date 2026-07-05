@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./fetchTimeout";
+
 const DEFAULT_SALES_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
 
 export const salesApiBase = (import.meta.env.VITE_SALES_API_BASE_URL || import.meta.env.VITE_AI_API_BASE_URL || DEFAULT_SALES_API_BASE).replace(/\/$/, "");
@@ -7,7 +9,7 @@ function salesUrl(path) {
 }
 
 async function requestJson(path, options = {}) {
-  const response = await fetch(salesUrl(path), {
+  const response = await fetchWithTimeout(salesUrl(path), {
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {})
