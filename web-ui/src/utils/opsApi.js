@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./fetchTimeout";
+
 const DEFAULT_OPS_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
 
 const opsApiBase = (
@@ -12,7 +14,7 @@ function url(path) {
 }
 
 async function requestJson(path) {
-  const response = await fetch(url(path), {
+  const response = await fetchWithTimeout(url(path), {
     headers: { "Content-Type": "application/json" }
   });
   if (!response.ok) {
