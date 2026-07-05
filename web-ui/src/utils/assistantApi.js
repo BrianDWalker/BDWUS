@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./fetchTimeout";
+
 const DEFAULT_ASSISTANT_API_BASE = (import.meta.env.VITE_AI_API_BASE_URL || window.location.origin || "").replace(/\/$/, "");
 
 export const assistantApiBase = DEFAULT_ASSISTANT_API_BASE;
@@ -7,7 +9,7 @@ function assistantUrl(path) {
 }
 
 async function requestJson(path, options = {}) {
-  const response = await fetch(assistantUrl(path), {
+  const response = await fetchWithTimeout(assistantUrl(path), {
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {})
