@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { GatedButton } from "../../components/PermissionGate";
 import { PageHeader } from "../../components/Shell";
 import { DataTable, MetricCard, Panel, StatusTag } from "../../components/Primitives";
 import { createCustomerServiceTicketNote, fetchCustomerServiceTicket, updateCustomerServiceTicket } from "../../utils/platformApi";
@@ -84,7 +85,7 @@ export default function CustomerServiceTicketDetail({ id, setRoute, showToast })
       <PageHeader
         title={title}
         description="Modern API-backed customer service ticket detail."
-        actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("customer-service")}>Back to Customer Service</button><button className="ghost-button" type="button" disabled={loading} onClick={loadTicket}>Refresh</button><button className="ghost-button" type="button" disabled={saving || !ticket} onClick={escalateTicket}>Escalate</button><button className="button" type="button" disabled={saving || !ticket} onClick={closeTicket}>Close Ticket</button></div>}
+        actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("customer-service")}>Back to Customer Service</button><button className="ghost-button" type="button" disabled={loading} onClick={loadTicket}>Refresh</button><GatedButton action="escalate:ticket" className="ghost-button" disabled={saving || !ticket} onClick={escalateTicket}>Escalate</GatedButton><GatedButton action="close:ticket" disabled={saving || !ticket} onClick={closeTicket}>Close Ticket</GatedButton></div>}
       />
       {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading ticket...</div> : !ticket ? <div className="empty-state">Ticket not found.</div> : (
@@ -110,7 +111,7 @@ export default function CustomerServiceTicketDetail({ id, setRoute, showToast })
                 <label>Comment<textarea value={comment} onChange={event => setComment(event.target.value)} placeholder="Add a ticket comment or customer update" /></label>
                 <label>Closure reason<input value={closureReason} onChange={event => setClosureReason(event.target.value)} placeholder="Closure reason" /></label>
               </div>
-              <div className="modal-actions"><button className="ghost-button" type="button" disabled={saving || !comment.trim()} onClick={addComment}>Add Comment</button><button className="button" type="button" disabled={saving} onClick={closeTicket}>Close With Reason</button></div>
+              <div className="modal-actions"><GatedButton action="comment:ticket" className="ghost-button" disabled={saving || !comment.trim()} onClick={addComment}>Add Comment</GatedButton><GatedButton action="close:ticket" disabled={saving} onClick={closeTicket}>Close With Reason</GatedButton></div>
             </Panel>
             <Panel title="Notes & History" description="Ticket notes, creation context, comments, escalations, and closure history.">
               {notes.length ? <DataTable columns={[{ key: "NoteType", label: "Type" }, { key: "Note", label: "Note" }, { key: "CreatedBy", label: "Created By" }, { key: "CreatedAtUtc", label: "Created" }]} rows={notes} /> : <div className="empty-state">No ticket notes returned by the API.</div>}
