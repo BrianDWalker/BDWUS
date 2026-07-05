@@ -108,7 +108,7 @@ export default function KnowledgeModule({ setRoute }) {
           </div>
         </Panel>
       </section>
-      <Panel title="Knowledge Assistant" description="Existing assistant integration preserved outside LegacyPortal.">
+      <Panel title="Knowledge Assistant" description="Platform assistant integration with SQL-backed knowledge context.">
         <KnowledgeAssistant context={{ route: "knowledge", pageTitle: "Knowledge", pageSummary: "Extracted knowledge workspace" }} />
       </Panel>
     </>
