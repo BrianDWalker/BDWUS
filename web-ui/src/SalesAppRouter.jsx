@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import App from "./App";
 import { Shell } from "./components/Shell";
 import { SalesContractDetail, SalesLeadDetail, SalesModule, SalesOpportunityDetail, SalesQuoteDetail } from "./components/SalesDatabaseCRM";
+import { convertQuoteToOrder } from "./utils/salesApi";
 import { isIntegratedSalesRoute, normalizeRoute } from "./routeOwnership";
 
 function currentHashRoute() {
@@ -29,6 +30,34 @@ function useRoute() {
 
 function Toast({ toast }) {
   return toast ? <div className="toast">{toast}</div> : null;
+}
+
+function QuoteToOrderAction({ route, setRoute, showToast }) {
+  const [, type, id] = route.split("/");
+  const [saving, setSaving] = useState(false);
+  if (type !== "quote" || !id) return null;
+
+  async function createOrderFromQuote() {
+    setSaving(true);
+    try {
+      const result = await convertQuoteToOrder(id, { assignedTeam: "Provisioning Ops" });
+      const orderNumber = result?.order?.OrderNumber || result?.order?.orderNumber || "order";
+      showToast(`Created ${orderNumber} from quote`);
+      setRoute("orders");
+    } catch (error) {
+      showToast(error.message || "Unable to create order from quote");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="floating-workflow-action" aria-label="Quote workflow action">
+      <button className="button" type="button" disabled={saving} onClick={createOrderFromQuote}>
+        {saving ? "Creating Order..." : "Create Order from Quote"}
+      </button>
+    </div>
+  );
 }
 
 function IntegratedSalesRoute({ route, setRoute, showToast }) {
@@ -59,6 +88,7 @@ export default function SalesAppRouter() {
 
   return (
     <Shell activeRoute={route} setRoute={setRoute}>
+      <QuoteToOrderAction route={route} setRoute={setRoute} showToast={showToast} />
       <IntegratedSalesRoute route={route} setRoute={setRoute} showToast={showToast} />
       <Toast toast={toast} />
     </Shell>
