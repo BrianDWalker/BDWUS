@@ -16,3 +16,5 @@ createRoot(document.getElementById("root")).render(
     <SalesAppRouter />
   </React.StrictMode>
 );
+
+document.documentElement.classList.add("react-hydrated");

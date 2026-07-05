@@ -17,9 +17,151 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://polite-cliff-080b22c0f-previewgpt.eastus2.7.azurestaticapps.net/" />
     <title>Northstar Telecom Portal</title>
+    <style>
+      .react-hydrated .crawler-preview { display: none; }
+      .crawler-preview {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 24px;
+        color: #0f172a;
+        font-family: Manrope, "Segoe UI", Arial, sans-serif;
+      }
+      .crawler-preview a { color: #0f766e; text-decoration: none; }
+      .crawler-preview-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: center;
+        padding: 18px 0 24px;
+      }
+      .crawler-preview-brand strong { display: block; font-size: 22px; }
+      .crawler-preview-brand span, .crawler-preview-card span, .crawler-preview-route p { color: rgba(15, 23, 42, 0.66); }
+      .crawler-preview-nav { display: flex; flex-wrap: wrap; gap: 8px; }
+      .crawler-preview-nav a, .crawler-preview-chip {
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        border-radius: 999px;
+        padding: 8px 11px;
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .crawler-preview-hero {
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 22px;
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+      }
+      .crawler-preview-hero h1 { margin: 0 0 8px; font-size: 32px; line-height: 1.15; }
+      .crawler-preview-hero p { margin: 0; max-width: 760px; color: rgba(15, 23, 42, 0.7); }
+      .crawler-preview-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .crawler-preview-card, .crawler-preview-route {
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.88);
+        padding: 16px;
+      }
+      .crawler-preview-card strong { display: block; font-size: 24px; margin-bottom: 4px; }
+      .crawler-preview-section { margin-top: 24px; }
+      .crawler-preview-section h2 { margin: 0 0 10px; font-size: 20px; }
+      .crawler-preview-route h3 { margin: 0 0 6px; font-size: 16px; }
+      .crawler-preview-route p { margin: 0 0 10px; }
+      .crawler-preview-list { margin: 8px 0 0; padding-left: 20px; color: rgba(15, 23, 42, 0.72); }
+      @media (max-width: 760px) {
+        .crawler-preview { padding: 16px; }
+        .crawler-preview-header { align-items: flex-start; flex-direction: column; }
+        .crawler-preview-hero h1 { font-size: 26px; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <main class="crawler-preview" aria-label="Static preview of the Northstar Telecom Portal React UI">
+      <header class="crawler-preview-header">
+        <div class="crawler-preview-brand">
+          <strong>Northstar Telecom</strong>
+          <span>BDWUS unified operations platform · fc-gpt preview</span>
+        </div>
+        <nav class="crawler-preview-nav" aria-label="Primary preview navigation">
+          <a href="/#/dashboard">Home</a>
+          <a href="/#/knowledge">Knowledge</a>
+          <a href="/#/sales">Sales</a>
+          <a href="/#/customer-360">Customer 360</a>
+          <a href="/#/orders">Orders</a>
+          <a href="/#/product-pricing">Product & Pricing</a>
+          <a href="/#/network">Network & Service</a>
+          <a href="/#/billing">Billing</a>
+          <a href="/#/reports">Reports</a>
+          <a href="/#/administration">Administration</a>
+        </nav>
+      </header>
+
+      <section class="crawler-preview-hero">
+        <span class="crawler-preview-chip">Static crawler snapshot of the React portal</span>
+        <h1>Telecom operations dashboard for sales, pricing, billing, orders, service operations, reporting, and administration.</h1>
+        <p>
+          This static preview mirrors the deployed React application surface so link fetchers can inspect the fc-gpt branch without executing JavaScript.
+          Interactive browsers still load the full React UI from the same URL.
+        </p>
+        <div class="crawler-preview-grid" aria-label="Portal metrics">
+          <article class="crawler-preview-card"><strong>11</strong><span>Primary routes available in the preview navigation.</span></article>
+          <article class="crawler-preview-card"><strong>API-backed</strong><span>Extracted modules call platform, billing, sales, and operations endpoints.</span></article>
+          <article class="crawler-preview-card"><strong>Ready</strong><span>Azure Static Web Apps previewgpt environment is deployed from fc-gpt.</span></article>
+          <article class="crawler-preview-card"><strong>200</strong><span>Preview URL, robots.txt, and sitemap.xml return successful responses.</span></article>
+        </div>
+      </section>
+
+      <section class="crawler-preview-section" aria-labelledby="preview-routes-heading">
+        <h2 id="preview-routes-heading">Route Preview</h2>
+        <div class="crawler-preview-grid">
+          <article class="crawler-preview-route">
+            <h3><a href="/#/sales">Sales</a></h3>
+            <p>Pipeline, leads, opportunities, quotes, contracts, approvals, and quote-to-order workflow.</p>
+            <ul class="crawler-preview-list"><li>Uses sales CRM APIs and route-specific detail views.</li><li>Supports creating orders from approved quotes.</li></ul>
+          </article>
+          <article class="crawler-preview-route">
+            <h3><a href="/#/product-pricing">Product & Pricing</a></h3>
+            <p>Catalog, product hierarchy, billing codes, billing elements, offers, promotions, and rate plans.</p>
+            <ul class="crawler-preview-list"><li>Reads platform product-pricing overview.</li><li>Reads billing product and rate-plan endpoints.</li></ul>
+          </article>
+          <article class="crawler-preview-route">
+            <h3><a href="/#/customer-360">Customer 360</a></h3>
+            <p>Customer search, account profile, active services, billing records, tickets, and account health.</p>
+            <ul class="crawler-preview-list"><li>Reads platform customer 360 data.</li><li>Reads billing customer data.</li></ul>
+          </article>
+          <article class="crawler-preview-route">
+            <h3><a href="/#/billing">Billing</a></h3>
+            <p>Invoices, invoice detail actions, adjustments, customers, status tags, loading states, and refresh behavior.</p>
+            <ul class="crawler-preview-list"><li>Reads billing workflow invoice APIs.</li><li>Posts invoice actions and adjustments.</li></ul>
+          </article>
+          <article class="crawler-preview-route">
+            <h3><a href="/#/orders">Orders</a></h3>
+            <p>Order queue, provisioning jobs, order detail links, operations bootstrap data, and fulfillment status.</p>
+            <ul class="crawler-preview-list"><li>Reads operations orders and provisioning APIs.</li><li>Displays empty and error states.</li></ul>
+          </article>
+          <article class="crawler-preview-route">
+            <h3><a href="/#/network">Network & Service</a></h3>
+            <p>Network events, service management, provisioning, and carrier settlement modules.</p>
+            <ul class="crawler-preview-list"><li>Reads operations network-events and carrier-settlement endpoints.</li><li>Shares service operations primitives.</li></ul>
+          </article>
+          <article class="crawler-preview-route">
+            <h3><a href="/#/reports">Reports</a></h3>
+            <p>API-backed report definitions, report result sets, parameters, export actions, loading, and empty states.</p>
+            <ul class="crawler-preview-list"><li>Reads platform report definition and report result APIs.</li></ul>
+          </article>
+          <article class="crawler-preview-route">
+            <h3><a href="/#/administration">Administration</a></h3>
+            <p>Users, roles, integrations, audit timeline, settings, create actions, and permission-sensitive controls.</p>
+            <ul class="crawler-preview-list"><li>Reads platform administration summary.</li><li>Posts role and integration records.</li></ul>
+          </article>
+        </div>
+      </section>
+    </main>
     <noscript>
       <main>
         <h1>Northstar Telecom Portal</h1>
