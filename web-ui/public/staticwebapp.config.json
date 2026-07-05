@@ -1,7 +1,8 @@
 {
   "globalHeaders": {
     "Cache-Control": "public, max-age=300, stale-while-revalidate=86400",
-    "X-Content-Type-Options": "nosniff"
+    "X-Content-Type-Options": "nosniff",
+    "X-Robots-Tag": "index, follow"
   },
   "navigationFallback": {
     "rewrite": "/index.html"
