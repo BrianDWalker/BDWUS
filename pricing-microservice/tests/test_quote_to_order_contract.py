@@ -5,11 +5,12 @@ from fastapi import HTTPException
 
 from app.main import app
 from app.services import sales_compat
+from tests.route_helpers import iter_effective_routes
 
 
 def test_quote_to_order_route_registered_before_sales_router():
     matches = [
-        route for route in app.routes
+        route for route in iter_effective_routes(app.routes)
         if getattr(route, "path", None) == "/api/sales/quotes/{quote_id}/convert-to-order"
         and "POST" in getattr(route, "methods", set())
     ]

@@ -3,10 +3,11 @@ from fastapi import HTTPException
 
 from app.main import app
 from app.services import customer_service
+from tests.route_helpers import iter_effective_routes
 
 
 def test_customer_service_router_registered():
-    routes = {(getattr(route, "path", None), tuple(sorted(getattr(route, "methods", [])))) for route in app.routes}
+    routes = {(getattr(route, "path", None), tuple(sorted(getattr(route, "methods", [])))) for route in iter_effective_routes(app.routes)}
     assert any(path == "/api/platform/customer-service/overview" and "GET" in methods for path, methods in routes)
     assert any(path == "/api/platform/customer-service/tickets" and "POST" in methods for path, methods in routes)
     assert any(path == "/api/platform/customer-service/tickets/{ticket_id}" and "GET" in methods for path, methods in routes)

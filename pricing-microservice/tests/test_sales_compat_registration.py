@@ -1,8 +1,9 @@
 from app.main import app
+from tests.route_helpers import iter_effective_routes
 
 
 def first_matching_endpoint_name(path, method):
-    for route in app.routes:
+    for route in iter_effective_routes(app.routes):
         methods = getattr(route, "methods", set())
         if getattr(route, "path", None) == path and method in methods:
             return route.endpoint.__name__
