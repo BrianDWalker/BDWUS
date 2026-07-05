@@ -45,9 +45,9 @@ Important tables and row counts:
 
 Known database gaps for later phases:
 
-- `billing.BillingElements` exists but has no rows.
-- Knowledge documents/topics are not database-backed yet.
-- Report definitions are static in API code even though report rows are SQL-backed.
+- `billing.BillingElements` existed but had no rows before Phase 2. Phase 2 seeded durable billing elements in Azure SQL.
+- Knowledge documents/topics were not database-backed before Phase 2. Phase 2 added `knowledge` tables and `knowledge.vDocuments`.
+- Report definitions were static in API code before Phase 2. Phase 2 added `report.ReportDefinitions` and `report.vReportDefinitions`.
 - Administration summary still uses static defaults from API code instead of `admin.*` tables.
 - Some schemas are created at runtime from service modules; Phase 2 should move that DDL into source-controlled migrations.
 
