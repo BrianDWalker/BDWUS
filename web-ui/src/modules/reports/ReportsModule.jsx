@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
-import { DataTable, Panel, StatusTag, formatMoney } from "../../components/Primitives";
+import { DataTable, Panel, StatusTag, formatDateTime, formatMoney } from "../../components/Primitives";
 import { downloadBlob, makeXlsx } from "../../utils/export";
 import { fetchPlatformReport, fetchPlatformReportDefinitions } from "../../utils/platformApi";
 
@@ -20,7 +20,7 @@ function csvBlob(rows) {
 export default function ReportsModule({ showToast }) {
   const [params, setParams] = useState(DEFAULT_PARAMS);
   const [page, setPage] = useState(1);
-  const [runStamp, setRunStamp] = useState("Not run");
+  const [runStamp, setRunStamp] = useState("");
   const [definitions, setDefinitions] = useState([]);
   const [reportPayload, setReportPayload] = useState(null);
   const [loadingDefinitions, setLoadingDefinitions] = useState(true);
@@ -59,7 +59,7 @@ export default function ReportsModule({ showToast }) {
       .then(payload => {
         if (!active) return;
         setReportPayload(payload);
-        setRunStamp(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        setRunStamp(new Date().toISOString());
       })
       .catch(err => {
         if (!active) return;
@@ -115,7 +115,7 @@ export default function ReportsModule({ showToast }) {
     fetchPlatformReport(params.reportId)
       .then(payload => {
         setReportPayload(payload);
-        setRunStamp(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+        setRunStamp(new Date().toISOString());
         showToast?.("Report refreshed");
       })
       .catch(err => {
@@ -154,7 +154,7 @@ export default function ReportsModule({ showToast }) {
                 <div>
                   <h2>{definition.name}</h2>
                   <p>{definition.description}</p>
-                  <p className="small-muted">Last run: {runStamp}</p>
+                  <p className="small-muted">Last run: {formatDateTime(runStamp, { empty: "Not run" })}</p>
                 </div>
                 <div className="report-page-actions">
                   <div className="module-toolbar report-page-pagination">
@@ -169,8 +169,7 @@ export default function ReportsModule({ showToast }) {
               </div>
               <div className="report-summary-strip"><div className="report-summary-card"><span>Total exposure</span><strong>{formatMoney(total)}</strong></div><div className="report-summary-card"><span>Rows</span><strong>{filteredRows.length}</strong></div><div className="report-summary-card"><span>Page</span><strong>{page} of {pages}</strong></div><div className="report-summary-card"><span>Area</span><strong>{definition.area}</strong></div></div>
               <Panel title="Result set" description="Current report results returned by the platform API.">
-                <DataTable columns={[{ key: "account", label: "Account" }, { key: "region", label: "Region" }, { key: "segment", label: "Segment" }, { key: "service", label: "Service" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }, { key: "metric", label: "Metric" }, { key: "status", label: "Status", render: row => <StatusTag tone={["Priority", "Open", "Review", "Urgent"].includes(row.status) ? "warn" : "blue"}>{row.status}</StatusTag> }]} rows={visibleRows} />
-                {!visibleRows.length && <div className="empty-state">No rows match the current parameters.</div>}
+                <DataTable emptyMessage="No rows match the current parameters." columns={[{ key: "account", label: "Account" }, { key: "region", label: "Region" }, { key: "segment", label: "Segment" }, { key: "service", label: "Service" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }, { key: "metric", label: "Metric" }, { key: "status", label: "Status", render: row => <StatusTag tone={["Priority", "Open", "Review", "Urgent"].includes(row.status) ? "warn" : ["Approved", "Active", "Growth", "Current"].includes(row.status) ? "success" : "blue"}>{row.status}</StatusTag> }]} rows={visibleRows} />
               </Panel>
             </section>
           )}

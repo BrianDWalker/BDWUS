@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
-import { DataTable, MetricCard, Panel, StatusTag, WarningBanner, formatMoney } from "../../components/Primitives";
+import { DataTable, MetricCard, Panel, StatusTag, WarningBanner, formatDate, formatDateTime, formatMoney } from "../../components/Primitives";
 import { fetchBillingWorkflowAdjustments, fetchBillingWorkflowInvoice, fetchBillingWorkflowInvoiceActions } from "../../utils/opsApi";
 import { listBillingCustomers } from "../../utils/salesApi";
 import { normalizeCustomer, normalizeInvoice } from "../../utils/payloadMapping";
@@ -104,13 +104,13 @@ export default function InvoiceDetailModule({ id, setRoute, showToast }) {
             breadcrumb={["Billing", "Invoices", selectedInvoice.InvoiceNumber || id]}
             title={`Invoice ${selectedInvoice.InvoiceNumber || id}`}
             status={selectedInvoice.Status || "Open"}
-            subtitle={`${selectedInvoice.AccountName || customer.CustomerName || "Account unavailable"} · ${selectedInvoice.DueDate || "Due date unavailable"}`}
+            subtitle={`${selectedInvoice.AccountName || customer.CustomerName || "Account unavailable"} · ${formatDate(selectedInvoice.DueDate, { empty: "Due date unavailable" })}`}
             actions={<div className="button-cluster"><button className="button" type="button" onClick={() => setRoute?.(`details/customer/${customer.CustomerNumber || id}`)}>Open Customer</button><button className="ghost-button" type="button" onClick={() => showToast?.("Invoice snapshot refreshed")}>Snapshot</button></div>}
           />
           <DetailSummary items={[
             { label: "Customer", value: selectedInvoice.AccountName || customer.CustomerName || "-", note: customer.CustomerNumber || "Billing account" },
-            { label: "Invoice Date", value: selectedInvoice.InvoiceDate || "-", note: "Issue date" },
-            { label: "Due Date", value: selectedInvoice.DueDate || "-", note: "Payment due" },
+            { label: "Invoice Date", value: formatDate(selectedInvoice.InvoiceDate), note: "Issue date" },
+            { label: "Due Date", value: formatDate(selectedInvoice.DueDate), note: "Payment due" },
             { label: "Total", value: formatMoney(selectedInvoice.Amount || 0), note: "Invoice total" },
             { label: "Balance", value: formatMoney(selectedInvoice.Balance || 0), note: selectedInvoice.Status || "Status" },
             { label: "Actions", value: actions.length, note: "Workflow items" }
@@ -143,7 +143,7 @@ export default function InvoiceDetailModule({ id, setRoute, showToast }) {
           )}
           {tab === "Actions" && (
             <Panel title="Invoice actions" description="Workflow actions attached to this invoice.">
-              {actions.length ? <DataTable columns={[{ key: "ActionType", label: "Action" }, { key: "Status", label: "Status", render: row => <StatusTag tone={tone(row.Status)}>{row.Status || "-"}</StatusTag> }, { key: "RequestedBy", label: "Requested By" }, { key: "Notes", label: "Notes" }, { key: "CreatedAtUtc", label: "Created" }]} rows={actions} /> : <EmptyState>No invoice actions returned.</EmptyState>}
+              {actions.length ? <DataTable columns={[{ key: "ActionType", label: "Action" }, { key: "Status", label: "Status", render: row => <StatusTag tone={tone(row.Status)}>{row.Status || "-"}</StatusTag> }, { key: "RequestedBy", label: "Requested By" }, { key: "Notes", label: "Notes" }, { key: "CreatedAtUtc", label: "Created", render: row => formatDateTime(row.CreatedAtUtc) }]} rows={actions} /> : <EmptyState>No invoice actions returned.</EmptyState>}
             </Panel>
           )}
           {tab === "Adjustments" && (
@@ -153,7 +153,7 @@ export default function InvoiceDetailModule({ id, setRoute, showToast }) {
           )}
           {tab === "Payments" && (
             <Panel title="Payments" description="Payment records and posting state.">
-              {paymentRows.length ? <DataTable columns={[{ key: "date", label: "Date" }, { key: "method", label: "Method" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }, { key: "status", label: "Status", render: row => <StatusTag tone={tone(row.status)}>{row.status || "-"}</StatusTag> }, { key: "reference", label: "Reference" }]} rows={paymentRows} /> : <EmptyState>No payment records returned.</EmptyState>}
+              {paymentRows.length ? <DataTable columns={[{ key: "date", label: "Date", render: row => formatDate(row.date, { empty: "Pending" }) }, { key: "method", label: "Method" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }, { key: "status", label: "Status", render: row => <StatusTag tone={tone(row.status)}>{row.status || "-"}</StatusTag> }, { key: "reference", label: "Reference" }]} rows={paymentRows} /> : <EmptyState>No payment records returned.</EmptyState>}
             </Panel>
           )}
         </>

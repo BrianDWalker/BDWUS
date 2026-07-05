@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { PageHeader } from "./Shell";
 import { Icon } from "./Icons";
-import { DataTable, Panel, StatusTag, formatMoney } from "./Primitives";
+import { DataTable, Panel, StatusTag, StructuredFieldList, formatDate, formatDateTime, formatMoney, formatPercent } from "./Primitives";
 import {
   approveApproval,
   checkServiceability,
@@ -119,9 +119,7 @@ function parseJsonField(value, fallback = {}) {
 }
 
 function pageDate(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
+  return formatDate(value, { empty: "" });
 }
 
 function money(value) {
@@ -1138,7 +1136,7 @@ export function SalesOpportunityDetail({ id, setRoute, showToast }) {
               <div className="sales-pricing-card">
                 <span>Pricing summary</span>
                 <strong>{money(opportunity.EstimatedValue)}</strong>
-                <small>{`${Number(opportunity.MarginPct || 0).toFixed(1)}% margin · ${opportunity.LocationCount || 0} locations`}</small>
+                <small>{`${formatPercent(opportunity.MarginPct || 0)} margin · ${opportunity.LocationCount || 0} locations`}</small>
               </div>
               <div className="sales-pricing-card">
                 <span>Billing codes</span>
@@ -1583,8 +1581,8 @@ export function SalesContractDetail({ id, setRoute, showToast }) {
           <DataTable columns={[
             { key: "FileName", label: "File" },
             { key: "FileType", label: "Type" },
-            { key: "StorageUrl", label: "Storage URL" },
-            { key: "CreatedAtUtc", label: "Uploaded" },
+            { key: "StorageUrl", label: "Storage URL", render: row => row.StorageUrl ? <a href={row.StorageUrl} target="_blank" rel="noreferrer">Open file</a> : "-" },
+            { key: "CreatedAtUtc", label: "Uploaded", render: row => formatDateTime(row.CreatedAtUtc) },
             { key: "actions", label: "Actions", render: row => <div className="table-row-actions"><button className="link-button compact-action" type="button" onClick={() => row.StorageUrl && window.open(row.StorageUrl, "_blank", "noopener,noreferrer")}>Open</button><button className="link-button compact-action" type="button" onClick={async () => { await deleteContractFile(id, row.ContractFileId); setFiles(await listContractFiles(id)); showToast("File metadata removed"); }}>Remove</button></div> }
           ]} rows={files} />
         </Panel>
@@ -1595,13 +1593,13 @@ export function SalesContractDetail({ id, setRoute, showToast }) {
             { key: "EventType", label: "Event" },
             { key: "Notes", label: "Notes" },
             { key: "CreatedBy", label: "Created By" },
-            { key: "CreatedAtUtc", label: "Created" }
+            { key: "CreatedAtUtc", label: "Created", render: row => formatDateTime(row.CreatedAtUtc) }
           ]} rows={history} />
         </Panel>
       )}
       {tab === "Terms" && (
         <Panel title="Terms" description="Contract terms stored in Azure SQL.">
-          <pre className="code-block">{JSON.stringify(parseJsonField(contract.TermsJson, {}), null, 2)}</pre>
+          <StructuredFieldList value={contract.TermsJson} emptyMessage="No contract terms have been stored yet." />
         </Panel>
       )}
       {editModal && (

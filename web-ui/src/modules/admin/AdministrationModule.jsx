@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { PageHeader } from "../../components/Shell";
-import { DataTable, MetricCard, Panel, StatusTag } from "../../components/Primitives";
+import { DataTable, MetricCard, Panel, StatusTag, StructuredValueSummary, formatDateTime } from "../../components/Primitives";
 import { fetchAdministrationSummary } from "../../utils/platformApi";
 import { fetchAdminIntegrations, fetchAdminRoles, fetchAdminUsers } from "../../utils/opsApi";
 import { createAdminIntegration, createAdminRole, createAdminUser } from "../../utils/opsMutations";
@@ -11,12 +11,16 @@ function TimelineList({ items }) {
       {items.map(item => (
         <div className="timeline-item" key={`${item.date}-${item.title}`}>
           <span className="timeline-dot"></span>
-          <div><strong>{item.title}</strong><div className="small-muted">{item.date} · {item.body}</div></div>
+          <div><strong>{item.title}</strong><div className="small-muted">{formatDate(item.date)} · {item.body}</div></div>
           {item.status && <StatusTag tone={item.tone || "blue"}>{item.status}</StatusTag>}
         </div>
       ))}
     </div>
   );
+}
+
+function formatDate(value) {
+  return value ? new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "-";
 }
 
 export default function AdministrationModule({ setRoute, showToast }) {
@@ -104,7 +108,7 @@ export default function AdministrationModule({ setRoute, showToast }) {
           {tab === "Users" && (
             <section className="record-main-layout">
               <Panel title="Users" description="Operational user accounts and access state." action={<button className="ghost-button" type="button" disabled={saving} onClick={() => createSample("user")}>Create sample user</button>}>
-                <DataTable columns={[{ key: "UserNumber", label: "User ID" }, { key: "UserName", label: "Name" }, { key: "RoleName", label: "Role" }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Active" ? "success" : "warn"}>{row.Status}</StatusTag> }, { key: "LastLoginAtUtc", label: "Last Login" }, { key: "details", label: "", render: row => <button className="link-button compact-action" type="button" onClick={() => setRoute?.(`details/record/${row.UserNumber}`)}>View</button> }]} rows={users} />
+                <DataTable columns={[{ key: "UserNumber", label: "User ID" }, { key: "UserName", label: "Name" }, { key: "RoleName", label: "Role" }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Active" ? "success" : "warn"}>{row.Status}</StatusTag> }, { key: "LastLoginAtUtc", label: "Last Login", render: row => formatDateTime(row.LastLoginAtUtc) }, { key: "details", label: "", render: row => <button className="link-button compact-action" type="button" onClick={() => setRoute?.(`details/record/${row.UserNumber}`)}>View</button> }]} rows={users} />
               </Panel>
               <section className="side-stack">
                 <Panel title="Invite user" description="Add a new platform account.">
@@ -116,7 +120,7 @@ export default function AdministrationModule({ setRoute, showToast }) {
               </section>
             </section>
           )}
-          {tab === "Roles" && <Panel title="Roles" description="Permission groups and access scope." action={<button className="ghost-button" type="button" disabled={saving} onClick={() => createSample("role")}>Create sample role</button>}><DataTable columns={[{ key: "RoleNumber", label: "Role ID" }, { key: "RoleName", label: "Role" }, { key: "PermissionsJson", label: "Permissions" }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Active" ? "success" : "warn"}>{row.Status}</StatusTag> }]} rows={roles} /></Panel>}
+          {tab === "Roles" && <Panel title="Roles" description="Permission groups and access scope." action={<button className="ghost-button" type="button" disabled={saving} onClick={() => createSample("role")}>Create sample role</button>}><DataTable columns={[{ key: "RoleNumber", label: "Role ID" }, { key: "RoleName", label: "Role" }, { key: "PermissionsJson", label: "Permissions", render: row => <StructuredValueSummary value={row.PermissionsJson} empty="No permissions assigned" /> }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Active" ? "success" : "warn"}>{row.Status}</StatusTag> }]} rows={roles} /></Panel>}
           {tab === "Integrations" && <Panel title="Integrations" description="Platform connections and sync status." action={<button className="ghost-button" type="button" disabled={saving} onClick={() => createSample("integration")}>Create sample integration</button>}><DataTable columns={[{ key: "IntegrationNumber", label: "Integration ID" }, { key: "IntegrationName", label: "Integration" }, { key: "Detail", label: "Detail" }, { key: "OwnerName", label: "Owner" }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Connected" ? "success" : "warn"}>{row.Status}</StatusTag> }]} rows={integrations} /></Panel>}
           {tab === "Audit" && <Panel title="Audit" description="System actions and version history."><TimelineList items={auditItems} /></Panel>}
           {tab === "Settings" && <Panel title="Settings" description="Platform defaults and governance controls."><div className="field-grid"><MetricCard label="Security" value="MFA required" delta="Policy" /><MetricCard label="Session timeout" value="30 minutes" delta="Platform" /><MetricCard label="Audit retention" value="7 years" delta="Governance" /><MetricCard label="Release mode" value={summary?.platform?.environment || "Controlled"} delta={summary?.platform?.serviceName || "Platform API"} /></div></Panel>}

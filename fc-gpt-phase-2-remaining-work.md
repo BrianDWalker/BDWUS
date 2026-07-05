@@ -373,6 +373,18 @@ Completion criteria:
 
 ### Phase 8 - UI consistency and desktop polish
 
+Status:
+
+- Complete for desktop consistency scope.
+- Shared formatting primitives now normalize desktop date, timestamp, percentage, and structured-value rendering across the extracted modules.
+- Administration tables now render readable permission summaries and formatted last-login timestamps instead of raw JSON-like payloads.
+- Reports, Orders, Ops, Billing detail, Customer Service detail, and Sales contract surfaces now use more consistent desktop formatting and empty-state handling.
+- The Sales contract terms panel no longer dumps raw JSON in the user-facing detail view; structured terms render as labeled fields instead.
+- Remaining blockers are documented explicitly:
+  - Some edit dialogs still intentionally expose JSON textareas for structured payload entry because those workflows do not yet have dedicated field-by-field editors.
+  - Broader mobile/tablet redesign work remains intentionally out of scope for this phase.
+  - Cross-module status-tone logic is still duplicated in places; visual output is now more consistent, but the mapping rules are not yet centralized.
+
 Goal:
 
 - Keep UI quality consistent while data and API behavior become more real.

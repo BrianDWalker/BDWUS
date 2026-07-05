@@ -135,6 +135,14 @@
   line-height: 1.45;
 }
 
+.compact-empty-state {
+  min-height: 0;
+  place-items: start;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
 .warning-banner {
   border: 1px solid rgba(217, 119, 6, 0.22);
   background: #fffbeb;
@@ -147,6 +155,52 @@
 
 .mini-tag {
   white-space: nowrap;
+}
+
+.token-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.token-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--ink);
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.structured-field-list {
+  display: grid;
+  gap: 12px;
+}
+
+.structured-field-list > div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.72);
+}
+
+.structured-field-list dt {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.structured-field-list dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
 .modal-actions {
