@@ -65,7 +65,7 @@ export const topNavSections = [
     label: "Customer 360",
     icon: "customerSearch",
     route: "customer-360",
-    routes: ["customer-360", "customer-service", "details/billing-account", "details/invoice", "details/service"]
+    routes: ["customer-360", "customer-service", "details/customer", "details/account", "details/billing-account", "details/invoice", "details/service"]
   },
   {
     id: "orders",

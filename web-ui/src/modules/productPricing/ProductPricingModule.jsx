@@ -20,7 +20,7 @@ function TableOrEmpty({ rows, columns, empty }) {
   return rows.length ? <DataTable columns={columns} rows={rows} /> : <div className="empty-state">{empty}</div>;
 }
 
-export default function ProductPricingModule({ showToast }) {
+export default function ProductPricingModule({ setRoute, showToast }) {
   const [tab, setTab] = useState("Products");
   const [data, setData] = useState({
     overview: null,
@@ -100,7 +100,7 @@ export default function ProductPricingModule({ showToast }) {
               <button key={item} className={item === tab ? "active" : ""} type="button" onClick={() => setTab(item)}>{item}</button>
             ))}
           </div>
-          {tab === "Products" && <Panel title="Products" description="Billing product records from the platform API."><TableOrEmpty rows={data.products} empty="No products returned by the billing API." columns={[{ key: "ProductCode", label: "Code" }, { key: "ProductName", label: "Product" }, { key: "Category", label: "Category" }, { key: "ServiceCategory", label: "Service Category" }, { key: "BaseMrc", label: "MRC", render: row => formatMoney(row.BaseMrc || 0) }, { key: "BaseNrc", label: "NRC", render: row => formatMoney(row.BaseNrc || 0) }, { key: "Status", label: "Status", render: row => <StatusTag tone={productStatusTone(row.Status)}>{row.Status}</StatusTag> }]} /></Panel>}
+          {tab === "Products" && <Panel title="Products" description="Billing product records from the platform API."><TableOrEmpty rows={data.products} empty="No products returned by the billing API." columns={[{ key: "ProductCode", label: "Code" }, { key: "ProductName", label: "Product" }, { key: "Category", label: "Category" }, { key: "ServiceCategory", label: "Service Category" }, { key: "BaseMrc", label: "MRC", render: row => formatMoney(row.BaseMrc || 0) }, { key: "BaseNrc", label: "NRC", render: row => formatMoney(row.BaseNrc || 0) }, { key: "Status", label: "Status", render: row => <StatusTag tone={productStatusTone(row.Status)}>{row.Status}</StatusTag> }, { key: "details", label: "", render: row => <button className="link-button compact-action" type="button" onClick={() => setRoute?.(`details/product/${encodeURIComponent(row.ProductId || row.ProductCode || row.ProductName)}`)}>Details</button> }]} /></Panel>}
           {tab === "Hierarchy" && <Panel title="Product Hierarchy" description="Product-to-billing hierarchy returned by /api/billing/product-hierarchy."><TableOrEmpty rows={data.hierarchy} empty="No hierarchy rows returned by the billing API." columns={[{ key: "ProductName", label: "Product" }, { key: "HierarchyPath", label: "Path" }, { key: "BillingCode", label: "Billing Code" }, { key: "DisplayOrder", label: "Order" }]} /></Panel>}
           {tab === "Billing Codes" && <Panel title="Billing Codes" description="Charge codes available to pricing and quote workflows."><TableOrEmpty rows={data.billingCodes} empty="No billing codes returned by the billing API." columns={[{ key: "Code", label: "Code" }, { key: "Description", label: "Description" }, { key: "BillingType", label: "Type" }]} /></Panel>}
           {tab === "Billing Elements" && <Panel title="Billing Elements" description="Reusable billing elements and amounts."><TableOrEmpty rows={data.billingElements} empty="No billing elements returned by the billing API." columns={[{ key: "ElementName", label: "Element" }, { key: "ElementType", label: "Type" }, { key: "Amount", label: "Amount", render: row => formatMoney(row.Amount || 0) }]} /></Panel>}

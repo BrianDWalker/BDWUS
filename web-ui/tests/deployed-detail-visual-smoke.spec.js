@@ -97,6 +97,54 @@ test.describe("deployed detail visual smoke", () => {
     expect(consoleErrors).toEqual([]);
   });
 
+  test("customer detail opens from customer 360 on deployed preview", async ({ page }, testInfo) => {
+    const consoleErrors = captureConsoleErrors(page);
+
+    await openRoute(page, "customer-360", "Customer 360");
+    await page.getByRole("button", { name: "Open Detail" }).click();
+    await assertDetailRoute(page, "customer", /Apex Health|Customer 360/i);
+    await expect(page.locator("#root").getByText(/Customer profile|Account profile|Service locations/i).first()).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS });
+    await attachRouteEvidence(testInfo, page, "customer-detail-loaded", consoleErrors);
+
+    expect(consoleErrors).toEqual([]);
+  });
+
+  test("invoice detail opens from billing on deployed preview", async ({ page }, testInfo) => {
+    const consoleErrors = captureConsoleErrors(page);
+
+    await openRoute(page, "billing", "Billing");
+    await page.locator(".panel").filter({ hasText: "Invoices" }).getByRole("button", { name: "Details" }).first().click();
+    await assertDetailRoute(page, "invoice", /Invoice INV-1001|Billing/i);
+    await expect(page.locator("#root").getByText(/Invoice summary|Payment info|Invoice actions/i).first()).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS });
+    await attachRouteEvidence(testInfo, page, "invoice-detail-loaded", consoleErrors);
+
+    expect(consoleErrors).toEqual([]);
+  });
+
+  test("order detail opens from orders on deployed preview", async ({ page }, testInfo) => {
+    const consoleErrors = captureConsoleErrors(page);
+
+    await openRoute(page, "orders", "Orders");
+    await page.locator(".panel").filter({ hasText: "Orders returned" }).getByRole("button", { name: "Details" }).first().click();
+    await assertDetailRoute(page, "order", /ORD-1001|Orders/i);
+    await expect(page.locator("#root").getByText(/Order summary|Task summary|Provisioning jobs/i).first()).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS });
+    await attachRouteEvidence(testInfo, page, "order-detail-loaded", consoleErrors);
+
+    expect(consoleErrors).toEqual([]);
+  });
+
+  test("product detail opens from product pricing on deployed preview", async ({ page }, testInfo) => {
+    const consoleErrors = captureConsoleErrors(page);
+
+    await openRoute(page, "product-pricing", "Product & Pricing");
+    await page.locator(".panel").filter({ hasText: "Products" }).getByRole("button", { name: "Details" }).first().click();
+    await assertDetailRoute(page, "product", /Fiber 1G|Product & Pricing/i);
+    await expect(page.locator("#root").getByText(/Product summary|Pricing profile|Rate plans/i).first()).toBeVisible({ timeout: ROUTE_LOAD_TIMEOUT_MS });
+    await attachRouteEvidence(testInfo, page, "product-detail-loaded", consoleErrors);
+
+    expect(consoleErrors).toEqual([]);
+  });
+
   test("sales lead detail opens from sales on deployed preview", async ({ page }, testInfo) => {
     const consoleErrors = captureConsoleErrors(page);
 

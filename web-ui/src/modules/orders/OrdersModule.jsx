@@ -13,7 +13,7 @@ function statusTone(status) {
 const normalizeOrders = rows => (rows || []).map(normalizeOrder);
 const normalizeJobs = rows => (rows || []).map(normalizeProvisioningJob);
 
-export default function OrdersModule({ showToast }) {
+export default function OrdersModule({ setRoute, showToast }) {
   const [orders, setOrders] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +82,7 @@ export default function OrdersModule({ showToast }) {
             <MetricCard label="Teams" value={new Set(orders.map(row => row.AssignedTeam).filter(Boolean)).size} delta="Assigned teams" />
           </section>
           <section className="record-main-layout">
-            <Panel title="Orders" description="Orders returned by /api/ops/orders.">{orders.length ? <DataTable columns={[{ key: "OrderNumber", label: "Order" }, { key: "AccountName", label: "Account" }, { key: "ServiceName", label: "Service" }, { key: "LifecycleStage", label: "Stage" }, { key: "OverallStatus", label: "Status", render: row => <StatusTag tone={statusTone(row.OverallStatus)}>{row.OverallStatus}</StatusTag> }, { key: "SlaStatus", label: "SLA", render: row => <StatusTag tone={statusTone(row.SlaStatus)}>{row.SlaStatus}</StatusTag> }, { key: "DueDate", label: "Due" }, { key: "action", label: "", render: row => <GatedButton action="create:provisioning-job" className="link-button compact-action" disabled={saving} onClick={() => progressOrder(row)}>Provision</GatedButton> }]} rows={orders} /> : <div className="empty-state">No orders returned by the ops API.</div>}</Panel>
+            <Panel title="Orders" description="Orders returned by /api/ops/orders.">{orders.length ? <DataTable columns={[{ key: "OrderNumber", label: "Order" }, { key: "AccountName", label: "Account" }, { key: "ServiceName", label: "Service" }, { key: "LifecycleStage", label: "Stage" }, { key: "OverallStatus", label: "Status", render: row => <StatusTag tone={statusTone(row.OverallStatus)}>{row.OverallStatus}</StatusTag> }, { key: "SlaStatus", label: "SLA", render: row => <StatusTag tone={statusTone(row.SlaStatus)}>{row.SlaStatus}</StatusTag> }, { key: "DueDate", label: "Due" }, { key: "details", label: "", render: row => <button className="link-button compact-action" type="button" onClick={() => setRoute?.(`details/order/${encodeURIComponent(row.OrderId)}`)}>Details</button> }, { key: "action", label: "", render: row => <GatedButton action="create:provisioning-job" className="link-button compact-action" disabled={saving} onClick={() => progressOrder(row)}>Provision</GatedButton> }]} rows={orders} /> : <div className="empty-state">No orders returned by the ops API.</div>}</Panel>
             <Panel title="Provisioning Jobs" description="Jobs returned by /api/ops/provisioning-jobs.">{jobs.length ? <DataTable columns={[{ key: "JobNumber", label: "Job" }, { key: "JobType", label: "Type" }, { key: "OwnerName", label: "Owner" }, { key: "Status", label: "Status" }, { key: "DueDate", label: "Due" }]} rows={jobs} /> : <div className="empty-state">No provisioning jobs returned by the ops API.</div>}</Panel>
           </section>
         </>

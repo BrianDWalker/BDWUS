@@ -46,6 +46,7 @@ export function normalizeOrder(row = {}) {
     ...row,
     OrderId: textField(row, "OrderId", "orderId", "id"),
     OrderNumber: textField(row, "OrderNumber", "orderNumber", "number"),
+    CustomerNumber: textField(row, "CustomerNumber", "customerNumber"),
     AccountName: textField(row, "AccountName", "accountName", "customer", "CustomerName"),
     ServiceName: textField(row, "ServiceName", "serviceName", "service"),
     LifecycleStage: textField(row, "LifecycleStage", "lifecycleStage", "stage"),

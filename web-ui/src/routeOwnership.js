@@ -28,12 +28,7 @@ export const routeAliases = {
 
 export function normalizeRoute(route) {
   const normalized = routeAliases[route] || route;
-  if (normalized.startsWith("details/customer/") || normalized.startsWith("details/account/")) return "customer-360";
-  if (normalized.startsWith("details/billing-account/")) return "customer-360";
-  if (normalized.startsWith("details/invoice/")) return "billing";
   if (normalized.startsWith("details/service/")) return "billing";
-  if (normalized.startsWith("details/order/")) return "orders";
-  if (normalized.startsWith("details/product/") || normalized.startsWith("details/product-pricing/")) return "product-pricing";
   return normalized;
 }
 
@@ -44,7 +39,17 @@ export function detailType(route) {
 }
 
 export function isExtractedRoute(route) {
-  return extractedRoutes.includes(route) || route.startsWith("details/ticket/") || route.startsWith("details/network/") || route.startsWith("details/record/");
+  return extractedRoutes.includes(route)
+    || route.startsWith("details/customer/")
+    || route.startsWith("details/account/")
+    || route.startsWith("details/billing-account/")
+    || route.startsWith("details/invoice/")
+    || route.startsWith("details/order/")
+    || route.startsWith("details/product/")
+    || route.startsWith("details/product-pricing/")
+    || route.startsWith("details/ticket/")
+    || route.startsWith("details/network/")
+    || route.startsWith("details/record/");
 }
 
 export function isIntegratedSalesRoute(route) {

@@ -10,6 +10,10 @@ import Customer360Module from "./modules/customer360/Customer360Module";
 import CustomerServiceModule from "./modules/customerService/CustomerServiceModule";
 import CustomerServiceTicketDetail from "./modules/customerService/CustomerServiceTicketDetail";
 import NetworkDetailModule from "./modules/details/NetworkDetailModule";
+import CustomerAccountDetailModule from "./modules/details/CustomerAccountDetailModule";
+import InvoiceDetailModule from "./modules/details/InvoiceDetailModule";
+import OrderDetailModule from "./modules/details/OrderDetailModule";
+import ProductDetailModule from "./modules/details/ProductDetailModule";
 import RecordDetailModule from "./modules/details/RecordDetailModule";
 import BillingModule from "./modules/billing/BillingModule";
 import OrdersModule from "./modules/orders/OrdersModule";
@@ -39,6 +43,10 @@ function useRoute() {
   return [route, setRoute];
 }
 
+function detailId(route, prefix) {
+  return decodeURIComponent(route.slice(prefix.length));
+}
+
 function Toast({ toast }) {
   return toast ? <div className="toast">{toast}</div> : null;
 }
@@ -51,6 +59,13 @@ function ExtractedRoute({ route, setRoute, showToast }) {
   if (route === "product-pricing") return <ProductPricingModule setRoute={setRoute} showToast={showToast} />;
   if (route === "customer-360") return <Customer360Module setRoute={setRoute} showToast={showToast} />;
   if (route === "customer-service") return <CustomerServiceModule setRoute={setRoute} showToast={showToast} />;
+  if (route.startsWith("details/customer/")) return <CustomerAccountDetailModule id={detailId(route, "details/customer/")} setRoute={setRoute} showToast={showToast} />;
+  if (route.startsWith("details/account/")) return <CustomerAccountDetailModule id={detailId(route, "details/account/")} setRoute={setRoute} showToast={showToast} />;
+  if (route.startsWith("details/billing-account/")) return <CustomerAccountDetailModule id={detailId(route, "details/billing-account/")} setRoute={setRoute} showToast={showToast} />;
+  if (route.startsWith("details/invoice/")) return <InvoiceDetailModule id={detailId(route, "details/invoice/")} setRoute={setRoute} showToast={showToast} />;
+  if (route.startsWith("details/order/")) return <OrderDetailModule id={detailId(route, "details/order/")} setRoute={setRoute} showToast={showToast} />;
+  if (route.startsWith("details/product/")) return <ProductDetailModule id={detailId(route, "details/product/")} setRoute={setRoute} showToast={showToast} />;
+  if (route.startsWith("details/product-pricing/")) return <ProductDetailModule id={detailId(route, "details/product-pricing/")} setRoute={setRoute} showToast={showToast} />;
   if (route.startsWith("details/ticket/")) return <CustomerServiceTicketDetail id={route.split("/")[2]} setRoute={setRoute} showToast={showToast} />;
   if (route.startsWith("details/network/")) return <NetworkDetailModule id={route.split("/")[2]} setRoute={setRoute} showToast={showToast} />;
   if (route.startsWith("details/record/")) return <RecordDetailModule id={route.split("/")[2]} setRoute={setRoute} showToast={showToast} />;
