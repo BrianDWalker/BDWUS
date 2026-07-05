@@ -1,0 +1,109 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { PageHeader } from "../../components/Shell";
+import { Icon } from "../../components/Icons";
+import { DataTable, MetricCard, Panel, StatusTag, formatMoney } from "../../components/Primitives";
+import { fetchCustomerServiceOverview } from "../../utils/platformApi";
+
+function contains(row, query, keys) {
+  const needle = String(query || "").trim().toLowerCase();
+  if (!needle) return true;
+  return keys.some(key => String(row[key] || "").toLowerCase().includes(needle));
+}
+
+function tone(value) {
+  if (["Urgent", "High", "Major", "Open", "In Progress"].includes(value)) return "warn";
+  if (["Closed", "Resolved", "Completed"].includes(value)) return "success";
+  return "blue";
+}
+
+export default function CustomerServiceModule({ setRoute, showToast }) {
+  const [data, setData] = useState({ tickets: [], customerReportedOutages: [], summary: {} });
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  async function loadCustomerService() {
+    setLoading(true);
+    setError("");
+    try {
+      const overview = await fetchCustomerServiceOverview();
+      setData({
+        tickets: overview.tickets || [],
+        customerReportedOutages: overview.customerReportedOutages || [],
+        summary: overview.summary || {}
+      });
+    } catch (err) {
+      setError(err.message || "Unable to load customer service data.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadCustomerService();
+  }, []);
+
+  const visibleTickets = useMemo(() => {
+    return (data.tickets || []).filter(ticket => contains(ticket, query, ["TicketNumber", "AccountName", "CustomerNumber", "IssueType", "Category", "Priority", "Status", "OwnerName"]));
+  }, [data.tickets, query]);
+
+  function captureDraft() {
+    const next = {
+      TicketId: `draft-${Date.now()}`,
+      TicketNumber: `TKT-DRAFT-${(data.tickets.length + 1).toString().padStart(3, "0")}`,
+      CustomerNumber: "Draft",
+      AccountName: "New Customer",
+      IssueType: "Customer inquiry",
+      Category: "Care",
+      Priority: "Normal",
+      Status: "Draft",
+      AgeHours: 0,
+      OwnerName: "Care Ops"
+    };
+    setData(current => ({ ...current, tickets: [next, ...current.tickets], summary: { ...current.summary, openTicketCount: Number(current.summary.openTicketCount || 0) + 1 } }));
+    showToast?.("Ticket draft captured");
+  }
+
+  const summary = data.summary || {};
+
+  return (
+    <>
+      <PageHeader
+        title="Customer Service"
+        description="API-backed support tickets, customer-reported network issues, billing inquiries, and care queue triage."
+        actions={<div className="module-toolbar"><button className="ghost-button" type="button" disabled={loading} onClick={loadCustomerService}>Refresh</button><button className="button" type="button" onClick={captureDraft}>Create ticket</button></div>}
+      />
+      {error && <div className="empty-state">{error}</div>}
+      {loading ? <div className="empty-state">Loading customer service queue...</div> : (
+        <>
+          <section className="overview-grid">
+            <MetricCard label="Open tickets" value={summary.openTicketCount ?? data.tickets.length} delta="Network, billing, orders, and care" />
+            <MetricCard label="Network reported" value={summary.networkTicketCount ?? 0} delta="Customer-reported cases" />
+            <MetricCard label="Billing inquiries" value={summary.billingTicketCount ?? 0} delta="Invoice and usage questions" />
+            <MetricCard label="Avg age" value={`${summary.averageAgeHours ?? 0}h`} delta="Current support queue" />
+          </section>
+          <section className="care-layout">
+            <Panel title="Support tickets" description="Search by ticket, customer, issue, owner, priority, or category." action={<label className="inline-search"><Icon name="search" className="button-icon" /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search support tickets" /></label>}>
+              {visibleTickets.length ? <DataTable columns={[
+                { key: "TicketNumber", label: "Ticket" },
+                { key: "AccountName", label: "Customer" },
+                { key: "IssueType", label: "Issue" },
+                { key: "Category", label: "Category" },
+                { key: "AgeHours", label: "Age", render: row => `${row.AgeHours || 0}h` },
+                { key: "Priority", label: "Priority", render: row => <StatusTag tone={tone(row.Priority)}>{row.Priority}</StatusTag> },
+                { key: "Status", label: "Status", render: row => <StatusTag tone={tone(row.Status)}>{row.Status}</StatusTag> },
+                { key: "OwnerName", label: "Owner" },
+                { key: "actions", label: "", render: row => <button className="link-button compact-action" type="button" onClick={() => setRoute?.(`details/ticket/${row.TicketId || row.TicketNumber}`)}>Details</button> }
+              ]} rows={visibleTickets} /> : <div className="empty-state">No support tickets match the current search.</div>}
+            </Panel>
+            <Panel title="Customer-reported network issues" description="Care cases connected to operational impact and SLA exposure.">
+              {data.customerReportedOutages?.length ? <div className="outage-map">
+                {data.customerReportedOutages.map(event => <button className="outage-card enhanced" type="button" key={event.EventId || event.EventNumber} onClick={() => setRoute?.(`details/network/${event.EventId || event.EventNumber}`)}><Icon name="network" className="button-icon" /><div><strong>{event.Market || "Market"}</strong><span>{event.Type} · {event.Impacted || event.AccountName} · {formatMoney(event.SlaExposure || 0)}</span></div><StatusTag tone={tone(event.Severity)}>{event.Severity || "Open"}</StatusTag></button>)}
+              </div> : <div className="empty-state">No customer-reported network issues returned by the customer service API.</div>}
+            </Panel>
+          </section>
+        </>
+      )}
+    </>
+  );
+}
