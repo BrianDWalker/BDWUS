@@ -68,7 +68,6 @@ export default function OrdersModule({ setRoute, showToast }) {
   return (
     <section className="orders-compact">
       <PageHeader title="Orders" description="API-backed service delivery queue, provisioning jobs, and order mutations." actions={<div className="button-cluster"><GatedButton action="create:order" disabled={saving} onClick={createSampleOrder}>New Order</GatedButton></div>} />
-      {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading orders...</div> : (
         <>
           <section className="overview-grid">

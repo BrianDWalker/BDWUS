@@ -149,7 +149,6 @@ export default function Customer360Module({ setRoute, showToast }) {
         <label className="inline-search">Customer<select value={selectedCustomer} onChange={event => setSelectedCustomer(event.target.value)}>{customerOptions.map(item => <option key={item.number} value={item.number}>{item.name}</option>)}</select></label>
       </div>
       {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
-      {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading customer data...</div> : !customerOptions.length ? null : (
         <>
           <section className="overview-grid">

@@ -82,7 +82,6 @@ export default function OrderDetailModule({ id, setRoute, showToast }) {
     <>
       <PageHeader title="Orders" description="Dedicated order and provisioning detail workspace." actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("orders")}>Back to Orders</button></div>} />
       {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
-      {error && <EmptyState>{error}</EmptyState>}
       {loading ? <EmptyState>Loading order detail...</EmptyState> : (
         <>
           <DetailHeader

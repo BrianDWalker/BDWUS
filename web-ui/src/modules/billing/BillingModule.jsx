@@ -130,7 +130,6 @@ export default function BillingModule({ setRoute, showToast }) {
   return (
     <>
       <PageHeader title="Billing" description="API-backed invoices, workflow actions, adjustments, and billing customers." />
-      {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading billing workflows...</div> : (
         <>
           <section className="overview-grid">

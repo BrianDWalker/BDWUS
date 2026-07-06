@@ -93,7 +93,6 @@ export default function AdministrationModule({ setRoute, showToast }) {
         description="Platform users, roles, integrations, audit, and system settings."
         actions={<button className="button" type="button" onClick={() => showToast?.("Administration settings opened")}>System Settings</button>}
       />
-      {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading administration data…</div> : (
         <>
           <section className="overview-grid">

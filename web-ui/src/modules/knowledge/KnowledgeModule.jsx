@@ -81,7 +81,6 @@ export default function KnowledgeModule({ setRoute }) {
         actions={<div className="module-toolbar"><button className="ghost-button" type="button" onClick={() => setRoute?.("reports")}>Open Reports</button><button className="button" type="button" onClick={() => setRoute?.("administration")}>Admin Settings</button></div>}
       />
       {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
-      {error && <div className="empty-state">{error}</div>}
       {loading && <div className="empty-state">Loading knowledge records…</div>}
       <section className="overview-grid">
         <MetricCard label="Documents" value={knowledgePayload.summary?.documentCount ?? docs.length} delta="Knowledge records" />

@@ -175,9 +175,8 @@ export default function ReportsModule({ showToast }) {
             <label>Status<select value={params.status} onChange={event => updateParam("status", event.target.value)}>{statusOptions.map(value => <option key={value}>{value}</option>)}</select></label>
             <button className="button" type="button" onClick={refreshReport}>Run report</button>
           </div>
-          {error && <div className="empty-state">{error}</div>}
-          {loadingReport && !error && !hasRows && <div className="empty-state">Loading report results…</div>}
-          {(!loadingReport || hasRows) && !error && (
+          {loadingReport && !hasRows && <div className="empty-state">Loading report results…</div>}
+          {(!loadingReport || hasRows) && (
             <section className="report-page">
               <div className="report-page-header">
                 <div>

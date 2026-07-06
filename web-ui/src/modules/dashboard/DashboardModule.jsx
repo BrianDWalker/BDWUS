@@ -91,7 +91,6 @@ export default function DashboardModule({ setRoute }) {
         description="Modern API-backed operating dashboard for sales, care, orders, billing, network, and platform work."
         actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setRoute?.("reports")}>Open Reports</button></div>}
       />
-      {error && <div className="empty-state">{error}</div>}
       {loading && !hasData ? <div className="empty-state">Loading operating dashboard...</div> : (
         <>
           <section className="overview-grid">
