@@ -1,6 +1,8 @@
 import { fetchWithTimeout } from "./fetchTimeout";
 import { platformApiBase } from "./platformApi";
 
+const ASSISTANT_REQUEST_TIMEOUT_MS = Number(import.meta.env.VITE_ASSISTANT_REQUEST_TIMEOUT_MS || 60_000);
+
 const DEFAULT_ASSISTANT_API_BASE = (
   import.meta.env.DEV
     ? ""
@@ -25,6 +27,7 @@ async function requestJson(path, options = {}) {
       "Content-Type": "application/json",
       ...(options.headers || {})
     },
+    timeoutMs: ASSISTANT_REQUEST_TIMEOUT_MS,
     ...options
   });
 
@@ -102,7 +105,7 @@ export async function fetchAssistantUiOverrides(scope = "knowledge") {
 export async function chatAssistant(payload) {
   return requestJson("/api/assistant/chat", {
     method: "POST",
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 }
 
