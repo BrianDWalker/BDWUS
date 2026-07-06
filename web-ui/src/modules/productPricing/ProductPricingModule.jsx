@@ -33,12 +33,10 @@ export default function ProductPricingModule({ setRoute, showToast }) {
     ratePlans: []
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [warnings, setWarnings] = useState([]);
 
   async function loadProductPricing() {
     setLoading(true);
-    setError("");
     setWarnings([]);
     const requests = [
         fetchProductPricingOverview(),
@@ -50,11 +48,7 @@ export default function ProductPricingModule({ setRoute, showToast }) {
         listPromotions(),
         listRatePlans()
       ];
-    const labels = ["overview", "products", "hierarchy", "billing codes", "billing elements", "offers", "promotions", "rate plans"];
     const [overview, products, hierarchy, billingCodes, billingElements, offers, promotions, ratePlans] = await Promise.allSettled(requests);
-    const failures = [overview, products, hierarchy, billingCodes, billingElements, offers, promotions, ratePlans]
-      .map((result, index) => result.status === "rejected" ? labels[index] : "")
-      .filter(Boolean);
     const nextData = {
       overview: overview.status === "fulfilled" ? overview.value : null,
       products: products.status === "fulfilled" ? products.value || [] : [],
@@ -65,10 +59,8 @@ export default function ProductPricingModule({ setRoute, showToast }) {
       promotions: promotions.status === "fulfilled" ? promotions.value || [] : [],
       ratePlans: ratePlans.status === "fulfilled" ? ratePlans.value || [] : []
     };
-    const loadedRows = nextData.products.length + nextData.hierarchy.length + nextData.billingCodes.length + nextData.billingElements.length + nextData.offers.length + nextData.promotions.length + nextData.ratePlans.length;
     setData(nextData);
     setWarnings([]);
-    setError(failures.length && !loadedRows ? "Unable to load product and pricing data from any configured source." : "");
     setLoading(false);
   }
 
@@ -85,7 +77,6 @@ export default function ProductPricingModule({ setRoute, showToast }) {
         description="API-backed catalog, hierarchy, billing elements, offers, promotions, and rate plans."
       />
       {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
-      {error && <div className="empty-state">{error}</div>}
       {loading ? <div className="empty-state">Loading product and pricing data...</div> : (
         <>
           <section className="overview-grid">
