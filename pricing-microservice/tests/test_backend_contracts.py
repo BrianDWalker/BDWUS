@@ -1,4 +1,4 @@
-from app.services import ops, ops_write, platform
+from app.services import assistant, ops, ops_write, platform
 from app.main import app
 
 
@@ -21,6 +21,10 @@ def test_ops_write_router_prefixes_exist():
     assert ops_write.billing_write_router.prefix == '/api/billing-workflows'
 
 
+def test_assistant_router_prefix_exists():
+    assert assistant.router.prefix == '/api/assistant'
+
+
 def test_platform_and_ops_routes_are_registered():
     route_paths = set(app.openapi()['paths'])
     expected_paths = {
@@ -35,6 +39,13 @@ def test_platform_and_ops_routes_are_registered():
         '/api/platform/knowledge/topics',
         '/api/platform/customer-360/{customer_number}',
         '/api/platform/product-pricing/overview',
+        '/api/assistant/chat',
+        '/api/assistant/ui-overrides',
+        '/api/assistant/change-requests/{change_request_id}/approve',
+        '/api/assistant/change-requests/{change_request_id}/reject',
+        '/api/assistant/github/branches',
+        '/api/assistant/github/tree',
+        '/api/assistant/github/file',
         '/api/ops/bootstrap',
         '/api/ops/orders',
         '/api/ops/network-events',

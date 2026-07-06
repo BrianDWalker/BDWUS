@@ -11,6 +11,7 @@ from urllib import request as urlrequest
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import OpenAI
+from fastapi import APIRouter, Query
 
 from app.database import get_sql_connection
 from app.models import (
@@ -45,6 +46,9 @@ GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com").rstrip("/")
 
 MAX_HISTORY_MESSAGES = int(os.getenv("AI_ASSISTANT_MAX_HISTORY_MESSAGES", "8"))
+
+
+router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 
 
 def normalize_github_repository(repository: str) -> str:
@@ -674,6 +678,7 @@ def github_request(method: str, path: str, payload: dict[str, Any] | None = None
       raise ValueError(f"GitHub API error ({exc.code}): {detail}") from exc
 
 
+@router.get("/github/branches")
 def get_github_branches(repository: str) -> dict[str, Any]:
     normalized_repo = normalize_github_repository(repository)
     payload = github_request("GET", github_api_path(f"/repos/{normalized_repo}/branches", {"per_page": "100"}))
@@ -690,6 +695,7 @@ def get_github_branches(repository: str) -> dict[str, Any]:
     }
 
 
+@router.get("/github/tree")
 def get_github_tree(repository: str, branch: str, path: str = "") -> dict[str, Any]:
     normalized_repo = normalize_github_repository(repository)
     normalized_branch = normalize_github_branch(branch)
@@ -722,6 +728,7 @@ def get_github_tree(repository: str, branch: str, path: str = "") -> dict[str, A
     }
 
 
+@router.get("/github/file")
 def get_github_file(repository: str, branch: str, path: str) -> dict[str, Any]:
     normalized_repo = normalize_github_repository(repository)
     normalized_branch = normalize_github_branch(branch)
@@ -908,6 +915,7 @@ def execute_lead_create(record: AssistantChangeRequest) -> dict[str, Any]:
     return created
 
 
+@router.post("/chat")
 def chat(request: AssistantChatRequest) -> AssistantChatResponse:
     ensure_ai_storage()
     conversation_id = request.conversationId or str(uuid.uuid4())
@@ -939,7 +947,8 @@ def chat(request: AssistantChatRequest) -> AssistantChatResponse:
     )
 
 
-def list_ui_overrides(scope: str) -> list[AssistantUiOverride]:
+@router.get("/ui-overrides")
+def list_ui_overrides(scope: str = Query(default="knowledge")) -> list[AssistantUiOverride]:
     ensure_ai_storage()
     conn = get_sql_connection()
     try:
@@ -1001,6 +1010,7 @@ def get_change_request(change_request_id: uuid.UUID) -> AssistantChangeRequest |
       conn.close()
 
 
+@router.post("/change-requests/{change_request_id}/approve")
 def approve_change_request(change_request_id: uuid.UUID, request: AssistantApprovalRequest) -> AssistantChangeRequest:
     ensure_ai_storage()
     record = get_change_request(change_request_id)
@@ -1058,6 +1068,7 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
     return updated
 
 
+@router.post("/change-requests/{change_request_id}/reject")
 def reject_change_request(change_request_id: uuid.UUID, rejected_by: str = "admin") -> AssistantChangeRequest:
     ensure_ai_storage()
     record = get_change_request(change_request_id)

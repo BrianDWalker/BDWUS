@@ -21,6 +21,7 @@ from app.models import (
     QuoteReviseRequest,
 )
 from app.services.assistant import (
+    router as assistant_router,
     approve_change_request,
     chat,
     get_change_request,
@@ -106,6 +107,7 @@ app.include_router(auth_router)
 app.include_router(sales_compat_router)
 app.include_router(sales_router)
 app.include_router(billing_router)
+app.include_router(assistant_router)
 app.include_router(platform_router)
 app.include_router(customer_service_router)
 app.include_router(ops_router)
