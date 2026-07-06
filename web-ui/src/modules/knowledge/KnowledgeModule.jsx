@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
-import { KnowledgeAssistant } from "../../components/KnowledgeAssistant";
 import { DataTable, MetricCard, Panel, StatusTag, WarningBanner, statusTone } from "../../components/Primitives";
 import { fetchKnowledgeBootstrap } from "../../utils/platformApi";
 
@@ -107,9 +106,6 @@ export default function KnowledgeModule({ setRoute }) {
           </div>
         </Panel>
       </section>
-      <Panel title="Knowledge Assistant" description="Platform assistant integration with SQL-backed knowledge context.">
-        <KnowledgeAssistant context={{ route: "knowledge", pageTitle: "Knowledge", pageSummary: "Extracted knowledge workspace" }} />
-      </Panel>
     </>
   );
 }

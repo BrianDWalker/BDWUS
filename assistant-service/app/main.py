@@ -1,4 +1,3 @@
-import base64
 import os
 import re
 import uuid
@@ -11,9 +10,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 try:
-    from openai import AzureOpenAI
+    from azure.identity import DefaultAzureCredential, get_bearer_token_provider
+    from openai import OpenAI
 except Exception:  # pragma: no cover
-    AzureOpenAI = None
+    DefaultAzureCredential = None
+    get_bearer_token_provider = None
+    OpenAI = None
 
 
 APP_NAME = "BDWUS Assistant Service"
@@ -27,6 +29,21 @@ SYSTEM_OVERRIDES = {
     "billing": [],
 }
 CHANGE_REQUESTS: dict[str, dict[str, Any]] = {}
+AI_MODEL = (
+    os.getenv("AZURE_AI_FOUNDRY_DEPLOYMENT")
+    or os.getenv("AZURE_OPENAI_DEPLOYMENT")
+    or "gpt-5-nano"
+)
+AI_ENDPOINT = (
+    os.getenv("AZURE_AI_FOUNDRY_OPENAI_ENDPOINT")
+    or os.getenv("AZURE_OPENAI_ENDPOINT")
+    or ""
+).rstrip("/")
+AI_PROJECT_ENDPOINT = os.getenv("AZURE_AI_FOUNDRY_PROJECT_ENDPOINT", "").rstrip("/")
+AI_API_KEY = os.getenv("AZURE_AI_FOUNDRY_API_KEY") or os.getenv("AZURE_OPENAI_API_KEY")
+AI_AUTH_MODE = os.getenv("AI_AUTH_MODE", "auto").lower()
+AI_SCOPE = os.getenv("AZURE_AI_FOUNDRY_SCOPE", "https://ai.azure.com/.default")
+AI_OFFLINE = os.getenv("AI_ASSISTANT_OFFLINE", "false").lower() in {"1", "true", "yes"}
 
 
 class ChatRequest(BaseModel):
@@ -119,106 +136,91 @@ def summarize_files(files: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def normalize_openai_base_url(endpoint: str) -> str:
+    cleaned = endpoint.rstrip("/")
+    if not cleaned:
+        return ""
+    if cleaned.endswith("/openai/v1"):
+        return cleaned
+    if "/api/projects/" in cleaned:
+        origin = cleaned.split("/api/projects/", 1)[0].rstrip("/")
+        return f"{origin}/openai/v1"
+    return f"{cleaned}/openai/v1"
 
-def heuristic_assistant_message(request: ChatRequest) -> tuple[str, list[dict[str, Any]]]:
-    context = request.context or {}
-    mode = request.mode
-    message = request.message.strip()
-    repo = context.get("githubRepo") or DEFAULT_ALLOWED_REPOSITORIES
-    branch = context.get("githubBranch") or "fc-gpt"
-    staged_files = context.get("githubFiles") or []
-    page_title = context.get("pageTitle") or context.get("route") or "workspace"
-    files_summary = summarize_files(staged_files)
-    lower = message.lower()
-    proposals: list[dict[str, Any]] = []
 
-    if mode == "dev":
-        proposals.append(
-            {
-                "kind": "github_update",
-                "title": "Review staged repository changes",
-                "target": f"{repo}@{branch}",
-                "summary": "This proposal packages the currently staged files for manual review and a controlled GitHub commit workflow.",
-                "patch": {
-                    "github": {
-                        "repository": repo,
-                        "branch": branch,
-                        "changeSummary": f"Review and refine {len(staged_files)} staged file(s) for the {page_title} workspace.",
-                        "files": [
-                            {
-                                "filePath": item.get("path", "unknown"),
-                                "content": item.get("content", ""),
-                            }
-                            for item in staged_files[:10]
-                        ],
-                    }
-                },
-            }
-        )
-        assistant_text = (
-            f"I reviewed the repository context for **{page_title}** on `{repo}` / `{branch}`.\n\n"
-            f"Attached files:\n{files_summary}\n\n"
-            "I generated a controlled GitHub review proposal rather than writing directly, so the next step can stay approval-driven. "
-            "To make this production-grade, the branch still needs diff generation, commit execution, and audit logging behind the approval path."
-        )
-        return assistant_text, proposals
+def model_status() -> dict[str, Any]:
+    base_url = normalize_openai_base_url(AI_ENDPOINT or AI_PROJECT_ENDPOINT)
+    configured = bool(base_url and (AI_API_KEY or AI_AUTH_MODE in {"bearer_token", "managed_identity", "entra"}))
+    return {
+        "configured": configured,
+        "endpoint": base_url,
+        "deployment": AI_MODEL,
+        "authMode": AI_AUTH_MODE,
+        "offline": AI_OFFLINE,
+    }
 
-    if mode == "agent":
-        draft = context.get("salesDefaults") or {}
-        proposals.append(
-            {
-                "kind": "lead_create",
-                "title": "Create lead draft",
-                "target": draft.get("accountName") or "New account",
-                "summary": "Prepared a lead draft using the current assistant context and sales defaults.",
-                "patch": {
-                    "leadDraft": {
-                        "accountName": draft.get("accountName", ""),
-                        "contactName": draft.get("contactName", ""),
-                        "productInterest": draft.get("productInterest", ""),
-                        "ownerName": draft.get("ownerName", request.userName or "admin"),
-                    }
-                },
-            }
-        )
-        return (
-            "I prepared a lead-agent draft proposal from the supplied sales context. "
-            "This service keeps the action approval-driven so the UI can review the payload before anything is written to a system of record.",
-            proposals,
-        )
 
-    assistant_text = (
-        f"I reviewed your request for the **{page_title}** workspace. "
-        "This assistant service is wired to support grounded telecom knowledge, proposal generation, GitHub repository browsing, and approval-based actions. "
-        "For deterministic local operation it uses repository/context-aware heuristics when a model is not configured."
+def openai_client() -> OpenAI | None:
+    if AI_OFFLINE or OpenAI is None:
+        return None
+
+    base_url = normalize_openai_base_url(AI_ENDPOINT or AI_PROJECT_ENDPOINT)
+    if not base_url:
+        return None
+
+    if AI_AUTH_MODE == "api_key":
+        return OpenAI(api_key=AI_API_KEY, base_url=base_url) if AI_API_KEY else None
+
+    if AI_AUTH_MODE in {"bearer_token", "managed_identity", "entra"}:
+        if DefaultAzureCredential is None or get_bearer_token_provider is None:
+            return None
+        token_provider = get_bearer_token_provider(
+            DefaultAzureCredential(exclude_interactive_browser_credential=False),
+            AI_SCOPE,
+        )
+        return OpenAI(api_key=token_provider, base_url=base_url)
+
+    if AI_API_KEY:
+        return OpenAI(api_key=AI_API_KEY, base_url=base_url)
+
+    if DefaultAzureCredential is None or get_bearer_token_provider is None:
+        return None
+    token_provider = get_bearer_token_provider(
+        DefaultAzureCredential(exclude_interactive_browser_credential=False),
+        AI_SCOPE,
     )
+    return OpenAI(api_key=token_provider, base_url=base_url)
 
-    if any(token in lower for token in ["quote", "pricing", "margin"]):
-        assistant_text += " Pricing questions should also be cross-checked against the pricing microservice runtime before approval."
-    elif any(token in lower for token in ["billing", "invoice", "charge"]):
-        assistant_text += " Billing questions should be grounded in Azure SQL billing read models before any action is approved."
-    elif any(token in lower for token in ["order", "provision", "activation"]):
-        assistant_text += " Order and provisioning actions should remain workflow-gated until live orchestration endpoints are connected."
 
-    return assistant_text, proposals
+def extract_response_text(response: Any) -> str:
+    text = getattr(response, "output_text", "")
+    if isinstance(text, str) and text.strip():
+        return text.strip()
+    output = getattr(response, "output", []) or []
+    parts: list[str] = []
+    for item in output:
+        content = getattr(item, "content", None) if not isinstance(item, dict) else item.get("content")
+        if not content:
+            continue
+        for entry in content:
+            value = getattr(entry, "text", None) if not isinstance(entry, dict) else entry.get("text")
+            if isinstance(value, str) and value.strip():
+                parts.append(value.strip())
+    return "\n".join(parts).strip()
 
 
 
 def model_assistant_message(request: ChatRequest) -> tuple[str, list[dict[str, Any]]]:
-    if AzureOpenAI is None:
-        return heuristic_assistant_message(request)
+    client = openai_client()
+    if client is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Assistant model is not configured. Set Azure AI Foundry or Azure OpenAI endpoint, deployment, and credentials.",
+        )
 
-    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "").strip()
-    api_key = os.getenv("AZURE_OPENAI_API_KEY", "").strip()
-    deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "").strip()
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-21")
-    if not endpoint or not api_key or not deployment:
-        return heuristic_assistant_message(request)
-
-    client = AzureOpenAI(azure_endpoint=endpoint, api_key=api_key, api_version=api_version)
     system_prompt = (
-        "You are the BDWUS telecom assistant. Ground answers in the provided context, be explicit about uncertainty, "
-        "and prefer approval-based proposals over direct side effects."
+        "You are the BDWUS telecom assistant. Keep answers concise, conversational, and directly useful. "
+        "Ground answers in the provided context and be explicit about uncertainty."
     )
     user_payload = {
         "mode": request.mode,
@@ -226,17 +228,19 @@ def model_assistant_message(request: ChatRequest) -> tuple[str, list[dict[str, A
         "context": request.context,
         "userName": request.userName,
     }
-    response = client.chat.completions.create(
-        model=deployment,
-        temperature=0.2,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": str(user_payload)},
-        ],
-    )
-    text = response.choices[0].message.content if response.choices else "I am ready."
-    heuristic_text, proposals = heuristic_assistant_message(request)
-    return text or heuristic_text, proposals
+    try:
+        response = client.responses.create(
+            model=AI_MODEL,
+            instructions=system_prompt,
+            input=str(user_payload),
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Assistant model request failed: {exc}") from exc
+
+    text = extract_response_text(response)
+    if not text:
+        raise HTTPException(status_code=502, detail="Assistant model returned an empty response.")
+    return text, []
 
 
 @app.get("/health")
@@ -247,6 +251,7 @@ def health() -> dict[str, Any]:
         "time": utc_now(),
         "allowedRepositories": sorted(_allowed_repositories()),
         "assistantApiPrefix": API_PREFIX,
+        "model": model_status(),
     }
 
 

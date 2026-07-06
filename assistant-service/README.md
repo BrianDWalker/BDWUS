@@ -15,8 +15,8 @@ This service provides a dedicated backend contract for the `fc-gpt` in-app assis
 
 ## Runtime modes
 
-- Azure OpenAI / Azure AI Foundry if configured
-- Deterministic heuristic fallback if no model credentials are provided
+- Azure OpenAI / Azure AI Foundry responses API if configured
+- Requests return a model response or an explicit error
 
 ## Local run
 
@@ -31,6 +31,14 @@ uvicorn app.main:app --reload --port 8080
 - `ASSISTANT_ALLOWED_ORIGINS`
 - `ASSISTANT_ALLOWED_REPOSITORIES`
 - `GITHUB_TOKEN`
+- `AI_ASSISTANT_OFFLINE`
+- `AI_AUTH_MODE`
+- `AZURE_AI_FOUNDRY_DEPLOYMENT`
+- `AZURE_AI_FOUNDRY_OPENAI_ENDPOINT`
+- `AZURE_AI_FOUNDRY_PROJECT_ENDPOINT`
+- `AZURE_AI_FOUNDRY_API_KEY`
+- `AZURE_AI_FOUNDRY_SCOPE`
+- `AZURE_AI_FOUNDRY_DEPLOYMENT`
 - `AZURE_OPENAI_ENDPOINT`
 - `AZURE_OPENAI_API_KEY`
 - `AZURE_OPENAI_DEPLOYMENT`

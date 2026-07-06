@@ -102,11 +102,11 @@ export const topNavSections = [
     route: "reports",
     routes: ["reports"]
   },
-  {
-    id: "administration",
-    label: "Administration",
-    icon: "settings",
-    route: "administration",
-    routes: ["administration"]
-  }
+  // {
+  //   id: "administration",
+  //   label: "Administration",
+  //   icon: "settings",
+  //   route: "administration",
+  //   routes: ["administration"]
+  // }
 ];

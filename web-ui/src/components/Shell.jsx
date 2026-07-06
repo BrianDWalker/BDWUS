@@ -2,6 +2,7 @@ import React, { createContext, useEffect, useMemo, useRef, useState } from "reac
 import { navGroups, topNavSections } from "../navigationConfig";
 import { activeRole, roles, synchronizeRoleToken } from "../utils/permissions";
 import { platformApiBase } from "../utils/platformApi";
+import { AiAssistPopover } from "./AiAssistPopover";
 import { Icon } from "./Icons";
 
 export const PermissionRoleContext = createContext(null);
@@ -203,12 +204,13 @@ function MobileDrawer({ activeRoute, onNavigate, onClose }) {
   );
 }
 
-export function Shell({ activeRoute, setRoute, children, onAiAssistOpen }) {
+export function Shell({ activeRoute, setRoute, children }) {
   const isMobile = useMediaQuery("(max-width: 760px)");
   const shellRef = useRef(null);
   const [utility, setUtility] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [role, setRole] = useState(activeRole());
 
@@ -236,6 +238,7 @@ export function Shell({ activeRoute, setRoute, children, onAiAssistOpen }) {
     setUtility(null);
     setSearchOpen(false);
     setDrawerOpen(false);
+    setAiOpen(false);
   }, [activeRoute]);
 
   useEffect(() => {
@@ -252,6 +255,7 @@ export function Shell({ activeRoute, setRoute, children, onAiAssistOpen }) {
         setUtility(null);
         setSearchOpen(false);
         setDrawerOpen(false);
+        setAiOpen(false);
       }
     }
     document.addEventListener("pointerdown", handlePointerDown);
@@ -263,6 +267,7 @@ export function Shell({ activeRoute, setRoute, children, onAiAssistOpen }) {
     setUtility(null);
     setSearchOpen(false);
     setDrawerOpen(false);
+    setAiOpen(false);
     setSearchQuery("");
   }
 
@@ -309,17 +314,29 @@ export function Shell({ activeRoute, setRoute, children, onAiAssistOpen }) {
         )}
 
         <div className="topnav-right">
-          <button className="topnav-icon-button" type="button" aria-label="AI Assist" onClick={() => {
-            setUtility(null);
-            setDrawerOpen(false);
-            setSearchOpen(false);
-            onAiAssistOpen?.();
-          }}>
-            <Icon name="sparkles" className="button-icon" />
-          </button>
+          <div className="topnav-ai-shell">
+            <button className="topnav-icon-button" type="button" aria-label="AI Assist" onClick={() => {
+              setUtility(null);
+              setDrawerOpen(false);
+              setSearchOpen(false);
+              setAiOpen(open => !open);
+            }}>
+              <Icon name="sparkles" className="button-icon" />
+            </button>
+            <AiAssistPopover
+              open={aiOpen}
+              onClose={() => setAiOpen(false)}
+              context={{
+                route: activeRoute,
+                pageTitle: activeSection?.label || activeGroup,
+                pageSummary: `${activeSection?.label || activeGroup} workspace`
+              }}
+            />
+          </div>
           <button className="topnav-icon-button" type="button" aria-label="Search" onClick={() => {
             setUtility(null);
             setDrawerOpen(false);
+            setAiOpen(false);
             setSearchOpen(open => !open);
           }}>
             <Icon name="search" className="button-icon" />
@@ -336,6 +353,7 @@ export function Shell({ activeRoute, setRoute, children, onAiAssistOpen }) {
           <button className="topnav-icon-button" type="button" aria-label="Notifications" onClick={() => {
             setSearchOpen(false);
             setDrawerOpen(false);
+            setAiOpen(false);
             setUtility(current => current === "notifications" ? null : "notifications");
           }}>
             <Icon name="bell" className="button-icon" />
@@ -343,6 +361,7 @@ export function Shell({ activeRoute, setRoute, children, onAiAssistOpen }) {
           <button className="topnav-avatar" type="button" aria-label="Profile" onClick={() => {
             setSearchOpen(false);
             setDrawerOpen(false);
+            setAiOpen(false);
             setUtility(current => current === "profile" ? null : "profile");
           }}>BW</button>
         </div>
