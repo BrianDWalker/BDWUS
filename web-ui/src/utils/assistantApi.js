@@ -5,10 +5,10 @@ const DEFAULT_ASSISTANT_API_BASE = (
   import.meta.env.DEV
     ? ""
     : (
+      import.meta.env.VITE_ASSISTANT_API_BASE_URL ||
       import.meta.env.VITE_AI_API_BASE_URL ||
       import.meta.env.VITE_PLATFORM_API_BASE_URL ||
       platformApiBase ||
-      window.location.origin ||
       ""
     )
 ).replace(/\/$/, "");
