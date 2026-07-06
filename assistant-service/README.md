@@ -26,6 +26,8 @@ python -m pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8080
 ```
 
+When running `web-ui` locally with `npm run dev`, Vite proxies `/api/*` to `http://127.0.0.1:8080` by default, so keep this service running on that port for assistant requests. `vite preview` and other static-serving modes do not use that proxy, so use the dev server when you want local API wiring to reflect immediately.
+
 ## Key environment variables
 
 - `ASSISTANT_ALLOWED_ORIGINS`
