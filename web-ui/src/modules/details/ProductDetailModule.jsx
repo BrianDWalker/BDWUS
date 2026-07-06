@@ -92,7 +92,7 @@ export default function ProductDetailModule({ id, setRoute, showToast }) {
       .filter(Boolean);
 
     if (failures.length && (nextProducts.length || nextHierarchy.length || nextCodes.length || nextElements.length || nextOffers.length || nextPromotions.length || nextRatePlans.length)) {
-      setWarnings([`${failures.join(", ")} source${failures.length === 1 ? "" : "s"} unavailable; showing available catalog data.`]);
+      setWarnings([]);
     } else if (failures.length) {
       setError(overviewResult.reason?.message || productsResult.reason?.message || hierarchyResult.reason?.message || codesResult.reason?.message || elementsResult.reason?.message || offersResult.reason?.message || promotionsResult.reason?.message || ratePlansResult.reason?.message || "Unable to load product detail.");
     }
@@ -160,32 +160,32 @@ export default function ProductDetailModule({ id, setRoute, showToast }) {
           )}
           {tab === "Hierarchy" && (
             <Panel title="Hierarchy" description="Product-to-billing hierarchy records.">
-              {relatedHierarchy.length ? <DataTable columns={[{ key: "ProductName", label: "Product" }, { key: "HierarchyPath", label: "Path" }, { key: "BillingCode", label: "Billing Code" }, { key: "DisplayOrder", label: "Order" }]} rows={relatedHierarchy} /> : <EmptyState>No hierarchy rows returned for this product.</EmptyState>}
+              {relatedHierarchy.length ? <DataTable columns={[{ key: "ProductName", label: "Product" }, { key: "HierarchyPath", label: "Path" }, { key: "BillingCode", label: "Billing Code" }, { key: "DisplayOrder", label: "Order" }]} rows={relatedHierarchy} /> : null}
             </Panel>
           )}
           {tab === "Billing Codes" && (
             <Panel title="Billing codes" description="Charge codes used by pricing and billing.">
-              {relatedCodes.length ? <DataTable columns={[{ key: "Code", label: "Code" }, { key: "Description", label: "Description" }, { key: "BillingType", label: "Type" }]} rows={relatedCodes} /> : <EmptyState>No billing codes returned for this product.</EmptyState>}
+              {relatedCodes.length ? <DataTable columns={[{ key: "Code", label: "Code" }, { key: "Description", label: "Description" }, { key: "BillingType", label: "Type" }]} rows={relatedCodes} /> : null}
             </Panel>
           )}
           {tab === "Billing Elements" && (
             <Panel title="Billing elements" description="Reusable charge elements and amounts.">
-              {relatedElements.length ? <DataTable columns={[{ key: "ElementName", label: "Element" }, { key: "ElementType", label: "Type" }, { key: "Amount", label: "Amount", render: row => formatMoney(row.Amount || 0) }]} rows={relatedElements} /> : <EmptyState>No billing elements returned for this product.</EmptyState>}
+              {relatedElements.length ? <DataTable columns={[{ key: "ElementName", label: "Element" }, { key: "ElementType", label: "Type" }, { key: "Amount", label: "Amount", render: row => formatMoney(row.Amount || 0) }]} rows={relatedElements} /> : null}
             </Panel>
           )}
           {tab === "Offers" && (
             <Panel title="Offers" description="Offer positioning and eligibility.">
-              {offers.length ? <DataTable columns={[{ key: "OfferCode", label: "Code" }, { key: "OfferName", label: "Offer" }, { key: "OfferType", label: "Type" }, { key: "Eligibility", label: "Eligibility" }, { key: "Status", label: "Status", render: row => <StatusTag tone={tone(row.Status)}>{row.Status || "-"}</StatusTag> }]} rows={offers} /> : <EmptyState>No offers returned for this product.</EmptyState>}
+              {offers.length ? <DataTable columns={[{ key: "OfferCode", label: "Code" }, { key: "OfferName", label: "Offer" }, { key: "OfferType", label: "Type" }, { key: "Eligibility", label: "Eligibility" }, { key: "Status", label: "Status", render: row => <StatusTag tone={tone(row.Status)}>{row.Status || "-"}</StatusTag> }]} rows={offers} /> : null}
             </Panel>
           )}
           {tab === "Promotions" && (
             <Panel title="Promotions" description="Active and planned promotions.">
-              {promotions.length ? <DataTable columns={[{ key: "PromotionCode", label: "Code" }, { key: "PromotionName", label: "Promotion" }, { key: "PromotionType", label: "Type" }, { key: "DiscountPct", label: "Discount %" }, { key: "Status", label: "Status", render: row => <StatusTag tone={tone(row.Status)}>{row.Status || "-"}</StatusTag> }]} rows={promotions} /> : <EmptyState>No promotions returned for this product.</EmptyState>}
+              {promotions.length ? <DataTable columns={[{ key: "PromotionCode", label: "Code" }, { key: "PromotionName", label: "Promotion" }, { key: "PromotionType", label: "Type" }, { key: "DiscountPct", label: "Discount %" }, { key: "Status", label: "Status", render: row => <StatusTag tone={tone(row.Status)}>{row.Status || "-"}</StatusTag> }]} rows={promotions} /> : null}
             </Panel>
           )}
           {tab === "Rate Plans" && (
             <Panel title="Rate plans" description="Recurring and usage plans associated with the catalog.">
-              {ratePlans.length ? <DataTable columns={[{ key: "PlanCode", label: "Code" }, { key: "PlanName", label: "Plan" }, { key: "PlanTier", label: "Tier" }, { key: "BillingFrequency", label: "Frequency" }, { key: "MonthlyBaseFee", label: "Base Fee", render: row => formatMoney(row.MonthlyBaseFee || 0) }, { key: "MinimumCommitment", label: "Commitment", render: row => formatMoney(row.MinimumCommitment || 0) }]} rows={ratePlans} /> : <EmptyState>No rate plans returned for this product.</EmptyState>}
+              {ratePlans.length ? <DataTable columns={[{ key: "PlanCode", label: "Code" }, { key: "PlanName", label: "Plan" }, { key: "PlanTier", label: "Tier" }, { key: "BillingFrequency", label: "Frequency" }, { key: "MonthlyBaseFee", label: "Base Fee", render: row => formatMoney(row.MonthlyBaseFee || 0) }, { key: "MinimumCommitment", label: "Commitment", render: row => formatMoney(row.MinimumCommitment || 0) }]} rows={ratePlans} /> : null}
             </Panel>
           )}
         </>

@@ -79,7 +79,7 @@ export default function CustomerAccountDetailModule({ id, setRoute, showToast })
     ].filter(Boolean);
 
     if (failed.length && (customer360Payload || billingPayload || directoryRows.length)) {
-      setWarnings([`${failed.join(" and ")} unavailable; showing available customer data.`]);
+      setWarnings([]);
     } else if (failed.length) {
       setError(customerResult.reason?.message || billingResult.reason?.message || directoryResult.reason?.message || "Unable to load customer detail.");
     }
@@ -161,32 +161,32 @@ export default function CustomerAccountDetailModule({ id, setRoute, showToast })
           )}
           {tab === "Accounts" && (
             <Panel title="Accounts" description="Account records linked to this customer.">
-              {accounts.length ? <DataTable columns={[{ key: "name", label: "Account" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status)}>{row.status || "-"}</StatusTag> }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }]} rows={accounts} /> : <EmptyState>No linked accounts returned.</EmptyState>}
+              {accounts.length ? <DataTable columns={[{ key: "name", label: "Account" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status)}>{row.status || "-"}</StatusTag> }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }]} rows={accounts} /> : null}
             </Panel>
           )}
           {tab === "Locations" && (
-            <Panel title="Locations" description="Service locations and serviceability returned by the platform API.">
-              {locations.length ? <DataTable columns={[{ key: "LocationName", label: "Location" }, { key: "AddressLine1", label: "Address" }, { key: "City", label: "City" }, { key: "StateProvince", label: "State" }, { key: "ServiceabilityType", label: "Serviceability" }, { key: "Status", label: "Status", render: row => <StatusTag tone={statusTone(row.Status)}>{row.Status || "-"}</StatusTag> }]} rows={locations} /> : <EmptyState>No service locations returned.</EmptyState>}
+            <Panel title="Locations" description="Service locations and serviceability.">
+              {locations.length ? <DataTable columns={[{ key: "LocationName", label: "Location" }, { key: "AddressLine1", label: "Address" }, { key: "City", label: "City" }, { key: "StateProvince", label: "State" }, { key: "ServiceabilityType", label: "Serviceability" }, { key: "Status", label: "Status", render: row => <StatusTag tone={statusTone(row.Status)}>{row.Status || "-"}</StatusTag> }]} rows={locations} /> : null}
             </Panel>
           )}
           {tab === "Opportunities" && (
             <Panel title="Opportunities" description="Commercial pipeline tied to this customer.">
-              {opportunities.length ? <DataTable columns={[{ key: "name", label: "Opportunity" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status)}>{row.status || "-"}</StatusTag> }, { key: "amount", label: "Value", render: row => formatMoney(row.amount || 0) }]} rows={opportunities} /> : <EmptyState>No opportunities returned.</EmptyState>}
+              {opportunities.length ? <DataTable columns={[{ key: "name", label: "Opportunity" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status)}>{row.status || "-"}</StatusTag> }, { key: "amount", label: "Value", render: row => formatMoney(row.amount || 0) }]} rows={opportunities} /> : null}
             </Panel>
           )}
           {tab === "Quotes" && (
             <Panel title="Quotes" description="Quote records associated with this customer.">
-              {quotes.length ? <DataTable columns={[{ key: "name", label: "Quote" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status)}>{row.status || "-"}</StatusTag> }, { key: "amount", label: "Value", render: row => formatMoney(row.amount || 0) }]} rows={quotes} /> : <EmptyState>No quotes returned.</EmptyState>}
+              {quotes.length ? <DataTable columns={[{ key: "name", label: "Quote" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status)}>{row.status || "-"}</StatusTag> }, { key: "amount", label: "Value", render: row => formatMoney(row.amount || 0) }]} rows={quotes} /> : null}
             </Panel>
           )}
           {tab === "Contracts" && (
             <Panel title="Contracts" description="Agreement records associated with this customer.">
-              {contracts.length ? <DataTable columns={[{ key: "name", label: "Contract" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status)}>{row.status || "-"}</StatusTag> }, { key: "amount", label: "Value", render: row => formatMoney(row.amount || 0) }]} rows={contracts} /> : <EmptyState>No contracts returned.</EmptyState>}
+              {contracts.length ? <DataTable columns={[{ key: "name", label: "Contract" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status)}>{row.status || "-"}</StatusTag> }, { key: "amount", label: "Value", render: row => formatMoney(row.amount || 0) }]} rows={contracts} /> : null}
             </Panel>
           )}
           {tab === "Activity" && (
             <Panel title="Activity" description="Timeline entries and customer interactions.">
-              {activityRows.length ? <DataTable columns={[{ key: "when", label: "When" }, { key: "event", label: "Event" }, { key: "detail", label: "Detail" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status)}>{row.status || "-"}</StatusTag> }]} rows={activityRows} /> : <EmptyState>No activity returned for this customer.</EmptyState>}
+              {activityRows.length ? <DataTable columns={[{ key: "when", label: "When" }, { key: "event", label: "Event" }, { key: "detail", label: "Detail" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status)}>{row.status || "-"}</StatusTag> }]} rows={activityRows} /> : null}
             </Panel>
           )}
         </>

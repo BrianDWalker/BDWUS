@@ -52,8 +52,8 @@ export default function NetworkDetailModule({ id, setRoute }) {
                 <MetricCard label="State" value={<StatusTag tone={statusTone(event.Status, { warn: ["Breached"] })}>{event.Status}</StatusTag>} delta="Ops status" />
               </div>
             </Panel>
-            <Panel title="Related Network Events" description="Other events returned by the operations API.">
-              {events.length ? <DataTable columns={[{ key: "EventNumber", label: "Event" }, { key: "Market", label: "Market" }, { key: "Type", label: "Type" }, { key: "Severity", label: "Severity", render: row => <StatusTag tone={statusTone(row.Severity, { warn: ["Major", "Critical", "Breached"] })}>{row.Severity}</StatusTag> }, { key: "Status", label: "Status" }]} rows={events.slice(0, 8)} /> : <div className="empty-state">No related events returned.</div>}
+            <Panel title="Related Network Events" description="Related events.">
+              {events.length ? <DataTable columns={[{ key: "EventNumber", label: "Event" }, { key: "Market", label: "Market" }, { key: "Type", label: "Type" }, { key: "Severity", label: "Severity", render: row => <StatusTag tone={statusTone(row.Severity, { warn: ["Major", "Critical", "Breached"] })}>{row.Severity}</StatusTag> }, { key: "Status", label: "Status" }]} rows={events.slice(0, 8)} /> : null}
             </Panel>
           </section>
         </>

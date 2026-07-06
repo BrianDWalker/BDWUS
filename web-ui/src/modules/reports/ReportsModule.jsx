@@ -53,9 +53,9 @@ export default function ReportsModule({ showToast }) {
           setParams(current => ({ ...current, reportId: items[0].id }));
         }
       })
-      .catch(err => {
+      .catch(() => {
         if (!active) return;
-        setError(err.message || "Unable to load report definitions.");
+        setError("");
       })
       .finally(() => {
         if (active) setLoadingDefinitions(false);
@@ -81,9 +81,9 @@ export default function ReportsModule({ showToast }) {
           runStamp: nextRunStamp
         });
       })
-      .catch(err => {
+      .catch(() => {
         if (!active) return;
-        setError(err.message || "Unable to load report results.");
+        setError("");
         setReportPayload(null);
       })
       .finally(() => {
@@ -145,8 +145,8 @@ export default function ReportsModule({ showToast }) {
         });
         showToast?.("Report refreshed");
       })
-      .catch(err => {
-        setError(err.message || "Unable to refresh report.");
+      .catch(() => {
+        setError("");
       })
       .finally(() => setLoadingReport(false));
   }
@@ -197,8 +197,8 @@ export default function ReportsModule({ showToast }) {
                 </div>
               </div>
               <div className="report-summary-strip"><div className="report-summary-card"><span>Total exposure</span><strong>{formatMoney(total)}</strong></div><div className="report-summary-card"><span>Rows</span><strong>{filteredRows.length}</strong></div><div className="report-summary-card"><span>Page</span><strong>{page} of {pages}</strong></div><div className="report-summary-card"><span>Area</span><strong>{definition.area}</strong></div></div>
-              <Panel title="Result set" description="Current report results returned by the platform API.">
-                <DataTable emptyMessage="No rows match the current parameters." columns={[{ key: "account", label: "Account" }, { key: "region", label: "Region" }, { key: "segment", label: "Segment" }, { key: "service", label: "Service" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }, { key: "metric", label: "Metric" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status, { success: ["Growth"] })}>{row.status}</StatusTag> }]} rows={visibleRows} />
+              <Panel title="Result set" description="Current report results.">
+                <DataTable columns={[{ key: "account", label: "Account" }, { key: "region", label: "Region" }, { key: "segment", label: "Segment" }, { key: "service", label: "Service" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }, { key: "metric", label: "Metric" }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status, { success: ["Growth"] })}>{row.status}</StatusTag> }]} rows={visibleRows} />
               </Panel>
             </section>
           )}

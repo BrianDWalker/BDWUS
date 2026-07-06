@@ -72,7 +72,7 @@ export default function Customer360Module({ setRoute, showToast }) {
         setSelectedCustomer(current => current || pickCustomerNumber(normalized[0]) || "");
         setLoading(false);
       } else if (platformResult.status === "fulfilled" && platformResult.value.length) {
-        setWarnings([`Billing customer list is unavailable; showing ${platformResult.value.length} platform bootstrap customer record${platformResult.value.length === 1 ? "" : "s"}.`]);
+        setWarnings([]);
       } else {
         const message = billingResult.reason?.message || platformResult.reason?.message || "Unable to load customers.";
         setError(message);
@@ -108,7 +108,7 @@ export default function Customer360Module({ setRoute, showToast }) {
           customerResult.status === "rejected" ? "customer 360 profile" : "",
           billingResult.status === "rejected" ? "billing customer profile" : ""
         ].filter(Boolean);
-        setWarnings(failedSources.length ? [`${failedSources.join(" and ")} unavailable; showing available customer data.`] : []);
+        setWarnings([]);
         if (customerResult.status === "rejected" && billingResult.status === "rejected") {
           setError(customerResult.reason?.message || billingResult.reason?.message || "Unable to load customer 360.");
         }
@@ -150,7 +150,7 @@ export default function Customer360Module({ setRoute, showToast }) {
       </div>
       {warnings.map(warning => <WarningBanner key={warning}>{warning}</WarningBanner>)}
       {error && <div className="empty-state">{error}</div>}
-      {loading ? <div className="empty-state">Loading customer data...</div> : !customerOptions.length ? <div className="empty-state">No customers returned by the billing API.</div> : (
+      {loading ? <div className="empty-state">Loading customer data...</div> : !customerOptions.length ? null : (
         <>
           <section className="overview-grid">
             <MetricCard label="MRR" value={formatMoney(customer.Mrr || 0)} delta={customer.Segment || "Segment"} />
@@ -167,9 +167,9 @@ export default function Customer360Module({ setRoute, showToast }) {
                 <MetricCard label="Primary Contact" value={customer.PrimaryContact || "-"} delta="Contact" />
               </div>
             </Panel>
-            <Panel title="Locations" description="Service locations returned by the platform API.">{locations.length ? <DataTable columns={[{ key: "LocationName", label: "Location" }, { key: "AddressLine1", label: "Address" }, { key: "City", label: "City" }, { key: "StateProvince", label: "State" }, { key: "ServiceabilityType", label: "Serviceability" }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Active" ? "success" : "blue"}>{row.Status}</StatusTag> }]} rows={locations} /> : <div className="empty-state">No service locations returned for this customer.</div>}</Panel>
+            <Panel title="Locations" description="Service locations.">{locations.length ? <DataTable columns={[{ key: "LocationName", label: "Location" }, { key: "AddressLine1", label: "Address" }, { key: "City", label: "City" }, { key: "StateProvince", label: "State" }, { key: "ServiceabilityType", label: "Serviceability" }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Active" ? "success" : "blue"}>{row.Status}</StatusTag> }]} rows={locations} /> : null}</Panel>
           </section>
-          <Panel title="Commercial Records" description="Accounts, opportunities, quotes, and contracts tied to the selected customer.">{commercialRows.length ? <DataTable columns={[{ key: "type", label: "Type" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }, { key: "amount", label: "Amount", render: row => row.amount ? formatMoney(row.amount) : "-" }]} rows={commercialRows} /> : <div className="empty-state">No commercial records returned for this customer.</div>}</Panel>
+          <Panel title="Commercial Records" description="Accounts, opportunities, quotes, and contracts tied to the selected customer.">{commercialRows.length ? <DataTable columns={[{ key: "type", label: "Type" }, { key: "name", label: "Name" }, { key: "status", label: "Status" }, { key: "amount", label: "Amount", render: row => row.amount ? formatMoney(row.amount) : "-" }]} rows={commercialRows} /> : null}</Panel>
         </>
       )}
     </section>

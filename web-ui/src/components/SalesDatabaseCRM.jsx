@@ -521,7 +521,7 @@ export function SalesModule({ setRoute, showToast }) {
   const filteredApprovals = approvals.filter(item => matchAny(item, query, [r => fieldValue(r, "EntityType"), r => fieldValue(r, "StepName"), r => fieldValue(r, "Status")]) && (status === "All statuses" || fieldValue(item, "Status") === status));
   const filteredContracts = contracts.filter(item => matchAny(item, query, [r => fieldValue(r, "ContractNumber"), r => fieldValue(r, "ContractName"), r => fieldValue(r, "AccountName"), r => fieldValue(r, "OpportunityName")]) && (status === "All statuses" || fieldValue(item, "Status") === status));
   const filteredCustomPricing = customPricing.filter(row => matchAny(row, query, [r => fieldValue(r, "RequestNumber"), r => fieldValue(r, "Status"), r => fieldValue(r, "RequestedBy"), r => fieldValue(r, "Reason")]) && (status === "All statuses" || fieldValue(row, "Status") === status));
-  const queueWarnings = loading ? ["Loading sales data from Azure SQL..."] : state.error ? [state.error] : state.warnings.length ? state.warnings : !hasSalesRows ? ["No sales records returned from Azure SQL yet."] : [];
+  const queueWarnings = loading ? ["Loading sales data from Azure SQL..."] : state.error ? [state.error] : state.warnings.length ? state.warnings : [];
 
   const leadColumns = [
     { key: "LeadNumber", label: "Lead" },

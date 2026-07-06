@@ -46,7 +46,7 @@ export default function OrderDetailModule({ id, setRoute, showToast }) {
     ].filter(Boolean);
 
     if (failed.length && (bootstrap.orders?.length || orderRows.length || jobRows.length)) {
-      setWarnings([`${failed.join(" and ")} unavailable; showing available order data.`]);
+      setWarnings([]);
     } else if (failed.length) {
       setError(bootstrapResult.reason?.message || ordersResult.reason?.message || jobsResult.reason?.message || "Unable to load order detail.");
     }
@@ -128,7 +128,7 @@ export default function OrderDetailModule({ id, setRoute, showToast }) {
           )}
           {tab === "Provisioning" && (
             <Panel title="Provisioning jobs" description="Jobs tied to this order and downstream delivery.">
-              {jobs.length ? <DataTable columns={[{ key: "JobNumber", label: "Job" }, { key: "JobType", label: "Type" }, { key: "OwnerName", label: "Owner" }, { key: "Status", label: "Status", render: row => <StatusTag tone={tone(row.Status)}>{row.Status || "-"}</StatusTag> }, { key: "DueDate", label: "Due" }]} rows={jobs} /> : <EmptyState>No provisioning jobs returned for this order.</EmptyState>}
+              {jobs.length ? <DataTable columns={[{ key: "JobNumber", label: "Job" }, { key: "JobType", label: "Type" }, { key: "OwnerName", label: "Owner" }, { key: "Status", label: "Status", render: row => <StatusTag tone={tone(row.Status)}>{row.Status || "-"}</StatusTag> }, { key: "DueDate", label: "Due" }]} rows={jobs} /> : null}
             </Panel>
           )}
           {tab === "Audit" && (

@@ -62,7 +62,6 @@ export default function DashboardModule({ setRoute }) {
           settlements: arrayField(opsPayload, "settlements", "carrierSettlements", "CarrierSettlements")
         }
       });
-      setError(failedLoads.length ? `${failedLoads.length} dashboard source${failedLoads.length === 1 ? "" : "s"} returned no data; showing available records.` : "");
     } catch (err) {
       setError(err.message || "Unable to load dashboard.");
     } finally {
@@ -92,7 +91,6 @@ export default function DashboardModule({ setRoute }) {
         description="Modern API-backed operating dashboard for sales, care, orders, billing, network, and platform work."
         actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setRoute?.("reports")}>Open Reports</button></div>}
       />
-      {loading && hasData ? <WarningBanner>Refreshing dashboard data…</WarningBanner> : null}
       {error && <div className="empty-state">{error}</div>}
       {loading && !hasData ? <div className="empty-state">Loading operating dashboard...</div> : (
         <>
@@ -111,14 +109,14 @@ export default function DashboardModule({ setRoute }) {
                 <button className="menu-action" type="button" onClick={() => setRoute?.("network")}><strong>Network events</strong><span>{ops.networkEvents.length} active network/service records</span></button>
               </div>
             </Panel>
-            <Panel title="Customer Watchlist" description="Top customer records returned by the platform bootstrap.">
+            <Panel title="Customer Watchlist" description="Top customer records.">
               {customers.length ? <DataTable columns={[
                 { key: "CustomerNumber", label: "Customer #" },
                 { key: "CustomerName", label: "Customer" },
                 { key: "Region", label: "Region" },
                 { key: "Status", label: "Status", render: row => <StatusTag tone={statusTone(row.Status)}>{row.Status || "Unknown"}</StatusTag> },
                 { key: "Mrr", label: "MRR", render: row => formatMoney(row.Mrr || row.mrr || 0) }
-              ]} rows={customers.slice(0, 6)} /> : <div className="empty-state">No customer records returned by platform bootstrap.</div>}
+              ]} rows={customers.slice(0, 6)} /> : null}
             </Panel>
           </section>
           <section className="record-main-layout">
@@ -129,7 +127,7 @@ export default function DashboardModule({ setRoute }) {
                 { key: "IssueType", label: "Issue" },
                 { key: "Priority", label: "Priority", render: row => <StatusTag tone={statusTone(row.Priority)}>{row.Priority || "Normal"}</StatusTag> },
                 { key: "Status", label: "Status", render: row => <StatusTag tone={statusTone(row.Status)}>{row.Status || "Open"}</StatusTag> }
-              ]} rows={care.tickets.slice(0, 6)} /> : <div className="empty-state">No care tickets returned by Customer Service.</div>}
+              ]} rows={care.tickets.slice(0, 6)} /> : null}
             </Panel>
             <Panel title="Orders & Network" description="Operational records that may need attention today.">
               {ops.orders.length ? <DataTable columns={[
@@ -138,7 +136,7 @@ export default function DashboardModule({ setRoute }) {
                 { key: "LifecycleStage", label: "Stage" },
                 { key: "OverallStatus", label: "Status", render: row => <StatusTag tone={statusTone(row.OverallStatus)}>{row.OverallStatus || "Draft"}</StatusTag> },
                 { key: "SlaStatus", label: "SLA", render: row => <StatusTag tone={statusTone(row.SlaStatus)}>{row.SlaStatus || "Unknown"}</StatusTag> }
-              ]} rows={ops.orders.slice(0, 6)} /> : <div className="empty-state">No orders returned by Operations.</div>}
+              ]} rows={ops.orders.slice(0, 6)} /> : null}
             </Panel>
           </section>
         </>

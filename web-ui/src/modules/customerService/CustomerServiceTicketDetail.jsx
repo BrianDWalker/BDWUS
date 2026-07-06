@@ -114,7 +114,7 @@ export default function CustomerServiceTicketDetail({ id, setRoute, showToast })
               <div className="modal-actions"><GatedButton action="comment:ticket" className="ghost-button" disabled={saving || !comment.trim()} onClick={addComment}>Add Comment</GatedButton><GatedButton action="close:ticket" disabled={saving} onClick={closeTicket}>Close With Reason</GatedButton></div>
             </Panel>
             <Panel title="Notes & History" description="Ticket notes, creation context, comments, escalations, and closure history.">
-              {notes.length ? <DataTable columns={[{ key: "NoteType", label: "Type" }, { key: "Note", label: "Note" }, { key: "CreatedBy", label: "Created By" }, { key: "CreatedAtUtc", label: "Created", render: row => formatDateTime(row.CreatedAtUtc) }]} rows={notes} /> : <div className="empty-state">No ticket notes returned by the API.</div>}
+              {notes.length ? <DataTable columns={[{ key: "NoteType", label: "Type" }, { key: "Note", label: "Note" }, { key: "CreatedBy", label: "Created By" }, { key: "CreatedAtUtc", label: "Created", render: row => formatDateTime(row.CreatedAtUtc) }]} rows={notes} /> : null}
             </Panel>
           </section>
         </>

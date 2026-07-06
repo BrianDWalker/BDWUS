@@ -103,12 +103,12 @@ export default function CustomerServiceModule({ setRoute, showToast }) {
                 { key: "Status", label: "Status", render: row => <StatusTag tone={statusTone(row.Status)}>{row.Status}</StatusTag> },
                 { key: "OwnerName", label: "Owner" },
                 { key: "actions", label: "", render: row => <button className="link-button compact-action" type="button" onClick={() => setRoute?.(`details/ticket/${row.TicketId || row.TicketNumber}`)}>Details</button> }
-              ]} rows={visibleTickets} /> : <div className="empty-state">No support tickets match the current search.</div>}
+              ]} rows={visibleTickets} /> : null}
             </Panel>
             <Panel title="Customer-reported network issues" description="Care cases connected to operational impact and SLA exposure.">
               {data.customerReportedOutages?.length ? <div className="outage-map">
                 {data.customerReportedOutages.map(event => <button className="outage-card enhanced" type="button" key={event.EventId || event.EventNumber} onClick={() => setRoute?.(`details/network/${event.EventId || event.EventNumber}`)}><Icon name="network" className="button-icon" /><div><strong>{event.Market || "Market"}</strong><span>{event.Type} · {event.Impacted || event.AccountName} · {formatMoney(event.SlaExposure || 0)}</span></div><StatusTag tone={statusTone(event.Severity, { warn: ["Major", "Critical"] })}>{event.Severity || "Open"}</StatusTag></button>)}
-              </div> : <div className="empty-state">No customer-reported network issues returned by the customer service API.</div>}
+              </div> : null}
             </Panel>
           </section>
         </>

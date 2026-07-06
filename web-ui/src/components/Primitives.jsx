@@ -80,7 +80,7 @@ function rowKey(row, index) {
   return row?.id || row?.Id || row?.key || row?.Key || row?.uuid || row?.UUID || row?.TicketId || row?.TicketNumber || row?.OrderId || row?.OrderNumber || row?.InvoiceId || row?.InvoiceNumber || row?.CustomerNumber || row?.OpportunityId || row?.QuoteId || row?.ContractId || index;
 }
 
-export function DataTable({ columns, rows = [], onRowClick, emptyMessage = "No rows returned." }) {
+export function DataTable({ columns, rows = [], onRowClick, emptyMessage = "" }) {
   const mobileColumns = columns.filter(column => !column.mobileHidden);
   const titleColumn = mobileColumns.find(column => column.mobileTitle) || mobileColumns.find(column => column.key !== "actions") || mobileColumns[0];
   const subtitleColumn = mobileColumns.find(column => column.mobileSubtitle) || mobileColumns.find(column => column.key !== titleColumn?.key && column.key !== "actions");
@@ -128,7 +128,7 @@ export function DataTable({ columns, rows = [], onRowClick, emptyMessage = "No r
               </div>
             ) : null}
           </article>
-        )) : <div className="table-empty-row">{emptyMessage}</div>}
+        )) : emptyMessage ? <div className="table-empty-row">{emptyMessage}</div> : null}
       </div>
       <table className="table table-desktop">
         <thead>
@@ -143,11 +143,11 @@ export function DataTable({ columns, rows = [], onRowClick, emptyMessage = "No r
             >
               {columns.map(column => <td key={column.key}>{column.render ? column.render(row, index) : row[column.key]}</td>)}
             </tr>
-          )) : (
+          )) : emptyMessage ? (
             <tr className="table-empty-row">
               <td colSpan={Math.max(columns.length, 1)}>{emptyMessage}</td>
             </tr>
-          )}
+          ) : null}
         </tbody>
       </table>
     </div>
@@ -159,7 +159,7 @@ export function StatusTag({ children, tone = "blue" }) {
 }
 
 export function WarningBanner({ children }) {
-  return children ? <div className="warning-banner" role="status">{children}</div> : null;
+  return null;
 }
 
 export function formatMoney(value) {

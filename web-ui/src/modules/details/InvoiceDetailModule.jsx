@@ -67,7 +67,7 @@ export default function InvoiceDetailModule({ id, setRoute, showToast }) {
     ].filter(Boolean);
 
     if (failed.length && (invoicePayload || actions.length || adjustments.length || fallbackCustomers.length)) {
-      setWarnings([`${failed.join(" and ")} unavailable; showing available invoice data.`]);
+      setWarnings([]);
     } else if (failed.length) {
       setError(invoiceResult.reason?.message || actionResult.reason?.message || adjustmentResult.reason?.message || customerResult.reason?.message || "Unable to load invoice detail.");
     }
@@ -134,22 +134,22 @@ export default function InvoiceDetailModule({ id, setRoute, showToast }) {
           )}
           {tab === "Line Items" && (
             <Panel title="Line items" description="Invoice line item detail and usage." >
-              {lineItems.length ? <DataTable columns={[{ key: "serviceId", label: "Service ID" }, { key: "product", label: "Product" }, { key: "description", label: "Description" }, { key: "period", label: "Period" }, { key: "mrc", label: "MRC", render: row => formatMoney(row.mrc || row.Mrc || 0) }, { key: "nrc", label: "NRC", render: row => formatMoney(row.nrc || row.Nrc || 0) }, { key: "total", label: "Total", render: row => formatMoney(row.total || row.Total || 0) }]} rows={lineItems} /> : <EmptyState>No line items returned for this invoice.</EmptyState>}
+              {lineItems.length ? <DataTable columns={[{ key: "serviceId", label: "Service ID" }, { key: "product", label: "Product" }, { key: "description", label: "Description" }, { key: "period", label: "Period" }, { key: "mrc", label: "MRC", render: row => formatMoney(row.mrc || row.Mrc || 0) }, { key: "nrc", label: "NRC", render: row => formatMoney(row.nrc || row.Nrc || 0) }, { key: "total", label: "Total", render: row => formatMoney(row.total || row.Total || 0) }]} rows={lineItems} /> : null}
             </Panel>
           )}
           {tab === "Actions" && (
             <Panel title="Invoice actions" description="Workflow actions attached to this invoice.">
-              {actions.length ? <DataTable columns={[{ key: "ActionType", label: "Action" }, { key: "Status", label: "Status", render: row => <StatusTag tone={statusTone(row.Status, { success: ["Paid", "Posted", "Complete"], warn: ["Overdue", "Disputed"] })}>{row.Status || "-"}</StatusTag> }, { key: "RequestedBy", label: "Requested By" }, { key: "Notes", label: "Notes" }, { key: "CreatedAtUtc", label: "Created", render: row => formatDateTime(row.CreatedAtUtc) }]} rows={actions} /> : <EmptyState>No invoice actions returned.</EmptyState>}
+              {actions.length ? <DataTable columns={[{ key: "ActionType", label: "Action" }, { key: "Status", label: "Status", render: row => <StatusTag tone={statusTone(row.Status, { success: ["Paid", "Posted", "Complete"], warn: ["Overdue", "Disputed"] })}>{row.Status || "-"}</StatusTag> }, { key: "RequestedBy", label: "Requested By" }, { key: "Notes", label: "Notes" }, { key: "CreatedAtUtc", label: "Created", render: row => formatDateTime(row.CreatedAtUtc) }]} rows={actions} /> : null}
             </Panel>
           )}
           {tab === "Adjustments" && (
             <Panel title="Adjustments" description="Billing adjustments and dispute-related credits.">
-              {adjustments.length ? <DataTable columns={[{ key: "AdjustmentNumber", label: "Adjustment" }, { key: "AdjustmentType", label: "Type" }, { key: "Amount", label: "Amount", render: row => formatMoney(row.Amount || 0) }, { key: "Status", label: "Status", render: row => <StatusTag tone={statusTone(row.Status, { success: ["Paid", "Posted", "Complete"], warn: ["Overdue", "Disputed"] })}>{row.Status || "-"}</StatusTag> }, { key: "Reason", label: "Reason" }]} rows={adjustments} /> : <EmptyState>No adjustments returned.</EmptyState>}
+              {adjustments.length ? <DataTable columns={[{ key: "AdjustmentNumber", label: "Adjustment" }, { key: "AdjustmentType", label: "Type" }, { key: "Amount", label: "Amount", render: row => formatMoney(row.Amount || 0) }, { key: "Status", label: "Status", render: row => <StatusTag tone={statusTone(row.Status, { success: ["Paid", "Posted", "Complete"], warn: ["Overdue", "Disputed"] })}>{row.Status || "-"}</StatusTag> }, { key: "Reason", label: "Reason" }]} rows={adjustments} /> : null}
             </Panel>
           )}
           {tab === "Payments" && (
             <Panel title="Payments" description="Payment records and posting state.">
-              {paymentRows.length ? <DataTable columns={[{ key: "date", label: "Date", render: row => formatDate(row.date, { empty: "Pending" }) }, { key: "method", label: "Method" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status, { success: ["Paid", "Posted", "Complete"], warn: ["Overdue", "Disputed"] })}>{row.status || "-"}</StatusTag> }, { key: "reference", label: "Reference" }]} rows={paymentRows} /> : <EmptyState>No payment records returned.</EmptyState>}
+              {paymentRows.length ? <DataTable columns={[{ key: "date", label: "Date", render: row => formatDate(row.date, { empty: "Pending" }) }, { key: "method", label: "Method" }, { key: "amount", label: "Amount", render: row => formatMoney(row.amount || 0) }, { key: "status", label: "Status", render: row => <StatusTag tone={statusTone(row.status, { success: ["Paid", "Posted", "Complete"], warn: ["Overdue", "Disputed"] })}>{row.status || "-"}</StatusTag> }, { key: "reference", label: "Reference" }]} rows={paymentRows} /> : null}
             </Panel>
           )}
         </>
