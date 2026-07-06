@@ -58,21 +58,22 @@ function TopNavButton({ section, active, onNavigate }) {
 function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange }) {
   const menuSets = {
     notifications: [
-      { label: "Reports", description: "Open operational reporting", route: "reports" },
-      { label: "Billing", description: "Review ledger and invoices", route: "billing" },
-      { label: "Orders", description: "Inspect delivery queue", route: "orders" },
-      { label: "Customer 360", description: "Jump into an account workspace", route: "customer-360" }
+      { label: "No notifications", description: "You are all caught up!"}
+      // { label: "Reports", description: "Open operational reporting", route: "reports" },
+      // { label: "Billing", description: "Review ledger and invoices", route: "billing" },
+      // { label: "Orders", description: "Inspect delivery queue", route: "orders" },
+      // { label: "Customer 360", description: "Jump into an account workspace", route: "customer-360" }
     ],
     profile: [
       { label: `Active role: ${role}`, description: "Role controls sensitive actions", route: "dashboard" },
       { label: "Administration", description: "Users, roles, and integrations", route: "administration" },
-      { label: "Customer Service", description: "Support and case work", route: "customer-service" },
-      { label: "Network & Service", description: "Operational queue", route: "network" },
-      { label: "Reports", description: "Search and export reports", route: "reports" },
-      { label: "Product & Pricing", description: "Catalog and governance", route: "product-pricing" },
-      { label: "Billing", description: "Billing controls and reports", route: "billing" },
-      { label: "Home", description: "Return to the operating brief", route: "dashboard" },
-      { label: "Sales", description: "Pipeline and quote desk", route: "sales" },
+      // { label: "Customer Service", description: "Support and case work", route: "customer-service" },
+      // { label: "Network & Service", description: "Operational queue", route: "network" },
+      // { label: "Reports", description: "Search and export reports", route: "reports" },
+      // { label: "Product & Pricing", description: "Catalog and governance", route: "product-pricing" },
+      // { label: "Billing", description: "Billing controls and reports", route: "billing" },
+      // { label: "Home", description: "Return to the operating brief", route: "dashboard" },
+      // { label: "Sales", description: "Pipeline and quote desk", route: "sales" },
       { label: "Sign out", description: "Session action placeholder", route: "dashboard" }
     ]
   };
@@ -202,7 +203,7 @@ function MobileDrawer({ activeRoute, onNavigate, onClose }) {
   );
 }
 
-export function Shell({ activeRoute, setRoute, children }) {
+export function Shell({ activeRoute, setRoute, children, onAiAssistOpen }) {
   const isMobile = useMediaQuery("(max-width: 760px)");
   const shellRef = useRef(null);
   const [utility, setUtility] = useState(null);
@@ -280,10 +281,10 @@ export function Shell({ activeRoute, setRoute, children }) {
             </button>
           )}
           <button className="topnav-brand" type="button" onClick={() => go("dashboard")}>
-            <span className="topnav-brand-mark">BDW</span>
+            <span className="topnav-brand-mark">AT&T</span>
             <span className="topnav-brand-copy">
-              <strong>Northstar Telecom</strong>
-              <span>{activeGroup}{activeSection ? ` · ${activeSection.label}` : ""}</span>
+              <strong>BDWUS Telecom</strong>
+              {/* <span>{activeGroup}{activeSection ? ` · ${activeSection.label}` : ""}</span> */}
             </span>
           </button>
         </div>
@@ -308,45 +309,30 @@ export function Shell({ activeRoute, setRoute, children }) {
         )}
 
         <div className="topnav-right">
-          {!isMobile ? (
-            <div className="topnav-search-shell">
-              <label className="topnav-search-field">
-                <Icon name="search" className="button-icon" />
-                <input
-                  value={searchQuery}
-                  onFocus={() => {
-                    setUtility(null);
-                    setDrawerOpen(false);
-                    setSearchOpen(true);
-                  }}
-                  onChange={event => {
-                    setUtility(null);
-                    setDrawerOpen(false);
-                    setSearchQuery(event.target.value);
-                    setSearchOpen(true);
-                  }}
-                  placeholder="Search modules and workspaces"
-                />
-              </label>
-              {searchOpen && (
-                <SearchPopover
-                  query={searchQuery}
-                  results={searchResults}
-                  onChange={setSearchQuery}
-                  onNavigate={go}
-                  onClose={() => setSearchOpen(false)}
-                />
-              )}
-            </div>
-          ) : (
-            <button className="topnav-icon-button" type="button" aria-label="Search" onClick={() => {
-              setUtility(null);
-              setDrawerOpen(false);
-              setSearchOpen(open => !open);
-            }}>
-              <Icon name="search" className="button-icon" />
-            </button>
-          )}
+          <button className="topnav-icon-button" type="button" aria-label="AI Assist" onClick={() => {
+            setUtility(null);
+            setDrawerOpen(false);
+            setSearchOpen(false);
+            onAiAssistOpen?.();
+          }}>
+            <Icon name="sparkles" className="button-icon" />
+          </button>
+          <button className="topnav-icon-button" type="button" aria-label="Search" onClick={() => {
+            setUtility(null);
+            setDrawerOpen(false);
+            setSearchOpen(open => !open);
+          }}>
+            <Icon name="search" className="button-icon" />
+          </button>
+          {searchOpen && !isMobile ? (
+            <SearchPopover
+              query={searchQuery}
+              results={searchResults}
+              onChange={setSearchQuery}
+              onNavigate={go}
+              onClose={() => setSearchOpen(false)}
+            />
+          ) : null}
           <button className="topnav-icon-button" type="button" aria-label="Notifications" onClick={() => {
             setSearchOpen(false);
             setDrawerOpen(false);

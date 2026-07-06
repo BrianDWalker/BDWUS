@@ -1,6 +1,17 @@
 import { fetchWithTimeout } from "./fetchTimeout";
+import { platformApiBase } from "./platformApi";
 
-const DEFAULT_ASSISTANT_API_BASE = (import.meta.env.VITE_AI_API_BASE_URL || window.location.origin || "").replace(/\/$/, "");
+const DEFAULT_ASSISTANT_API_BASE = (
+  import.meta.env.DEV
+    ? ""
+    : (
+      import.meta.env.VITE_AI_API_BASE_URL ||
+      import.meta.env.VITE_PLATFORM_API_BASE_URL ||
+      platformApiBase ||
+      window.location.origin ||
+      ""
+    )
+).replace(/\/$/, "");
 
 export const assistantApiBase = DEFAULT_ASSISTANT_API_BASE;
 

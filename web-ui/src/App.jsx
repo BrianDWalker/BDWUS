@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Shell } from "./components/Shell";
+import { KnowledgeAssistant } from "./components/KnowledgeAssistant";
 import DashboardModule from "./modules/dashboard/DashboardModule";
 import KnowledgeModule from "./modules/knowledge/KnowledgeModule";
 import ReportsModule from "./modules/reports/ReportsModule";
@@ -96,6 +97,7 @@ function UnknownRoute({ route, setRoute }) {
 export default function App() {
   const [route, setRoute] = useRoute();
   const [toast, setToast] = useState("");
+  const [assistantOpen, setAssistantOpen] = useState(false);
 
   function showToast(message) {
     setToast(message);
@@ -104,11 +106,19 @@ export default function App() {
   }
 
   return (
-    <Shell activeRoute={route} setRoute={setRoute}>
-      {isExtractedRoute(route)
-        ? <ExtractedRoute route={route} setRoute={setRoute} showToast={showToast} />
-        : <UnknownRoute route={route} setRoute={setRoute} />}
-      <Toast toast={toast} />
-    </Shell>
+    <>
+      <Shell activeRoute={route} setRoute={setRoute} onAiAssistOpen={() => setAssistantOpen(true)}>
+        {isExtractedRoute(route)
+          ? <ExtractedRoute route={route} setRoute={setRoute} showToast={showToast} />
+          : <UnknownRoute route={route} setRoute={setRoute} />}
+        <Toast toast={toast} />
+      </Shell>
+      <KnowledgeAssistant
+        open={assistantOpen}
+        onClose={() => setAssistantOpen(false)}
+        showToast={showToast}
+        context={{ route }}
+      />
+    </>
   );
 }

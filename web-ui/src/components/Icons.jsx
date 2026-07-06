@@ -95,6 +95,7 @@ const icons = {
   settings: Settings2,
   sla: Gauge,
   sales: ShoppingCart,
+  sparkles: Sparkles,
   strategic: Sparkles,
   tickets: TicketCheck,
   workflow: Workflow,
