@@ -4,11 +4,11 @@ import "./base.css";
 import "./react-app.css";
 import "./crm-polish.css";
 import "./sales-crm.css";
-import "./ui-consistency.css";
 import "./quote-to-order.css";
 import "./role-permissions.css";
-import "./topnav-stabilization.css";
-import "./layout-stabilization.css";
+import "./shell.css";
+import "./layouts.css";
+import "./surfaces.css";
 import SalesAppRouter from "./SalesAppRouter";
 
 createRoot(document.getElementById("root")).render(

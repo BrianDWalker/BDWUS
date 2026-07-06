@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
-import { DataTable, Panel, StatusTag, formatDateTime, formatMoney, statusTone } from "../../components/Primitives";
+import { DataTable, Panel, StatusTag, WarningBanner, formatDateTime, formatMoney, statusTone } from "../../components/Primitives";
 import { downloadBlob, makeXlsx } from "../../utils/export";
 import { fetchPlatformReport, fetchPlatformReportDefinitions } from "../../utils/platformApi";
+import { readSessionCache, writeSessionCache } from "../../utils/sessionCache";
 
 const DEFAULT_PARAMS = {
   reportId: "executive-scorecard",
@@ -12,19 +13,27 @@ const DEFAULT_PARAMS = {
   status: "All statuses"
 };
 
+const DEFAULT_DEFINITIONS = [
+  { id: "executive-scorecard", name: "Executive scorecard", area: "Executive", description: "Pipeline, quoted value, approvals, and contract coverage." },
+  { id: "pricing-approval-queue", name: "Pricing approval queue", area: "Pricing", description: "Quotes and custom pricing requests waiting on review." },
+  { id: "customer-revenue", name: "Customer revenue watchlist", area: "Billing", description: "Customer MRR and account exposure across active accounts." }
+];
+const REPORTS_CACHE_KEY = "bdwus.reports.v1";
+
 function csvBlob(rows) {
   const csv = rows.map(row => row.map(cell => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
   return new Blob([csv], { type: "text/csv" });
 }
 
 export default function ReportsModule({ showToast }) {
+  const cached = readSessionCache(REPORTS_CACHE_KEY, null);
   const [params, setParams] = useState(DEFAULT_PARAMS);
   const [page, setPage] = useState(1);
-  const [runStamp, setRunStamp] = useState("");
-  const [definitions, setDefinitions] = useState([]);
-  const [reportPayload, setReportPayload] = useState(null);
-  const [loadingDefinitions, setLoadingDefinitions] = useState(true);
-  const [loadingReport, setLoadingReport] = useState(true);
+  const [runStamp, setRunStamp] = useState(cached?.runStamp || "");
+  const [definitions, setDefinitions] = useState(cached?.definitions?.length ? cached.definitions : DEFAULT_DEFINITIONS);
+  const [reportPayload, setReportPayload] = useState(cached?.reportPayload || null);
+  const [loadingDefinitions, setLoadingDefinitions] = useState(!(cached?.definitions?.length || DEFAULT_DEFINITIONS.length));
+  const [loadingReport, setLoadingReport] = useState(!cached?.reportPayload);
   const [error, setError] = useState("");
   const pageSize = 6;
 
@@ -35,6 +44,11 @@ export default function ReportsModule({ showToast }) {
       .then(items => {
         if (!active) return;
         setDefinitions(items || []);
+        writeSessionCache(REPORTS_CACHE_KEY, {
+          definitions: items || [],
+          reportPayload,
+          runStamp
+        });
         if (items?.length && !items.some(item => item.id === params.reportId)) {
           setParams(current => ({ ...current, reportId: items[0].id }));
         }
@@ -59,7 +73,13 @@ export default function ReportsModule({ showToast }) {
       .then(payload => {
         if (!active) return;
         setReportPayload(payload);
-        setRunStamp(new Date().toISOString());
+        const nextRunStamp = new Date().toISOString();
+        setRunStamp(nextRunStamp);
+        writeSessionCache(REPORTS_CACHE_KEY, {
+          definitions,
+          reportPayload: payload,
+          runStamp: nextRunStamp
+        });
       })
       .catch(err => {
         if (!active) return;
@@ -91,6 +111,7 @@ export default function ReportsModule({ showToast }) {
   const pages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const visibleRows = filteredRows.slice((page - 1) * pageSize, page * pageSize);
   const total = filteredRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const hasRows = rows.length > 0;
 
   function updateParam(key, value) {
     setParams(current => ({ ...current, [key]: value }));
@@ -115,7 +136,13 @@ export default function ReportsModule({ showToast }) {
     fetchPlatformReport(params.reportId)
       .then(payload => {
         setReportPayload(payload);
-        setRunStamp(new Date().toISOString());
+        const nextRunStamp = new Date().toISOString();
+        setRunStamp(nextRunStamp);
+        writeSessionCache(REPORTS_CACHE_KEY, {
+          definitions,
+          reportPayload: payload,
+          runStamp: nextRunStamp
+        });
         showToast?.("Report refreshed");
       })
       .catch(err => {
@@ -130,8 +157,8 @@ export default function ReportsModule({ showToast }) {
       <section className="report-studio reports-compact">
         <aside className="report-catalog">
           <div className="report-catalog-header"><strong>Report catalog</strong></div>
-          {loadingDefinitions && <div className="empty-state">Loading report definitions…</div>}
-          {!loadingDefinitions && definitions.map(report => (
+          {loadingDefinitions && !definitions.length && <div className="empty-state">Loading report definitions…</div>}
+          {definitions.map(report => (
             <button className={report.id === params.reportId ? "report-item active" : "report-item"} type="button" key={report.id} onClick={() => updateParam("reportId", report.id)}>
               <strong>{report.name}</strong>
               <span>{report.area}</span>
@@ -139,6 +166,8 @@ export default function ReportsModule({ showToast }) {
           ))}
         </aside>
         <main className="report-workbench">
+          {loadingDefinitions && definitions.length ? <WarningBanner>Refreshing report definitions…</WarningBanner> : null}
+          {loadingReport && hasRows ? <WarningBanner>Refreshing report results…</WarningBanner> : null}
           <div className="parameter-ribbon">
             <label>Region<select value={params.region} onChange={event => updateParam("region", event.target.value)}>{regionOptions.map(value => <option key={value}>{value}</option>)}</select></label>
             <label>Period<select value={params.period} onChange={event => updateParam("period", event.target.value)}>{["May 2026", "April 2026", "Q2 2026 to date", "Rolling 90 days"].map(value => <option key={value}>{value}</option>)}</select></label>
@@ -147,8 +176,8 @@ export default function ReportsModule({ showToast }) {
             <button className="button" type="button" onClick={refreshReport}>Run report</button>
           </div>
           {error && <div className="empty-state">{error}</div>}
-          {loadingReport && !error && <div className="empty-state">Loading report results…</div>}
-          {!loadingReport && !error && (
+          {loadingReport && !error && !hasRows && <div className="empty-state">Loading report results…</div>}
+          {(!loadingReport || hasRows) && !error && (
             <section className="report-page">
               <div className="report-page-header">
                 <div>

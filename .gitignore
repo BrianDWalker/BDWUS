@@ -8,3 +8,7 @@ __pycache__/
 .databricks
 web-ui/dist/
 web-ui/node_modules/
+web-ui/playwright-report/
+web-ui/test-results/
+.pytest_cache/
+**/.pytest_cache/

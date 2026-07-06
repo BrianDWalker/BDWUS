@@ -68,11 +68,11 @@ Passed:
 
 Blocked locally:
 
-- `PYTHONPATH=pricing-microservice python3 -m pytest -q pricing-microservice/tests/test_platform_smoke.py pricing-microservice/tests/test_backend_contracts.py`
+- `PYTHONPATH=pricing-microservice pricing-microservice/.venv/bin/python -m pytest -q pricing-microservice/tests/test_platform_smoke.py pricing-microservice/tests/test_backend_contracts.py`
 
 Reason:
 
-- `pytest` is not installed in the local Python environment.
+- Local backend verification should run from `pricing-microservice/.venv` after installing `pricing-microservice/requirements-dev.txt`.
 
 Also blocked:
 

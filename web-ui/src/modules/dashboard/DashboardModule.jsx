@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/Shell";
-import { DataTable, MetricCard, Panel, StatusTag, formatMoney, statusTone } from "../../components/Primitives";
+import { DataTable, MetricCard, Panel, StatusTag, WarningBanner, formatMoney, statusTone } from "../../components/Primitives";
 import { fetchCustomerServiceOverview, fetchPlatformBootstrap } from "../../utils/platformApi";
 import { fetchOpsBootstrap } from "../../utils/opsApi";
 import { arrayField, normalizeNetworkEvent, normalizeOrder, normalizeTicket } from "../../utils/payloadMapping";
+import { readSessionCache, writeSessionCache } from "../../utils/sessionCache";
+
+const DASHBOARD_CACHE_KEY = "bdwus.dashboard.v1";
 
 function numberValue(row = {}, ...keys) {
   const value = keys.map(key => row?.[key]).find(item => item !== undefined && item !== null && item !== "");
@@ -20,10 +23,11 @@ function normalizeCareSummary(summary = {}, tickets = []) {
 }
 
 export default function DashboardModule({ setRoute }) {
-  const [platform, setPlatform] = useState({});
-  const [care, setCare] = useState({ tickets: [], summary: {} });
-  const [ops, setOps] = useState({ orders: [], networkEvents: [], provisioningJobs: [], settlements: [] });
-  const [loading, setLoading] = useState(true);
+  const cached = readSessionCache(DASHBOARD_CACHE_KEY, null);
+  const [platform, setPlatform] = useState(cached?.platform || {});
+  const [care, setCare] = useState(cached?.care || { tickets: [], summary: {} });
+  const [ops, setOps] = useState(cached?.ops || { orders: [], networkEvents: [], provisioningJobs: [], settlements: [] });
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState("");
 
   async function loadDashboard() {
@@ -48,6 +52,16 @@ export default function DashboardModule({ setRoute }) {
         provisioningJobs: arrayField(opsPayload, "provisioningJobs", "ProvisioningJobs", "jobs"),
         settlements: arrayField(opsPayload, "settlements", "carrierSettlements", "CarrierSettlements")
       });
+      writeSessionCache(DASHBOARD_CACHE_KEY, {
+        platform: platformPayload || {},
+        care: { tickets, summary: normalizeCareSummary(carePayload?.summary || carePayload?.Summary, tickets) },
+        ops: {
+          orders: arrayField(opsPayload, "orders", "Orders").map(normalizeOrder),
+          networkEvents: arrayField(opsPayload, "networkEvents", "NetworkEvents", "events").map(normalizeNetworkEvent),
+          provisioningJobs: arrayField(opsPayload, "provisioningJobs", "ProvisioningJobs", "jobs"),
+          settlements: arrayField(opsPayload, "settlements", "carrierSettlements", "CarrierSettlements")
+        }
+      });
       setError(failedLoads.length ? `${failedLoads.length} dashboard source${failedLoads.length === 1 ? "" : "s"} returned no data; showing available records.` : "");
     } catch (err) {
       setError(err.message || "Unable to load dashboard.");
@@ -69,6 +83,7 @@ export default function DashboardModule({ setRoute }) {
   const atRiskOrders = useMemo(() => ops.orders.filter(row => row.SlaStatus && row.SlaStatus !== "On Track"), [ops.orders]);
   const openTickets = useMemo(() => care.tickets.filter(row => row.Status !== "Closed"), [care.tickets]);
   const escalatedTickets = useMemo(() => care.tickets.filter(row => row.Status === "Escalated" || String(row.EscalationLevel || "").toLowerCase().includes("tier 2")), [care.tickets]);
+  const hasData = customers.length || quotes.length || opportunities.length || ops.orders.length || care.tickets.length;
 
   return (
     <>
@@ -77,8 +92,9 @@ export default function DashboardModule({ setRoute }) {
         description="Modern API-backed operating dashboard for sales, care, orders, billing, network, and platform work."
         actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setRoute?.("reports")}>Open Reports</button></div>}
       />
+      {loading && hasData ? <WarningBanner>Refreshing dashboard data…</WarningBanner> : null}
       {error && <div className="empty-state">{error}</div>}
-      {loading ? <div className="empty-state">Loading operating dashboard...</div> : (
+      {loading && !hasData ? <div className="empty-state">Loading operating dashboard...</div> : (
         <>
           <section className="overview-grid">
             <MetricCard label="Pipeline" value={formatMoney(numberValue(dashboard, "PipelineValue", "pipelineValue"))} delta={`${numberValue(dashboard, "OpportunityCount", "opportunityCount") || opportunities.length} opportunities`} />

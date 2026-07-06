@@ -18,6 +18,7 @@ Backend:
 - Project directory: `pricing-microservice`
 - FastAPI entry: `pricing-microservice/app/main.py`
 - Python dependencies: `pricing-microservice/requirements.txt`
+- Backend test dependencies: `pricing-microservice/requirements-dev.txt`
 
 ## Required Secrets Or Settings
 
@@ -66,7 +67,7 @@ npm run build
 
 ```bash
 cd pricing-microservice
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-dev.txt
 python -m compileall app
 ```
 
@@ -127,7 +128,7 @@ Use this matrix to avoid claiming full completion when only build checks have pa
 
 ## What Is Not Yet Proven By Existing Code
 
-The current backend exposes foundations for every major legacy UI domain, but live CI/staging validation is still required before claiming production completion. Do not wire modules to guessed URLs beyond the endpoint families listed in `docs/web-ui-module-migration-map.md`.
+The current backend exposes foundations for every major UI domain, but live CI/staging validation is still required before claiming production completion. Do not wire modules to guessed URLs beyond the endpoint families already implemented in the active API services.
 
 Known gaps before full mock removal:
 - Customer-service ticket endpoints are still not a complete dedicated API family.

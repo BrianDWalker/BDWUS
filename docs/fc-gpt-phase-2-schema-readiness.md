@@ -78,14 +78,14 @@ Live row counts after migration:
 
 ## Test Notes
 
-Attempted backend pytest coverage:
+Backend pytest coverage:
 
 ```bash
-PYTHONPATH=pricing-microservice pytest -q pricing-microservice/tests/test_platform_smoke.py pricing-microservice/tests/test_backend_contracts.py pricing-microservice/tests/test_readiness_care_storage.py pricing-microservice/tests/test_ops_write_contracts.py
-python3 -m pytest -q pricing-microservice/tests/test_platform_smoke.py pricing-microservice/tests/test_backend_contracts.py pricing-microservice/tests/test_readiness_care_storage.py pricing-microservice/tests/test_ops_write_contracts.py
+PYTHONPATH=pricing-microservice pricing-microservice/.venv/bin/python -m pytest -q pricing-microservice/tests/test_platform_smoke.py pricing-microservice/tests/test_backend_contracts.py pricing-microservice/tests/test_readiness_care_storage.py pricing-microservice/tests/test_ops_write_contracts.py
+pricing-microservice/.venv/bin/python -m pytest -q pricing-microservice/tests/test_platform_smoke.py pricing-microservice/tests/test_backend_contracts.py pricing-microservice/tests/test_readiness_care_storage.py pricing-microservice/tests/test_ops_write_contracts.py
 ```
 
-Both were blocked because `pytest` is not installed in this local Python environment, and `pricing-microservice/requirements.txt` does not currently include it.
+The local verification path now uses `pricing-microservice/requirements-dev.txt`, which installs `pytest` into the service virtual environment before running the suite.
 
 Completed non-pytest validation:
 

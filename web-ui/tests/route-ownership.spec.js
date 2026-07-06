@@ -35,16 +35,16 @@ test("route ownership registry documents extracted owners", () => {
 test("every top navigation route has extracted or integrated ownership", () => {
   for (const section of topNavSections) {
     const route = section.route || section.id;
-    expect(isExtractedRoute(route) || isIntegratedSalesRoute(route), `${section.label} route ${route} must not fall to LegacyPortal`).toBe(true);
+    expect(isExtractedRoute(route) || isIntegratedSalesRoute(route), `${section.label} route ${route} must resolve inside the active portal routers`).toBe(true);
   }
 });
 
-test("no intentional LegacyPortal owners remain", () => {
+test("no intentional legacy route owners remain", () => {
   expect(legacyOwnedRoutes).toHaveLength(0);
   expect(intentionalLegacyDetailTypes).toHaveLength(0);
 });
 
-test("migrated detail routes normalize away from LegacyPortal", () => {
+test("migrated detail routes normalize away from legacy fallbacks", () => {
   expect(normalizeRoute("pricing")).toBe("product-pricing");
   expect(normalizeRoute("products")).toBe("product-pricing");
   expect(normalizeRoute("quotes")).toBe("sales");

@@ -1,0 +1,151 @@
+/* Shared page and module layout grids. */
+
+.content > .dashboard-canvas,
+.content > .pricing-lab,
+.content > .care-layout,
+.content > .billing-ledger,
+.content > .invoice-research,
+.content > .orders-layout,
+.content > .ops-split,
+.content > .customer360-layout,
+.content > .report-studio,
+.content > .record-main-layout,
+.content > .order-detail-layout,
+.content > .billing-detail-grid,
+.content > .workspace-grid,
+.content > .customer360-landing-grid {
+  width: min(100%, 1360px);
+  margin-inline: auto;
+}
+
+.workspace-grid,
+.report-workbench,
+.record-main-layout,
+.order-detail-layout,
+.billing-detail-grid,
+.customer360-layout,
+.care-layout,
+.orders-layout,
+.ops-split,
+.report-studio,
+.dashboard-canvas,
+.pricing-lab,
+.billing-ledger,
+.invoice-research,
+.customer360-landing-grid,
+.customer360-workspace,
+.order-workspace-grid,
+.workflow-track {
+  min-width: 0;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: 1.7fr 1.1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.workspace-grid.compact {
+  grid-template-columns: 1.25fr 1fr 0.95fr;
+}
+
+.dashboard-canvas,
+.pricing-lab,
+.care-layout,
+.billing-ledger,
+.invoice-research,
+.orders-layout,
+.ops-split,
+.customer360-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.customer360-layout {
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+
+.report-studio {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.record-main-layout,
+.order-detail-layout,
+.billing-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 16px;
+}
+
+.billing-detail-grid {
+  margin-bottom: 16px;
+}
+
+.order-workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.workflow-track {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.customer360-landing-grid {
+  display: grid;
+  grid-template-columns: minmax(370px, 0.48fr) minmax(0, 0.52fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.customer360-workspace {
+  display: grid;
+  gap: 12px;
+}
+
+@media (max-width: 1220px) {
+  .dashboard-canvas,
+  .pricing-lab,
+  .care-layout,
+  .billing-ledger,
+  .invoice-research,
+  .orders-layout,
+  .ops-split,
+  .customer360-layout,
+  .report-studio,
+  .record-main-layout,
+  .order-detail-layout,
+  .billing-detail-grid,
+  .workspace-grid,
+  .workspace-grid.compact,
+  .customer360-landing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 920px) {
+  .order-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-track {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .workflow-track {
+    grid-template-columns: 1fr;
+  }
+}
