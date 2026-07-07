@@ -254,28 +254,28 @@ body[data-page="index"] .content {
 }
 
 .topnav-utility-panel[aria-label="profile"] {
-  width: min(560px, calc(100vw - 24px));
-  padding: 34px 34px 36px;
-  border-radius: 28px;
+  width: min(382px, calc(100vw - 20px));
+  padding: 16px;
+  border-radius: 18px;
 }
 
 .topnav-profile-summary {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 30px;
+  gap: 14px;
   align-items: center;
-  padding: 0 0 30px;
-  margin-bottom: 28px;
+  padding: 0 0 16px;
+  margin-bottom: 16px;
   border-bottom: 1px solid rgba(15, 23, 42, 0.1);
 }
 
 .topnav-profile-photo-wrap {
-  width: 104px;
-  height: 104px;
+  width: 66px;
+  height: 66px;
   border-radius: 999px;
   overflow: hidden;
   background: #ffffff;
-  border: 2px solid rgba(15, 23, 42, 0.22);
+  border: 1px solid rgba(15, 23, 42, 0.22);
 }
 
 .topnav-profile-photo-fallback {
@@ -285,26 +285,26 @@ body[data-page="index"] .content {
 }
 
 .topnav-profile-user-icon {
-  width: 66px;
-  height: 66px;
+  width: 42px;
+  height: 42px;
   stroke-width: 1.8;
 }
 
 .topnav-profile-copy {
   display: grid;
-  gap: 8px;
+  gap: 3px;
   min-width: 0;
 }
 
 .topnav-profile-copy strong {
-  font-size: 29px;
+  font-size: 18px;
   line-height: 1.05;
 }
 
 .topnav-profile-copy span {
   color: var(--muted);
-  font-size: 21px;
-  line-height: 1.18;
+  font-size: 13px;
+  line-height: 1.25;
 }
 
 .topnav-profile-copy .topnav-profile-title {
@@ -474,19 +474,19 @@ body[data-page="index"] .content {
 
 .topnav-profile-actions {
   display: grid;
-  gap: 18px;
+  gap: 10px;
 }
 
 .topnav-profile-action {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 22px;
+  gap: 12px;
   width: 100%;
-  min-height: 68px;
-  padding: 0 22px;
+  min-height: 48px;
+  padding: 0 14px;
   border: 1px solid rgba(15, 23, 42, 0.11);
-  border-radius: 14px;
+  border-radius: 12px;
   background: #ffffff;
   color: var(--text);
   text-align: left;
@@ -501,8 +501,8 @@ body[data-page="index"] .content {
 }
 
 .topnav-profile-action-icon {
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
   color: var(--text);
   stroke-width: 1.8;
 }
@@ -513,15 +513,15 @@ body[data-page="index"] .content {
 }
 
 .topnav-profile-action-copy strong {
-  font-size: 25px;
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: 0;
 }
 
 .topnav-profile-action-chevron {
   flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
+  width: 18px;
+  height: 18px;
   color: rgba(15, 23, 42, 0.92);
   stroke-width: 2.4;
 }
