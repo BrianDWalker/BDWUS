@@ -588,14 +588,16 @@ function DomainLandingCard({ config, stats, onEnter }) {
       <div className="pp-bullet-list">
         {config.landingBullets.map(item => <span key={item}>{item}</span>)}
       </div>
-      <div className="pp-domain-card-stats">
-        {stats.map(item => (
-          <div key={item.label} className="pp-domain-stat">
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-          </div>
-        ))}
-      </div>
+      {stats?.length ? (
+        <div className="pp-domain-card-stats">
+          {stats.map(item => (
+            <div key={item.label} className="pp-domain-stat">
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </div>
+          ))}
+        </div>
+      ) : null}
       <div className="button-cluster">
         <button className="button" type="button" onClick={onEnter}>Enter {config.label}</button>
       </div>
@@ -603,16 +605,12 @@ function DomainLandingCard({ config, stats, onEnter }) {
   );
 }
 
-function LandingPage({ workspace, setRoute, showToast }) {
+function scrollToWorkspace(domain) {
+  document.getElementById(`${domain}-workspace`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function LandingPage({ showToast }) {
   const cards = DOMAIN_ORDER.map(domain => DOMAIN_CONFIGS[domain]);
-  const crossLinks = [
-    { label: "Sales", route: "sales", note: "Quotes, opportunity pricing, and approvals" },
-    { label: "Orders", route: "orders", note: "Fulfillment and service delivery" },
-    { label: "Provisioning", route: "provisioning", note: "Service activation and readiness" },
-    { label: "Billing", route: "billing", note: "Invoices and billing workflows" },
-    { label: "Knowledge", route: "knowledge", note: "Docs and guidance" },
-    { label: "Customer 360", route: "customer-360", note: "Product visibility at the account level" }
-  ];
 
   return (
     <>
@@ -621,46 +619,14 @@ function LandingPage({ workspace, setRoute, showToast }) {
         description="A governed catalog workspace for Wireline, Wireless, and Custom pricing operations."
         actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => showToast?.("Workspace refreshed")}>Refresh</button></div>}
       />
-      <section className="overview-grid">
-        <MetricCard label="Wireline products" value={workspace.summary.wirelineProductCount} delta="Catalog records" />
-        <MetricCard label="Wireless plans" value={workspace.summary.wirelessPlanCount} delta="Plan and offer records" />
-        <MetricCard label="Custom approvals" value={workspace.summary.customQueueCount} delta="Governance queue" />
-        <MetricCard label="Algorithms" value={workspace.summary.customAlgorithmCount + workspace.summary.wirelineProductCount + workspace.summary.wirelessPlanCount} delta="Versioned pricing logic" />
-      </section>
       <section className="pp-landing-grid">
         {cards.map(domain => (
           <DomainLandingCard
             key={domain.route}
             config={domain}
-            stats={
-              domain.route === "wireline"
-                ? [
-                    { label: "Products", value: workspace.wireline.products.length },
-                    { label: "Billing codes", value: workspace.wireline.billingCodes.length },
-                    { label: "Docs", value: workspace.wireline.docs.length }
-                  ]
-                : domain.route === "wireless"
-                  ? [
-                      { label: "Plans", value: workspace.wireless.plans.length },
-                      { label: "Offers", value: workspace.wireless.offers.length },
-                      { label: "Devices", value: workspace.wireless.devices.length }
-                    ]
-                  : [
-                      { label: "Queue", value: workspace.custom.queue.length },
-                      { label: "Library", value: workspace.custom.library.length },
-                      { label: "Versions", value: workspace.custom.versions.length }
-                    ]
-            }
-            onEnter={() => setRoute(routeForDomain(domain.route))}
+            stats={[]}
+            onEnter={() => scrollToWorkspace(domain.route)}
           />
-        ))}
-      </section>
-      <section className="pp-cross-links">
-        {crossLinks.map(item => (
-          <button key={item.label} className="pp-cross-link" type="button" onClick={() => setRoute(item.route)}>
-            <strong>{item.label}</strong>
-            <span>{item.note}</span>
-          </button>
         ))}
       </section>
     </>
@@ -1039,7 +1005,7 @@ function detailActionButtons({ domain, record, baseRoute, setRoute, showToast, w
   );
 }
 
-function DomainWorkspace({ domain, route, workspace, setRoute, showToast }) {
+function DomainWorkspace({ domain, workspace, setRoute, showToast }) {
   const config = DOMAIN_CONFIGS[domain];
   const collection = domainCollectionRows(domain, workspace);
   const [activeTab, setActiveTab] = useState(config.tabs[0].key);
@@ -1050,12 +1016,13 @@ function DomainWorkspace({ domain, route, workspace, setRoute, showToast }) {
     setQuery("");
   }, [domain, config.tabs]);
 
-  const parsed = useMemo(() => routeParts(route), [route]);
-  const baseRoute = routeForDomain(domain);
-  const detailRouteBase = parsed.kind && parsed.recordId ? `product-pricing/${domain}/${parsed.kind}/${encodeURIComponent(parsed.recordId)}` : "";
   const selectedCollection = config.tabs.find(tab => tab.key === activeTab) || config.tabs[0];
-  const rows = collection[selectedCollection.dataKey] || [];
-  const columns = domain === "wireline" ? buildWirelineColumns(selectedCollection, setRoute) : domain === "wireless" ? buildWirelessColumns(selectedCollection, setRoute) : buildCustomColumns(selectedCollection, setRoute);
+  const rows = (domain === "wireline" ? collection.products : collection[selectedCollection.dataKey]) || [];
+  const columns = domain === "wireline"
+    ? buildWirelineColumns({ key: "products" }, setRoute)
+    : domain === "wireless"
+      ? buildWirelessColumns(selectedCollection, setRoute)
+      : buildCustomColumns(selectedCollection, setRoute);
   const filteredRows = useMemo(() => {
     if (!query.trim()) return rows;
     const lookupFields = {
@@ -1093,105 +1060,28 @@ function DomainWorkspace({ domain, route, workspace, setRoute, showToast }) {
     return rows.filter(row => matchesQuery(row, query, lookupFields[domain]));
   }, [rows, query, domain]);
 
-  const detailRecord = useMemo(() => {
-    if (!parsed.kind || !parsed.recordId) return null;
-    return rows.find(row => row.id === slugify(parsed.recordId) || row.id === parsed.recordId || row.approvalId === parsed.recordId || row.requestId === parsed.recordId) || rows.find(row => row.id === parsed.recordId) || null;
-  }, [parsed.kind, parsed.recordId, rows]);
-
-  if (parsed.kind && parsed.recordId) {
-    const recordTabs = config.detailTabs;
-    const currentTab = buildDetailTabs(domain, detailRecord || {}, parsed.subTab);
-    const detailBase = detailRouteBase || routeForRecord(domain, parsed.kind, parsed.recordId);
-    const handleTabChange = nextTab => {
-      setActiveTab(selectedCollection.key);
-      setRoute?.(nextTab === recordTabs[0] ? detailBase : `${detailBase}/${slugify(nextTab)}`);
-    };
-
-    const tabs = recordTabs;
-    const contentTab = currentTab;
-    const label = detailRecord?.name || detailRecord?.title || detailRecord?.approvalId || parsed.recordId;
-
-    return (
-      <>
-        <PageHeader
-          title={`${config.label} Workspace`}
-          description={config.description}
-          actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.(baseRoute)}>Back to {config.label}</button></div>}
-        />
-        <DetailHeader
-          breadcrumb={["Product & Pricing", config.label, label]}
-          title={label}
-          status={detailRecord?.status || detailRecord?.approvalStatus || "Active"}
-          subtitle={detailRecord?.summary || detailRecord?.description || detailRecord?.objective || `${config.label} ${parsed.kind} record`}
-          actions={detailActionButtons({
-            domain,
-            record: detailRecord || {},
-            baseRoute,
-            setRoute,
-            showToast,
-            workspace,
-            onApprovalChange: () => {
-              showToast?.("Workflow updated");
-              onRefreshWorkspace?.();
-            }
-          })}
-        />
-        <DetailSummary
-          items={recordFieldsForDomain(domain, detailRecord || {}, workspace)}
-        />
-        <DetailTabs tabs={tabs} active={contentTab} onChange={handleTabChange} />
-        {domain === "wireline" && renderWirelineDetailTab(contentTab, detailRecord, workspace, setRoute, showToast, detailBase)}
-        {domain === "wireless" && renderWirelessDetailTab(contentTab, detailRecord, workspace, setRoute, showToast, detailBase)}
-        {domain === "custom" && renderCustomDetailTab(contentTab, detailRecord, workspace, setRoute, showToast, detailBase)}
-      </>
-    );
-  }
-
   return (
-    <>
-      <PageHeader
-        title={`${config.label} Workspace`}
-        description={config.description}
-        actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.("product-pricing")}>Back to Product & Pricing</button></div>}
-      />
-      <section className="overview-grid">
-        {domain === "wireline" ? (
-          <>
-            <MetricCard label="Products" value={workspace.wireline.products.length} delta="Catalog records" />
-            <MetricCard label="Hierarchy rows" value={workspace.wireline.hierarchy.length} delta="Structure and rollups" />
-            <MetricCard label="Docs" value={workspace.wireline.docs.length} delta="Reference guides" />
-            <MetricCard label="Algorithms" value={workspace.wireline.algorithms.length} delta="Versioned logic" />
-          </>
-        ) : domain === "wireless" ? (
-          <>
-            <MetricCard label="Plans" value={workspace.wireless.plans.length} delta="Recurring offerings" />
-            <MetricCard label="Offers" value={workspace.wireless.offers.length} delta="Commercial bundles" />
-            <MetricCard label="Devices" value={workspace.wireless.devices.length} delta="Compatible devices" />
-            <MetricCard label="Features" value={workspace.wireless.features.length} delta="Entitlements and add-ons" />
-          </>
-        ) : (
-          <>
-            <MetricCard label="Queue items" value={workspace.custom.queue.length} delta="Governed approvals" />
-            <MetricCard label="Algorithms" value={workspace.custom.library.length} delta="Reusable templates" />
-            <MetricCard label="Exceptions" value={workspace.custom.exceptions.length} delta="Custom exception rows" />
-            <MetricCard label="Versions" value={workspace.custom.versions.length} delta="Reviewable releases" />
-          </>
-        )}
-      </section>
-      <WorkspaceTabs tabs={config.tabs.map(tab => tab.label)} active={selectedCollection.label} onChange={label => setActiveTab(config.tabs.find(tab => tab.label === label)?.key || config.tabs[0].key)} />
+    <section id={`${domain}-workspace`} className="pp-workspace-section">
+      <div className="pp-workspace-section-copy">
+        <strong>{config.label} Workspace</strong>
+        <p>{config.description}</p>
+      </div>
+      {domain !== "wireline" ? (
+        <WorkspaceTabs tabs={config.tabs.map(tab => tab.label)} active={selectedCollection.label} onChange={label => setActiveTab(config.tabs.find(tab => tab.label === label)?.key || config.tabs[0].key)} />
+      ) : null}
       <Panel
-        title={selectedCollection.label}
-        description={selectedCollection.description}
-        action={<CollectionToolbar query={query} setQuery={setQuery} placeholder={`Search ${selectedCollection.label.toLowerCase()}`} />}
+        title={domain === "wireline" ? "Products" : selectedCollection.label}
+        description={domain === "wireline" ? "Each wireline product record." : selectedCollection.description}
+        action={<CollectionToolbar query={query} setQuery={setQuery} placeholder={`Search ${domain === "wireline" ? "products" : selectedCollection.label.toLowerCase()}`} />}
       >
         <DataTable
           columns={columns}
           rows={filteredRows}
           onRowClick={selectedCollection.detailKind ? row => setRoute(routeForRecord(domain, selectedCollection.detailKind, row.id)) : undefined}
-          emptyMessage={`No ${selectedCollection.label.toLowerCase()} found.`}
+          emptyMessage={`No ${domain === "wireline" ? "products" : selectedCollection.label.toLowerCase()} found.`}
         />
       </Panel>
-    </>
+    </section>
   );
 }
 
@@ -1729,6 +1619,13 @@ export default function ProductPricingWorkspace({ route = "product-pricing", set
   }, [workspaceKey]);
 
   const parsed = useMemo(() => routeParts(route), [route]);
+  const focusDomain = parsed.domain && DOMAIN_CONFIGS[parsed.domain] && !parsed.kind ? parsed.domain : "";
+
+  useEffect(() => {
+    if (!focusDomain || loading) return;
+    const timer = window.setTimeout(() => scrollToWorkspace(focusDomain), 0);
+    return () => window.clearTimeout(timer);
+  }, [focusDomain, loading]);
 
   if (loading) {
     return (
@@ -1742,30 +1639,27 @@ export default function ProductPricingWorkspace({ route = "product-pricing", set
     );
   }
 
-  if (!parsed.domain || !DOMAIN_CONFIGS[parsed.domain]) {
-    return <LandingPage workspace={workspace} setRoute={setRoute} showToast={showToast} />;
-  }
-
-  if (!parsed.recordId) {
+  if (parsed.kind && parsed.recordId) {
     return (
-      <DomainWorkspace
+      <DetailPage
         domain={parsed.domain}
         route={route}
         workspace={workspace}
         setRoute={setRoute}
         showToast={showToast}
+        onRefreshWorkspace={() => setWorkspaceKey(value => value + 1)}
       />
     );
   }
 
   return (
-    <DetailPage
-      domain={parsed.domain}
-      route={route}
-      workspace={workspace}
-      setRoute={setRoute}
-      showToast={showToast}
-      onRefreshWorkspace={() => setWorkspaceKey(value => value + 1)}
-    />
+    <>
+      <LandingPage showToast={showToast} />
+      <section className="pp-workspace-stack">
+        <DomainWorkspace domain="wireline" workspace={workspace} setRoute={setRoute} showToast={showToast} />
+        <DomainWorkspace domain="wireless" workspace={workspace} setRoute={setRoute} showToast={showToast} />
+        <DomainWorkspace domain="custom" workspace={workspace} setRoute={setRoute} showToast={showToast} />
+      </section>
+    </>
   );
 }

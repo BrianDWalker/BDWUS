@@ -4,6 +4,36 @@
   gap: 16px;
 }
 
+.content > .pp-landing-grid,
+.content > .pp-workspace-stack {
+  width: min(100%, 1360px);
+  margin-inline: auto;
+}
+
+.pp-workspace-stack {
+  display: grid;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.pp-workspace-section {
+  display: grid;
+  gap: 12px;
+}
+
+.pp-workspace-section-copy strong {
+  display: block;
+  margin-bottom: 6px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.25rem;
+}
+
+.pp-workspace-section-copy p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .pp-domain-card {
   display: grid;
   gap: 16px;
