@@ -83,7 +83,7 @@ function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange, prof
   return (
     <div className="topnav-utility-panel" role="menu" aria-label={utility}>
       {utility === "profile" ? (
-        <div className="topnav-profile-summary">
+        <section className="topnav-profile-summary" aria-label="Profile summary">
           <div className="topnav-profile-photo-wrap">
             {profile.avatarUrl ? (
               <img className="topnav-profile-photo" src={profile.avatarUrl} alt={profile.name} />
@@ -97,25 +97,47 @@ function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange, prof
             <span>{profile.jobTitle}</span>
             <span>{profile.email}</span>
           </div>
-        </div>
+        </section>
       ) : null}
-      {items.map(item => (
-        <button
-          key={item.label}
-          className="nav-menu-link nav-menu-link-profile"
-          type="button"
-          onClick={() => {
-            onNavigate(item.route);
-            onClose();
-          }}
-        >
-          <div className="nav-menu-link-copy">
-            <strong>{item.label}</strong>
-            <span>{item.description}</span>
-          </div>
-          <Icon name="chevronRight" className="button-icon topnav-profile-chevron" />
-        </button>
-      ))}
+      {utility === "profile" ? (
+        <div className="topnav-profile-actions" role="presentation">
+          {items.map(item => (
+            <button
+              key={item.label}
+              className="topnav-profile-action"
+              type="button"
+              onClick={() => {
+                onNavigate(item.route);
+                onClose();
+              }}
+            >
+              <div className="topnav-profile-action-copy">
+                <strong>{item.label}</strong>
+                <span>{item.description}</span>
+              </div>
+              <span className="topnav-profile-action-arrow" aria-hidden="true">›</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        items.map(item => (
+          <button
+            key={item.label}
+            className="nav-menu-link"
+            type="button"
+            onClick={() => {
+              onNavigate(item.route);
+              onClose();
+            }}
+          >
+            <div className="nav-menu-link-copy">
+              <strong>{item.label}</strong>
+              <span>{item.description}</span>
+            </div>
+            <Icon name="chevronRight" className="button-icon" />
+          </button>
+        ))
+      )}
       {utility === "profile" ? (
         <div className="topnav-role-section">
           <div className="topnav-role-section-copy">

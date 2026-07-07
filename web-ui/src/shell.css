@@ -245,8 +245,8 @@ body[data-page="index"] .content {
   top: calc(100% + 10px);
   right: 0;
   z-index: 120;
-  width: min(376px, calc(100vw - 20px));
-  padding: 12px;
+  width: min(382px, calc(100vw - 20px));
+  padding: 14px;
 }
 
 .topnav-search-popover {
@@ -259,16 +259,16 @@ body[data-page="index"] .content {
   gap: 12px;
   align-items: center;
   padding: 14px;
-  margin-bottom: 12px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.09), rgba(248, 250, 252, 0.98));
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  margin-bottom: 16px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(250, 250, 251, 0.98), rgba(242, 245, 248, 0.98));
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
 }
 
 .topnav-profile-photo-wrap {
-  width: 70px;
-  height: 70px;
+  width: 72px;
+  height: 72px;
   border-radius: 18px;
   overflow: hidden;
   background: linear-gradient(135deg, #dbeafe, #2f6bcb);
@@ -279,25 +279,25 @@ body[data-page="index"] .content {
   display: grid;
   place-items: center;
   color: #ffffff;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 900;
   letter-spacing: 0.04em;
 }
 
 .topnav-profile-copy {
   display: grid;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
 .topnav-profile-copy strong {
-  font-size: 18px;
-  line-height: 1.05;
+  font-size: 17px;
+  line-height: 1.06;
 }
 
 .topnav-profile-copy span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.35;
 }
 
@@ -443,10 +443,6 @@ body[data-page="index"] .content {
   background: rgba(15, 118, 110, 0.08);
 }
 
-.nav-menu-link-profile + .nav-menu-link-profile {
-  border-top: 1px solid rgba(15, 23, 42, 0.06);
-}
-
 .nav-menu-link-copy {
   display: grid;
   gap: 3px;
@@ -459,22 +455,6 @@ body[data-page="index"] .content {
   text-overflow: ellipsis;
 }
 
-.nav-menu-link-profile .nav-menu-link-copy strong {
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-
-.nav-menu-link-profile .nav-menu-link-copy span {
-  font-size: 13px;
-}
-
-.topnav-profile-chevron {
-  width: 22px;
-  height: 22px;
-  color: rgba(15, 23, 42, 0.82);
-}
-
 .nav-menu-link-copy span,
 .topnav-empty-search {
   color: var(--muted);
@@ -482,17 +462,70 @@ body[data-page="index"] .content {
   line-height: 1.35;
 }
 
+.topnav-profile-actions {
+  display: grid;
+  gap: 0;
+}
+
+.topnav-profile-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 4px 14px 6px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.topnav-profile-action + .topnav-profile-action {
+  margin-top: 2px;
+}
+
+.topnav-profile-action:hover {
+  background: transparent;
+}
+
+.topnav-profile-action-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.topnav-profile-action-copy strong {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.topnav-profile-action-copy span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.topnav-profile-action-arrow {
+  flex: 0 0 auto;
+  width: 18px;
+  color: rgba(15, 23, 42, 0.92);
+  font-size: 30px;
+  font-weight: 300;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
 .topnav-role-section {
   display: grid;
-  gap: 12px;
-  margin-top: 10px;
-  padding: 14px 4px 4px;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 16px 2px 0;
   border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .topnav-role-section-copy {
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
 .topnav-role-section-copy strong {
@@ -501,7 +534,7 @@ body[data-page="index"] .content {
 
 .topnav-role-section-copy span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.35;
 }
 
@@ -583,24 +616,24 @@ body[data-page="index"] .content {
 .topnav-role-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
 }
 
 .topnav-role-option {
-  min-height: 36px;
-  padding: 8px 15px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  min-height: 34px;
+  padding: 7px 15px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 999px;
-  background: rgba(248, 250, 252, 0.9);
+  background: #ffffff;
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 750;
 }
 
 .topnav-role-option.active {
   color: #0f766e;
-  border-color: rgba(15, 118, 110, 0.28);
-  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.24);
+  background: rgba(15, 118, 110, 0.12);
 }
 
 .topbar {
