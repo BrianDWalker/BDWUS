@@ -219,7 +219,7 @@ for (const [hash, heading] of [
   });
 }
 
-test("mobile navigation drawer is grouped", async ({ page }) => {
+test("mobile navigation drawer is flat", async ({ page }) => {
   await mockApi(page);
   await page.setViewportSize({ width: 390, height: 844 });
 
@@ -227,9 +227,12 @@ test("mobile navigation drawer is grouped", async ({ page }) => {
   await page.getByRole("button", { name: "Open navigation" }).click();
 
   const drawer = page.getByRole("dialog", { name: "Primary navigation" });
-  await expect(drawer.getByText("Commercial")).toBeVisible();
+  await expect(drawer.getByText("Command section")).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "Home" })).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "Reports" })).toBeVisible();
   await expect(drawer.getByRole("button", { name: "Sales" })).toBeVisible();
   await expect(drawer.getByRole("button", { name: "Billing" })).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "Network & Service" })).toBeVisible();
 });
 
 test("mobile navigation drawer routes from the drawer", async ({ page }) => {
@@ -239,7 +242,7 @@ test("mobile navigation drawer routes from the drawer", async ({ page }) => {
   await page.goto("/#/dashboard");
   await page.getByRole("button", { name: "Open navigation" }).click();
   const drawer = page.getByRole("dialog", { name: "Primary navigation" });
-  await drawer.getByRole("button", { name: "Reports", exact: true }).click();
+  await drawer.getByRole("button", { name: "Reports" }).click();
 
   await expect(page).toHaveURL(/#\/reports/);
   await expect(page.getByRole("heading", { name: "Reports" }).first()).toBeVisible();

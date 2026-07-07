@@ -1,5 +1,5 @@
 import React, { createContext, useEffect, useMemo, useRef, useState } from "react";
-import { navGroups, topNavSections } from "../navigationConfig";
+import { topNavSections } from "../navigationConfig";
 import { activeRole, synchronizeRoleToken } from "../utils/permissions";
 import { platformApiBase } from "../utils/platformApi";
 import { useProfileSettings } from "../utils/profileSettings";
@@ -171,7 +171,7 @@ function MobileDrawer({ activeRoute, onNavigate, onClose }) {
   return (
     <div className="topnav-drawer" role="dialog" aria-label="Primary navigation">
       <div className="topnav-drawer-header">
-        <div>
+        <div className="topnav-drawer-title">
           <strong>Navigation</strong>
           <span>{routeGroupLabel(activeRoute)} section</span>
         </div>
@@ -179,33 +179,30 @@ function MobileDrawer({ activeRoute, onNavigate, onClose }) {
           <Icon name="close" className="button-icon" />
         </button>
       </div>
-      <div className="topnav-drawer-groups">
-        {navGroups.map(group => (
-          <section key={group.label} className="topnav-drawer-group">
-            <strong className="topnav-drawer-group-title">{group.label}</strong>
-            <div className="topnav-drawer-flat">
-              {group.items.map(item => {
-                const section = topNavSections.find(nav => nav.id === item.id);
-                if (!section) return null;
-                const active = routeMatches(section, activeRoute);
-                return (
-                  <button
-                    key={section.id}
-                    className={active ? "topnav-drawer-item active" : "topnav-drawer-item"}
-                    type="button"
-                    onClick={() => {
-                      onNavigate(section.route || section.id);
-                      onClose();
-                    }}
-                  >
-                    <Icon name={section.icon} className="button-icon" />
-                    <span>{section.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        ))}
+      <div className="topnav-drawer-list">
+        {topNavSections.map(section => {
+          const active = routeMatches(section, activeRoute);
+          return (
+            <button
+              key={section.id}
+              className={active ? "topnav-drawer-item active" : "topnav-drawer-item"}
+              type="button"
+              onClick={() => {
+                onNavigate(section.route || section.id);
+                onClose();
+              }}
+            >
+              <span className="topnav-drawer-item-icon">
+                <Icon name={section.icon} className="button-icon" />
+              </span>
+              <span className="topnav-drawer-item-copy">
+                <strong>{section.label}</strong>
+                <span>{active ? "Current section" : "Open module"}</span>
+              </span>
+              <Icon name="chevronRight" className="button-icon topnav-drawer-item-chevron" />
+            </button>
+          );
+        })}
       </div>
     </div>
   );
