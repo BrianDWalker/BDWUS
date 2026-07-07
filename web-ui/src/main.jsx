@@ -9,6 +9,7 @@ import "./role-permissions.css";
 import "./shell.css";
 import "./layouts.css";
 import "./surfaces.css";
+import "./product-pricing.css";
 import SalesAppRouter from "./SalesAppRouter";
 
 createRoot(document.getElementById("root")).render(

@@ -41,6 +41,7 @@ export function detailType(route) {
 
 export function isExtractedRoute(route) {
   return extractedRoutes.includes(route)
+    || route.startsWith("product-pricing/")
     || route.startsWith("details/lead/")
     || route.startsWith("details/opportunity/")
     || route.startsWith("details/quote/")

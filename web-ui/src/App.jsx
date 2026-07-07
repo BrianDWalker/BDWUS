@@ -57,7 +57,7 @@ function ExtractedRoute({ route, setRoute, showToast }) {
   if (route === "sales") return <SalesModule setRoute={setRoute} showToast={showToast} />;
   if (route === "reports") return <ReportsModule setRoute={setRoute} showToast={showToast} />;
   if (route === "administration") return <AdministrationModule setRoute={setRoute} showToast={showToast} />;
-  if (route === "product-pricing") return <ProductPricingModule setRoute={setRoute} showToast={showToast} />;
+  if (route === "product-pricing" || route.startsWith("product-pricing/")) return <ProductPricingModule route={route} setRoute={setRoute} showToast={showToast} />;
   if (route === "customer-360") return <Customer360Module setRoute={setRoute} showToast={showToast} />;
   if (route === "customer-service") return <CustomerServiceModule setRoute={setRoute} showToast={showToast} />;
   if (route.startsWith("details/customer/")) return <CustomerAccountDetailModule id={detailId(route, "details/customer/")} setRoute={setRoute} showToast={showToast} />;
