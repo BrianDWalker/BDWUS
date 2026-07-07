@@ -752,7 +752,11 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 920px) {
+  .table-desktop {
+    display: none;
+  }
+
   .panel-header,
   .record-header,
   .detail-hero-panel,
@@ -823,6 +827,12 @@
 
   .table-card-action-row {
     flex-basis: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .table-desktop {
+    display: none;
   }
 }
 

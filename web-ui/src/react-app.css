@@ -1949,9 +1949,13 @@ body[data-page="reports"] {
 
 }
 
-@media (max-width: 760px) {
+@media (max-width: 920px) {
   .table-desktop {
     display: none;
+  }
+
+  .table-mobile {
+    display: grid;
   }
 
   .command-strip,
@@ -2044,5 +2048,11 @@ body[data-page="reports"] {
   .reports-compact .record-tabs button {
     min-height: 32px;
     padding: 8px 10px 7px;
+  }
+}
+
+@media (max-width: 760px) {
+  .table-desktop {
+    display: none;
   }
 }

@@ -212,7 +212,7 @@ function MobileDrawer({ activeRoute, onNavigate, onClose }) {
 }
 
 export function Shell({ activeRoute, setRoute, children }) {
-  const isMobile = useMediaQuery("(max-width: 760px)");
+  const isCompactNav = useMediaQuery("(max-width: 920px)");
   const shellRef = useRef(null);
   const [utility, setUtility] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -250,8 +250,8 @@ export function Shell({ activeRoute, setRoute, children }) {
   }, [activeRoute]);
 
   useEffect(() => {
-    if (!isMobile) setDrawerOpen(false);
-  }, [isMobile]);
+    if (!isCompactNav) setDrawerOpen(false);
+  }, [isCompactNav]);
 
   useEffect(() => {
     synchronizeRoleToken(platformApiBase, role).catch(() => {});
@@ -284,7 +284,7 @@ export function Shell({ activeRoute, setRoute, children }) {
       <div className="app-shell" ref={shellRef}>
       <header className="app-topnav">
         <div className="topnav-left">
-          {isMobile && (
+          {isCompactNav && (
             <button className="topnav-icon-button" type="button" aria-label="Open navigation" onClick={() => {
               setUtility(null);
               setSearchOpen(false);
@@ -302,7 +302,7 @@ export function Shell({ activeRoute, setRoute, children }) {
           </button>
         </div>
 
-        {!isMobile && (
+        {!isCompactNav && (
           <nav className="topnav-center" aria-label="Primary">
             {topNavSections.map(section => (
               <div className="topnav-menu-anchor" key={section.id}>
@@ -349,7 +349,7 @@ export function Shell({ activeRoute, setRoute, children }) {
           }}>
             <Icon name="search" className="button-icon" />
           </button>
-          {searchOpen && !isMobile ? (
+          {searchOpen && !isCompactNav ? (
             <SearchPopover
               query={searchQuery}
               results={searchResults}
@@ -388,7 +388,7 @@ export function Shell({ activeRoute, setRoute, children }) {
             profile={profile}
           />
         )}
-        {isMobile && searchOpen && (
+        {isCompactNav && searchOpen && (
           <SearchPopover
             mobile
             query={searchQuery}
@@ -398,7 +398,7 @@ export function Shell({ activeRoute, setRoute, children }) {
             onClose={() => setSearchOpen(false)}
           />
         )}
-        {isMobile && drawerOpen && (
+        {isCompactNav && drawerOpen && (
           <MobileDrawer
             activeRoute={activeRoute}
             onNavigate={go}
