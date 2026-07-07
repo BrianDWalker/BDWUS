@@ -1,6 +1,6 @@
 import React, { createContext, useEffect, useMemo, useRef, useState } from "react";
 import { navGroups, topNavSections } from "../navigationConfig";
-import { activeRole, roles, synchronizeRoleToken } from "../utils/permissions";
+import { activeRole, synchronizeRoleToken } from "../utils/permissions";
 import { platformApiBase } from "../utils/platformApi";
 import { useProfileSettings } from "../utils/profileSettings";
 import { AiAssistPopover } from "./AiAssistPopover";
@@ -57,7 +57,7 @@ function TopNavButton({ section, active, onNavigate }) {
   );
 }
 
-function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange, profile }) {
+function UtilityPopover({ utility, onClose, onNavigate, profile }) {
   const menuSets = {
     notifications: [
       { label: "No notifications", description: "You are all caught up!"}
@@ -66,42 +66,33 @@ function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange, prof
       // { label: "Orders", description: "Inspect delivery queue", route: "orders" },
       // { label: "Customer 360", description: "Jump into an account area", route: "customer-360" }
     ],
-    profile: [
-      { label: `Active role: ${role}`, description: "Role controls sensitive actions", route: "dashboard" },
-      { label: "Administration", description: "Users, roles, and integrations", route: "administration" },
-      // { label: "Customer Service", description: "Support and case work", route: "customer-service" },
-      // { label: "Network & Service", description: "Operational queue", route: "network" },
-      // { label: "Reports", description: "Search and export reports", route: "reports" },
-      // { label: "Product & Pricing", description: "Catalog and governance", route: "product-pricing" },
-      // { label: "Billing", description: "Billing controls and reports", route: "billing" },
-      // { label: "Home", description: "Return to the operating brief", route: "dashboard" },
-      // { label: "Sales", description: "Pipeline and quote desk", route: "sales" },
-      { label: "Sign out", description: "Session action placeholder", route: "dashboard" }
-    ]
+    profile: []
   };
+  const profileItems = [
+    { label: "Settings", route: "administration", icon: "settings" },
+    { label: "Sign out", route: "dashboard", icon: "logout" }
+  ];
   const items = menuSets[utility] || [];
   return (
     <div className="topnav-utility-panel" role="menu" aria-label={utility}>
       {utility === "profile" ? (
         <section className="topnav-profile-summary" aria-label="Profile summary">
           <div className="topnav-profile-photo-wrap">
-            {profile.avatarUrl ? (
-              <img className="topnav-profile-photo" src={profile.avatarUrl} alt={profile.name} />
-            ) : (
-              <div className="topnav-profile-photo topnav-profile-photo-fallback">{profile.name.split(" ").filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "?"}</div>
-            )}
+            <div className="topnav-profile-photo topnav-profile-photo-fallback">
+              <Icon name="user" className="topnav-profile-user-icon" />
+            </div>
           </div>
           <div className="topnav-profile-copy">
             <strong>{profile.name}</strong>
-            <span>{profile.role}</span>
-            <span>{profile.jobTitle}</span>
+            <span className="topnav-profile-title">{profile.jobTitle}</span>
+            <span>Role: {profile.role}</span>
             <span>{profile.email}</span>
           </div>
         </section>
       ) : null}
       {utility === "profile" ? (
         <div className="topnav-profile-actions" role="presentation">
-          {items.map(item => (
+          {profileItems.map(item => (
             <button
               key={item.label}
               className="topnav-profile-action"
@@ -111,9 +102,9 @@ function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange, prof
                 onClose();
               }}
             >
+              <Icon name={item.icon} className="topnav-profile-action-icon" />
               <div className="topnav-profile-action-copy">
                 <strong>{item.label}</strong>
-                <span>{item.description}</span>
               </div>
               <Icon name="chevronRight" className="button-icon topnav-profile-action-chevron" />
             </button>
@@ -138,30 +129,6 @@ function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange, prof
           </button>
         ))
       )}
-      {utility === "profile" ? (
-        <div className="topnav-role-section">
-          <div className="topnav-role-section-copy">
-            <strong>Demo role</strong>
-            <span>Switch the role used for gated workflow actions.</span>
-          </div>
-          <div className="topnav-role-options">
-            {Object.keys(roles).map(item => (
-              <button
-                key={item}
-                className={item === role ? "topnav-role-option active" : "topnav-role-option"}
-                type="button"
-                onClick={() => {
-                  onRoleChange(item);
-                  onClose();
-                }}
-                aria-pressed={item === role}
-              >
-                {item}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -416,8 +383,6 @@ export function Shell({ activeRoute, setRoute, children }) {
         {utility && (
           <UtilityPopover
             utility={utility}
-            role={role}
-            onRoleChange={changeRole}
             onClose={() => setUtility(null)}
             onNavigate={go}
             profile={profile}
