@@ -115,7 +115,7 @@ function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange, prof
                 <strong>{item.label}</strong>
                 <span>{item.description}</span>
               </div>
-              <span className="topnav-profile-action-arrow" aria-hidden="true">›</span>
+              <Icon name="chevronRight" className="button-icon topnav-profile-action-chevron" />
             </button>
           ))}
         </div>
