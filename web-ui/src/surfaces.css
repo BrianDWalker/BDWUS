@@ -2,6 +2,10 @@
 
 .content > .record-header,
 .content > .overview-grid,
+.content > .summary-strip,
+.content > .mini-stat-row,
+.content > .report-summary-strip,
+.content > .record-tabs,
 .content > .panel,
 .content > .empty-state {
   width: min(100%, 1360px);
@@ -14,6 +18,13 @@
   gap: 14px;
   margin-bottom: 16px;
   align-items: stretch;
+}
+
+.summary-strip,
+.mini-stat-row,
+.report-summary-strip {
+  width: min(100%, 1360px);
+  margin-inline: auto;
 }
 
 .metric-card,
