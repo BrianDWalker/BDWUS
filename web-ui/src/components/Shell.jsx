@@ -102,7 +102,7 @@ function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange, prof
       {items.map(item => (
         <button
           key={item.label}
-          className="nav-menu-link"
+          className="nav-menu-link nav-menu-link-profile"
           type="button"
           onClick={() => {
             onNavigate(item.route);
@@ -113,7 +113,7 @@ function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange, prof
             <strong>{item.label}</strong>
             <span>{item.description}</span>
           </div>
-          <Icon name="chevronRight" className="button-icon" />
+          <Icon name="chevronRight" className="button-icon topnav-profile-chevron" />
         </button>
       ))}
       {utility === "profile" ? (

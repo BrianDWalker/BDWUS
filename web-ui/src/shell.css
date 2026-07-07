@@ -243,10 +243,10 @@ body[data-page="index"] .content {
 .topnav-utility-panel {
   position: absolute;
   top: calc(100% + 10px);
-  right: 12px;
+  right: 0;
   z-index: 120;
-  width: min(360px, calc(100vw - 32px));
-  padding: 10px;
+  width: min(376px, calc(100vw - 20px));
+  padding: 12px;
 }
 
 .topnav-search-popover {
@@ -258,39 +258,41 @@ body[data-page="index"] .content {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 12px;
   align-items: center;
-  padding: 12px;
-  margin-bottom: 10px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(248, 250, 252, 0.96));
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  padding: 14px;
+  margin-bottom: 12px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.09), rgba(248, 250, 252, 0.98));
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .topnav-profile-photo-wrap {
-  width: 68px;
-  height: 68px;
-  border-radius: 22px;
+  width: 70px;
+  height: 70px;
+  border-radius: 18px;
   overflow: hidden;
-  background: linear-gradient(135deg, #cbd5e1, #0f766e);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+  background: linear-gradient(135deg, #dbeafe, #2f6bcb);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
 }
 
 .topnav-profile-photo-fallback {
   display: grid;
   place-items: center;
   color: #ffffff;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 900;
   letter-spacing: 0.04em;
 }
 
 .topnav-profile-copy {
   display: grid;
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
 }
 
 .topnav-profile-copy strong {
-  font-size: 16px;
+  font-size: 18px;
+  line-height: 1.05;
 }
 
 .topnav-profile-copy span {
@@ -428,8 +430,8 @@ body[data-page="index"] .content {
   gap: 10px;
   width: 100%;
   min-width: 0;
-  padding: 10px;
-  border-radius: 12px;
+  padding: 14px 6px 14px 4px;
+  border-radius: 0;
   background: transparent;
   color: var(--text);
   text-align: left;
@@ -439,6 +441,10 @@ body[data-page="index"] .content {
 .topnav-drawer-item:hover,
 .topnav-drawer-item.active {
   background: rgba(15, 118, 110, 0.08);
+}
+
+.nav-menu-link-profile + .nav-menu-link-profile {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .nav-menu-link-copy {
@@ -453,6 +459,22 @@ body[data-page="index"] .content {
   text-overflow: ellipsis;
 }
 
+.nav-menu-link-profile .nav-menu-link-copy strong {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.nav-menu-link-profile .nav-menu-link-copy span {
+  font-size: 13px;
+}
+
+.topnav-profile-chevron {
+  width: 22px;
+  height: 22px;
+  color: rgba(15, 23, 42, 0.82);
+}
+
 .nav-menu-link-copy span,
 .topnav-empty-search {
   color: var(--muted);
@@ -462,9 +484,9 @@ body[data-page="index"] .content {
 
 .topnav-role-section {
   display: grid;
-  gap: 10px;
-  margin-top: 8px;
-  padding: 10px;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 14px 4px 4px;
   border-top: 1px solid rgba(15, 23, 42, 0.08);
 }
 
@@ -474,12 +496,12 @@ body[data-page="index"] .content {
 }
 
 .topnav-role-section-copy strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .topnav-role-section-copy span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.35;
 }
 
@@ -561,17 +583,17 @@ body[data-page="index"] .content {
 .topnav-role-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .topnav-role-option {
-  min-height: 34px;
-  padding: 7px 12px;
+  min-height: 36px;
+  padding: 8px 15px;
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 999px;
   background: rgba(248, 250, 252, 0.9);
   color: var(--text);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 750;
 }
 
