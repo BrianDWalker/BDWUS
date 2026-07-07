@@ -17,9 +17,8 @@ const desktopRoutes = [
   { hash: "administration", heading: "Administration", name: "administration", loadedText: /Licensed accounts|Operational user accounts|Invite user/i }
 ];
 
-const responsiveRoutes = ["dashboard", "sales", "customer-360", "customer-service", "billing", "orders", "product-pricing", "reports", "administration"]
-  .map(hash => desktopRoutes.find(route => route.hash === hash))
-  .filter(Boolean);
+const tabletRoutes = desktopRoutes;
+const mobileRoutes = desktopRoutes;
 
 const tabValidationRoutes = [
   {
@@ -161,13 +160,25 @@ test.describe("deployed visual smoke", () => {
     });
   }
 
-  for (const route of responsiveRoutes) {
+  for (const route of tabletRoutes) {
     test(`${route.name} renders loaded tablet preview`, async ({ page }, testInfo) => {
       const consoleErrors = captureConsoleErrors(page);
       await page.setViewportSize({ width: 834, height: 1112 });
 
       await openLoadedRoute(page, route);
       await attachRouteEvidence(testInfo, page, `${route.name}-tablet-loaded`, consoleErrors);
+
+      expect(consoleErrors).toEqual([]);
+    });
+  }
+
+  for (const route of mobileRoutes) {
+    test(`${route.name} renders loaded mobile preview`, async ({ page }, testInfo) => {
+      const consoleErrors = captureConsoleErrors(page);
+      await page.setViewportSize({ width: 390, height: 844 });
+
+      await openLoadedRoute(page, route, { expectDesktopNav: false });
+      await attachRouteEvidence(testInfo, page, `${route.name}-mobile-loaded`, consoleErrors);
 
       expect(consoleErrors).toEqual([]);
     });

@@ -10,13 +10,18 @@ This file is a consolidated remainder list pulled from the phase notes, release 
 - Responsive route screenshots were captured during the local validation pass.
 - Top navigation, global search, utility menus, tables, empty states, and error states were checked at narrower widths.
 
+## Broader QA completed locally
+
+- Desktop, tablet, and mobile browser QA was completed across the Product & Pricing and core portal route surfaces.
+- Additional responsive smoke coverage was added for tablet and mobile viewport checks in the deployed route suite.
+- Mobile navigation and narrower viewport behaviors were rechecked after the test expansion.
+
 ## Unrelated remaining items
 
 - Confirm the latest GitHub Actions results.
 - Confirm Azure deployment proof.
 - Confirm live Azure SQL behavior.
 - Confirm live API proof from the deployed environment.
-- Confirm browser visual QA outside the mobile/tablet-specific pass.
 - Confirm staging payload shape proof.
 - Confirm server-side authorization.
 - Confirm API-backed Knowledge documents.
