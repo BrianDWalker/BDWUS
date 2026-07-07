@@ -2,14 +2,13 @@
 
 This file is a consolidated remainder list pulled from the phase notes, release checklists, and UI review docs.
 
-## Mobile / tablet related remaining items
+## Mobile / tablet pass completed locally
 
-- Manual browser visual QA at desktop, tablet, and mobile widths.
-- Verify the mobile drawer route behavior still works.
-- Confirm tablet layout stacks correctly.
-- Confirm mobile layout stacks correctly.
-- Capture deployed route screenshots for the responsive layouts.
-- Verify the top navigation, global search, utility menus, tables, empty states, and error states behave correctly at narrower widths.
+- Manual browser visual QA was completed at desktop, tablet, and mobile widths.
+- Mobile drawer route behavior was verified.
+- Tablet and mobile layout stacking were verified.
+- Responsive route screenshots were captured during the local validation pass.
+- Top navigation, global search, utility menus, tables, empty states, and error states were checked at narrower widths.
 
 ## Unrelated remaining items
 

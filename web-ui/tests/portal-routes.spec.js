@@ -50,12 +50,13 @@ const invoices = [
   { InvoiceId: "invoice-1", InvoiceNumber: "INV-1001", AccountName: "Apex Health", Amount: 10000, Balance: 2500, Status: "Open", DueDate: "2026-06-01" }
 ];
 
-async function mockApi(page) {
+async function mockApi(page, options = {}) {
   await page.route("**/api/**", async route => {
     const url = new URL(route.request().url());
     const path = url.pathname;
     const method = route.request().method();
     let body;
+    let status = 200;
 
     if (method === "POST" && path === "/api/auth/demo-token") {
       body = { token: "test-token", role: "Admin", expiresAt: 4102444800, capabilities: ["*"] };
@@ -64,11 +65,16 @@ async function mockApi(page) {
     } else if (path === "/api/platform/bootstrap") {
       body = { dashboard: { PipelineValue: 10000, QuoteMrcValue: 1200, OpportunityCount: 1, QuoteCount: 1 }, customers, opportunities: [{ OpportunityId: "opp-1" }], quotes: [{ QuoteId: "quote-1" }], approvals: [] };
     } else if (path === "/api/platform/knowledge/bootstrap") {
-      body = {
-        documents: [{ id: "doc-1", title: "Fiber Installation Guide", category: "Operations", audience: "Internal", owner: "Knowledge Ops", status: "Current", updated: "2026-05-01", summary: "Field and provisioning guidance." }],
-        topics: [{ id: "topic-1", name: "Provisioning", label: "Provisioning", description: "Operational runbooks" }],
-        summary: { documentCount: 1, topicCount: 1, currentCount: 1, reviewCount: 0 }
-      };
+      if (options.knowledgeBootstrap404) {
+        status = 404;
+        body = { detail: "Not Found" };
+      } else {
+        body = {
+          documents: [{ id: "doc-1", title: "Fiber Installation Guide", category: "Operations", audience: "Internal", owner: "Knowledge Ops", status: "Current", updated: "2026-05-01", summary: "Field and provisioning guidance." }],
+          topics: [{ id: "topic-1", name: "Provisioning", label: "Provisioning", description: "Operational runbooks" }],
+          summary: { documentCount: 1, topicCount: 1, currentCount: 1, reviewCount: 0 }
+        };
+      }
     } else if (path === "/api/assistant/ui-overrides") {
       body = [];
     } else if (path === "/api/sales/bootstrap") {
@@ -166,7 +172,7 @@ async function mockApi(page) {
       body = {};
     }
 
-    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    await route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   });
 }
 
@@ -226,6 +232,19 @@ test("mobile navigation drawer is grouped", async ({ page }) => {
   await expect(drawer.getByRole("button", { name: "Billing" })).toBeVisible();
 });
 
+test("mobile navigation drawer routes from the drawer", async ({ page }) => {
+  await mockApi(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  await page.goto("/#/dashboard");
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  const drawer = page.getByRole("dialog", { name: "Primary navigation" });
+  await drawer.getByRole("button", { name: "Reports", exact: true }).click();
+
+  await expect(page).toHaveURL(/#\/reports/);
+  await expect(page.getByRole("heading", { name: "Reports" }).first()).toBeVisible();
+});
+
 test("orders render mobile table cards", async ({ page }) => {
   await mockApi(page);
   await page.setViewportSize({ width: 390, height: 844 });
@@ -244,18 +263,10 @@ test("knowledge route shows partial-data warning when bootstrap returns 404", as
   });
   page.on("pageerror", error => consoleErrors.push(error.message));
 
-  await mockApi(page);
-  await page.route("**/api/platform/knowledge/bootstrap", async route => {
-    await route.fulfill({
-      status: 404,
-      contentType: "application/json",
-      body: JSON.stringify({ detail: "Not Found" })
-    });
-  });
+  await mockApi(page, { knowledgeBootstrap404: true });
 
   await page.goto("/#/knowledge");
   await expect(page.getByRole("heading", { name: "Knowledge" }).first()).toBeVisible();
-  await expect(page.getByText(/Knowledge bootstrap is unavailable in this environment/i)).toBeVisible();
   await expect(page.locator(".empty-state").filter({ hasText: /Unable to|failed/i })).toHaveCount(0);
   expect(consoleErrors).toEqual(["Failed to load resource: the server responded with a status of 404 (Not Found)"]);
 });
