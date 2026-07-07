@@ -2,6 +2,7 @@ import React, { createContext, useEffect, useMemo, useRef, useState } from "reac
 import { navGroups, topNavSections } from "../navigationConfig";
 import { activeRole, roles, synchronizeRoleToken } from "../utils/permissions";
 import { platformApiBase } from "../utils/platformApi";
+import { useProfileSettings } from "../utils/profileSettings";
 import { AiAssistPopover } from "./AiAssistPopover";
 import { Icon } from "./Icons";
 
@@ -35,7 +36,7 @@ function routeGroupLabel(route) {
     { label: "Administration", matches: ["administration", "details/record"] }
   ];
   const match = groups.find(group => group.matches.some(item => route === item || route.startsWith(`${item}/`) || route.startsWith(`${item}?`)));
-  return match?.label || "Workspace";
+  return match?.label || "Section";
 }
 
 function navigate(setRoute, route) {
@@ -56,14 +57,14 @@ function TopNavButton({ section, active, onNavigate }) {
   );
 }
 
-function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange }) {
+function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange, profile }) {
   const menuSets = {
     notifications: [
       { label: "No notifications", description: "You are all caught up!"}
       // { label: "Reports", description: "Open operational reporting", route: "reports" },
       // { label: "Billing", description: "Review ledger and invoices", route: "billing" },
       // { label: "Orders", description: "Inspect delivery queue", route: "orders" },
-      // { label: "Customer 360", description: "Jump into an account workspace", route: "customer-360" }
+      // { label: "Customer 360", description: "Jump into an account area", route: "customer-360" }
     ],
     profile: [
       { label: `Active role: ${role}`, description: "Role controls sensitive actions", route: "dashboard" },
@@ -81,6 +82,23 @@ function UtilityPopover({ utility, onClose, onNavigate, role, onRoleChange }) {
   const items = menuSets[utility] || [];
   return (
     <div className="topnav-utility-panel" role="menu" aria-label={utility}>
+      {utility === "profile" ? (
+        <div className="topnav-profile-summary">
+          <div className="topnav-profile-photo-wrap">
+            {profile.avatarUrl ? (
+              <img className="topnav-profile-photo" src={profile.avatarUrl} alt={profile.name} />
+            ) : (
+              <div className="topnav-profile-photo topnav-profile-photo-fallback">{profile.name.split(" ").filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "?"}</div>
+            )}
+          </div>
+          <div className="topnav-profile-copy">
+            <strong>{profile.name}</strong>
+            <span>{profile.role}</span>
+            <span>{profile.jobTitle}</span>
+            <span>{profile.email}</span>
+          </div>
+        </div>
+      ) : null}
       {items.map(item => (
         <button
           key={item.label}
@@ -134,7 +152,7 @@ function SearchPopover({ query, results, onChange, onNavigate, onClose, mobile =
         <input
           value={query}
           onChange={event => onChange(event.target.value)}
-          placeholder="Search modules and workspaces"
+          placeholder="Search modules and sections"
           autoFocus={mobile}
         />
       </label>
@@ -166,7 +184,7 @@ function MobileDrawer({ activeRoute, onNavigate, onClose }) {
       <div className="topnav-drawer-header">
         <div>
           <strong>Navigation</strong>
-          <span>{routeGroupLabel(activeRoute)} workspace</span>
+          <span>{routeGroupLabel(activeRoute)} section</span>
         </div>
         <button className="topnav-mega-close" type="button" onClick={onClose} aria-label="Close navigation">
           <Icon name="close" className="button-icon" />
@@ -213,6 +231,7 @@ export function Shell({ activeRoute, setRoute, children }) {
   const [aiOpen, setAiOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [role, setRole] = useState(activeRole());
+  const [profile] = useProfileSettings();
 
   function changeRole(nextRole) {
     window.localStorage?.setItem("bdwus.role", nextRole);
@@ -329,7 +348,7 @@ export function Shell({ activeRoute, setRoute, children }) {
               context={{
                 route: activeRoute,
                 pageTitle: activeSection?.label || activeGroup,
-                pageSummary: `${activeSection?.label || activeGroup} workspace`
+                pageSummary: `${activeSection?.label || activeGroup} section`
               }}
             />
           </div>
@@ -363,7 +382,13 @@ export function Shell({ activeRoute, setRoute, children }) {
             setDrawerOpen(false);
             setAiOpen(false);
             setUtility(current => current === "profile" ? null : "profile");
-          }}>BW</button>
+          }}>
+            {profile.avatarUrl ? (
+              <img className="topnav-avatar-image" src={profile.avatarUrl} alt={profile.name} />
+            ) : (
+              <span>{profile.name.split(" ").filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "BW"}</span>
+            )}
+          </button>
         </div>
 
         {utility && (
@@ -373,6 +398,7 @@ export function Shell({ activeRoute, setRoute, children }) {
             onRoleChange={changeRole}
             onClose={() => setUtility(null)}
             onNavigate={go}
+            profile={profile}
           />
         )}
         {isMobile && searchOpen && (

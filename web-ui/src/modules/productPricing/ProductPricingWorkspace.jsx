@@ -32,7 +32,6 @@ const DOMAIN_CONFIGS = {
       "Billing codes, billing elements, and docs",
       "Availability, pricing, and algorithm versions"
     ],
-    landingValueLabel: "Product-centric catalog",
     tabs: [
       { key: "products", label: "Products", dataKey: "products", detailKind: "product", description: "Each wireline product record." },
       { key: "hierarchy", label: "Hierarchy", dataKey: "hierarchy", description: "Product parent and child relationships." },
@@ -54,7 +53,6 @@ const DOMAIN_CONFIGS = {
       "Offers, promotions, and eligibility",
       "Devices, features, and algorithm support"
     ],
-    landingValueLabel: "Plan and offer workspace",
     tabs: [
       { key: "plans", label: "Plans", dataKey: "plans", detailKind: "plan", description: "Recurring wireless plans." },
       { key: "offers", label: "Offers", dataKey: "offers", detailKind: "offer", description: "Commercial offers and bundles." },
@@ -75,7 +73,6 @@ const DOMAIN_CONFIGS = {
       "Custom algorithm library and exceptions",
       "Simulation, review, and version controls"
     ],
-    landingValueLabel: "Governance workspace",
     tabs: [
       { key: "queue", label: "Approval Queue", dataKey: "queue", detailKind: "queue", description: "Pricing requests waiting on review." },
       { key: "library", label: "Algo Library", dataKey: "library", detailKind: "algorithm", description: "Reusable custom algorithm templates." },
@@ -575,57 +572,43 @@ function WorkspaceTabs({ tabs, active, onChange }) {
   );
 }
 
-function DomainLandingCard({ config, stats, onEnter }) {
+function DomainLandingCard({ config, active, muted, onEnter }) {
   return (
-    <article className={`pp-domain-card ${config.accent}`}>
+    <article className={`pp-domain-card ${config.accent} ${active ? "is-selected" : ""} ${muted ? "is-muted" : ""}`.trim()}>
       <div className="pp-domain-card-top">
         <div>
           <strong>{config.label}</strong>
           <p>{config.description}</p>
         </div>
-        <StatusTag tone="blue">{config.landingValueLabel}</StatusTag>
       </div>
       <div className="pp-bullet-list">
         {config.landingBullets.map(item => <span key={item}>{item}</span>)}
       </div>
-      {stats?.length ? (
-        <div className="pp-domain-card-stats">
-          {stats.map(item => (
-            <div key={item.label} className="pp-domain-stat">
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-            </div>
-          ))}
-        </div>
-      ) : null}
       <div className="button-cluster">
-        <button className="button" type="button" onClick={onEnter}>Enter {config.label}</button>
+        <button className="button" type="button" onClick={onEnter}>Open {config.label}</button>
       </div>
     </article>
   );
 }
 
-function scrollToWorkspace(domain) {
-  document.getElementById(`${domain}-workspace`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function LandingPage({ showToast }) {
+function LandingPage({ selectedDomain, onSelectDomain, showToast }) {
   const cards = DOMAIN_ORDER.map(domain => DOMAIN_CONFIGS[domain]);
 
   return (
     <>
       <PageHeader
         title="Product & Pricing"
-        description="A governed catalog workspace for Wireline, Wireless, and Custom pricing operations."
-        actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => showToast?.("Workspace refreshed")}>Refresh</button></div>}
+        description="A governed catalog for Wireline, Wireless, and Custom pricing operations."
+        actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => showToast?.("Catalog refreshed")}>Refresh</button></div>}
       />
       <section className="pp-landing-grid">
         {cards.map(domain => (
           <DomainLandingCard
             key={domain.route}
             config={domain}
-            stats={[]}
-            onEnter={() => scrollToWorkspace(domain.route)}
+            active={selectedDomain === domain.route}
+            muted={Boolean(selectedDomain) && selectedDomain !== domain.route}
+            onEnter={() => onSelectDomain(domain.route)}
           />
         ))}
       </section>
@@ -1061,9 +1044,9 @@ function DomainWorkspace({ domain, workspace, setRoute, showToast }) {
   }, [rows, query, domain]);
 
   return (
-    <section id={`${domain}-workspace`} className="pp-workspace-section">
+    <section id={`${domain}-catalog`} className="pp-workspace-section">
       <div className="pp-workspace-section-copy">
-        <strong>{config.label} Workspace</strong>
+        <strong>{config.label}</strong>
         <p>{config.description}</p>
       </div>
       {domain !== "wireline" ? (
@@ -1535,7 +1518,7 @@ function DetailPage({ domain, route, workspace, setRoute, showToast, onRefreshWo
   return (
     <>
       <PageHeader
-        title={`${config.label} Workspace`}
+        title={config.label}
         description={config.description}
         actions={<div className="button-cluster"><button className="ghost-button" type="button" onClick={() => setRoute?.(routeForDomain(domain))}>Back to {config.label}</button></div>}
       />
@@ -1623,7 +1606,9 @@ export default function ProductPricingWorkspace({ route = "product-pricing", set
 
   useEffect(() => {
     if (!focusDomain || loading) return;
-    const timer = window.setTimeout(() => scrollToWorkspace(focusDomain), 0);
+    const timer = window.setTimeout(() => {
+      document.getElementById(`${focusDomain}-catalog`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
     return () => window.clearTimeout(timer);
   }, [focusDomain, loading]);
 
@@ -1632,9 +1617,9 @@ export default function ProductPricingWorkspace({ route = "product-pricing", set
       <>
         <PageHeader
           title="Product & Pricing"
-          description="Loading the commercial workspace..."
+          description="Loading the commercial catalog..."
         />
-        <EmptyState>Loading product and pricing workspace...</EmptyState>
+        <EmptyState>Loading product and pricing catalog...</EmptyState>
       </>
     );
   }
@@ -1654,12 +1639,12 @@ export default function ProductPricingWorkspace({ route = "product-pricing", set
 
   return (
     <>
-      <LandingPage showToast={showToast} />
-      <section className="pp-workspace-stack">
-        <DomainWorkspace domain="wireline" workspace={workspace} setRoute={setRoute} showToast={showToast} />
-        <DomainWorkspace domain="wireless" workspace={workspace} setRoute={setRoute} showToast={showToast} />
-        <DomainWorkspace domain="custom" workspace={workspace} setRoute={setRoute} showToast={showToast} />
-      </section>
+      <LandingPage selectedDomain={parsed.domain} onSelectDomain={nextDomain => setRoute?.(routeForDomain(nextDomain))} showToast={showToast} />
+      {parsed.domain ? (
+        <section className="pp-workspace-stack">
+          <DomainWorkspace domain={parsed.domain} workspace={workspace} setRoute={setRoute} showToast={showToast} />
+        </section>
+      ) : null}
     </>
   );
 }

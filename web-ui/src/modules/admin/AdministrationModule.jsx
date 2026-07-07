@@ -4,6 +4,7 @@ import { DataTable, MetricCard, Panel, StatusTag, StructuredValueSummary, format
 import { fetchAdministrationSummary } from "../../utils/platformApi";
 import { fetchAdminIntegrations, fetchAdminRoles, fetchAdminUsers } from "../../utils/opsApi";
 import { createAdminIntegration, createAdminRole, createAdminUser } from "../../utils/opsMutations";
+import { useProfileSettings } from "../../utils/profileSettings";
 
 function TimelineList({ items }) {
   return (
@@ -29,6 +30,7 @@ export default function AdministrationModule({ setRoute, showToast }) {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [integrations, setIntegrations] = useState([]);
+  const [profile, setProfile] = useProfileSettings();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -122,7 +124,57 @@ export default function AdministrationModule({ setRoute, showToast }) {
           {tab === "Roles" && <Panel title="Roles" description="Permission groups and access scope." action={<button className="ghost-button" type="button" disabled={saving} onClick={() => createSample("role")}>Create sample role</button>}><DataTable columns={[{ key: "RoleNumber", label: "Role ID" }, { key: "RoleName", label: "Role" }, { key: "PermissionsJson", label: "Permissions", render: row => <StructuredValueSummary value={row.PermissionsJson} empty="No permissions assigned" /> }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Active" ? "success" : "warn"}>{row.Status}</StatusTag> }]} rows={roles} /></Panel>}
           {tab === "Integrations" && <Panel title="Integrations" description="Platform connections and sync status." action={<button className="ghost-button" type="button" disabled={saving} onClick={() => createSample("integration")}>Create sample integration</button>}><DataTable columns={[{ key: "IntegrationNumber", label: "Integration ID" }, { key: "IntegrationName", label: "Integration" }, { key: "Detail", label: "Detail" }, { key: "OwnerName", label: "Owner" }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Connected" ? "success" : "warn"}>{row.Status}</StatusTag> }]} rows={integrations} /></Panel>}
           {tab === "Audit" && <Panel title="Audit" description="System actions and version history."><TimelineList items={auditItems} /></Panel>}
-          {tab === "Settings" && <Panel title="Settings" description="Platform defaults and governance controls."><div className="field-grid"><MetricCard label="Security" value="MFA required" delta="Policy" /><MetricCard label="Session timeout" value="30 minutes" delta="Platform" /><MetricCard label="Audit retention" value="7 years" delta="Governance" /><MetricCard label="Release mode" value={summary?.platform?.environment || "Controlled"} delta={summary?.platform?.serviceName || "Platform API"} /></div></Panel>}
+          {tab === "Settings" && (
+            <section className="record-main-layout">
+              <Panel title="Profile" description="Controls the identity shown in the top-right profile menu.">
+                <div className="profile-settings-grid">
+                  <div className="profile-settings-preview">
+                    {profile.avatarUrl ? (
+                      <img src={profile.avatarUrl} alt={profile.name} className="profile-settings-photo" />
+                    ) : (
+                      <div className="profile-settings-photo profile-settings-photo-fallback">{profile.name.split(" ").filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "?"}</div>
+                    )}
+                    <div>
+                      <strong>{profile.name}</strong>
+                      <span>{profile.role}</span>
+                      <span>{profile.jobTitle}</span>
+                      <span>{profile.email}</span>
+                    </div>
+                  </div>
+                  <div className="profile-settings-form">
+                    <label>
+                      <span>Name</span>
+                      <input value={profile.name} onChange={event => setProfile(current => ({ ...current, name: event.target.value }))} />
+                    </label>
+                    <label>
+                      <span>Role</span>
+                      <input value={profile.role} onChange={event => setProfile(current => ({ ...current, role: event.target.value }))} />
+                    </label>
+                    <label>
+                      <span>Job title</span>
+                      <input value={profile.jobTitle} onChange={event => setProfile(current => ({ ...current, jobTitle: event.target.value }))} />
+                    </label>
+                    <label>
+                      <span>Email</span>
+                      <input type="email" value={profile.email} onChange={event => setProfile(current => ({ ...current, email: event.target.value }))} />
+                    </label>
+                    <label>
+                      <span>Profile picture URL</span>
+                      <input value={profile.avatarUrl} onChange={event => setProfile(current => ({ ...current, avatarUrl: event.target.value }))} placeholder="https://..." />
+                    </label>
+                  </div>
+                </div>
+              </Panel>
+              <Panel title="Settings" description="Platform defaults and governance controls.">
+                <div className="field-grid">
+                  <MetricCard label="Security" value="MFA required" delta="Policy" />
+                  <MetricCard label="Session timeout" value="30 minutes" delta="Platform" />
+                  <MetricCard label="Audit retention" value="7 years" delta="Governance" />
+                  <MetricCard label="Release mode" value={summary?.platform?.environment || "Controlled"} delta={summary?.platform?.serviceName || "Platform API"} />
+                </div>
+              </Panel>
+            </section>
+          )}
         </>
       )}
     </>
