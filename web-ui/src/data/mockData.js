@@ -10,8 +10,8 @@ export const navGroups = [
     label: "Commercial",
     items: [
       { id: "sales", label: "Sales", icon: "sales" },
-      { id: "pricing", label: "Pricing", icon: "pricing" },
-      { id: "products", label: "Products", icon: "products" }
+      { id: "orders", label: "Orders", icon: "orders" },
+      { id: "product-pricing", label: "Product & Pricing", icon: "pricing" }
     ]
   },
   {
@@ -27,7 +27,6 @@ export const navGroups = [
     items: [
       { id: "network", label: "Network", icon: "network" },
       { id: "service-management", label: "Service Mgmt", icon: "service" },
-      { id: "orders", label: "Orders", icon: "orders" },
       { id: "provisioning", label: "Provisioning", icon: "provisioning" }
     ]
   },
@@ -36,6 +35,72 @@ export const navGroups = [
     items: [
       { id: "carrier-settlement", label: "Carrier Settlement", icon: "finance" }
     ]
+  }
+];
+
+export const topNavSections = [
+  {
+    id: "dashboard",
+    label: "Home",
+    icon: "dashboard",
+    route: "dashboard",
+    routes: ["dashboard"]
+  },
+  {
+    id: "sales",
+    label: "Sales",
+    icon: "sales",
+    route: "sales",
+    routes: ["sales", "details/opportunity", "details/lead", "details/quote"]
+  },
+  {
+    id: "customer-360",
+    label: "Customer 360",
+    icon: "customerSearch",
+    route: "customer-360",
+    routes: ["customer-360", "customer-service", "details/billing-account", "details/invoice", "details/service"]
+  },
+  {
+    id: "orders",
+    label: "Orders",
+    icon: "orders",
+    route: "orders",
+    routes: ["orders", "details/order"]
+  },
+  {
+    id: "product-pricing",
+    label: "Product & Pricing",
+    icon: "pricing",
+    route: "product-pricing",
+    routes: ["product-pricing", "details/product", "details/product-pricing"]
+  },
+  {
+    id: "network",
+    label: "Network & Service",
+    icon: "network",
+    route: "network",
+    routes: ["network", "service-management", "provisioning", "carrier-settlement"]
+  },
+  {
+    id: "billing",
+    label: "Billing",
+    icon: "billing",
+    route: "billing",
+    routes: ["billing", "details/invoice", "details/billing-account"]
+  },
+  {
+    id: "reports",
+    label: "Reports",
+    icon: "reports",
+    route: "reports",
+    routes: ["reports"]
+  },
+  {
+    id: "administration",
+    label: "Administration",
+    icon: "settings",
+    route: "administration",
+    routes: ["administration"]
   }
 ];
 

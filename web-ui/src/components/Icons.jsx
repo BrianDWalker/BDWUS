@@ -4,11 +4,14 @@ import {
   BadgeDollarSign,
   BarChart3,
   Bell,
+  ChevronDown,
+  ChevronRight,
   Boxes,
   BriefcaseBusiness,
   Building2,
   Cable,
   ClipboardList,
+  CircleHelp,
   CreditCard,
   FileSpreadsheet,
   Gauge,
@@ -33,6 +36,8 @@ import {
   Truck,
   UserRoundSearch,
   UsersRound,
+  Menu,
+  X,
   Workflow
 } from "lucide-react";
 
@@ -43,11 +48,14 @@ const icons = {
   coefficients: SlidersHorizontal,
   customers: UsersRound,
   customerSearch: UserRoundSearch,
+  chevronDown: ChevronDown,
+  chevronRight: ChevronRight,
   dashboard: Home,
   export: FileSpreadsheet,
   finance: HandCoins,
   leads: Send,
   network: Network,
+  menu: Menu,
   orders: ClipboardList,
   opportunities: BriefcaseBusiness,
   pricing: BadgeDollarSign,
@@ -66,11 +74,13 @@ const icons = {
   workflow: Workflow,
   account: Building2,
   cable: Cable,
+  help: CircleHelp,
   layers: Layers3,
   package: PackageCheck,
   percent: Percent,
   checks: ListChecks,
-  phone: PhoneCall
+  phone: PhoneCall,
+  close: X
 };
 
 export function Icon({ name, className = "nav-icon", size }) {
