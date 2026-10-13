@@ -1,8 +1,8 @@
 # BDWUS Azure deployment plan
 
-Status: Ready for Validation — local checks complete; live deployment validation pending owner approval.
+Status: Validated for dev/prod foundations and dev portal — live application validation pending.
 
-Prepared 12 October 2026 from the attached owner-approved seven-part scope. No provisioning, deployment, Azure configuration changes, SQL schema changes or seeding executed. Work is isolated in an attached worktree; original local UI edits remain untouched.
+Prepared 12 October 2026 from the attached owner-approved seven-part scope. Owner explicitly approved all prepared changes on 12 October 2026. Dev foundation preview and azd package passed; no provisioning or SQL changes executed yet. Work is isolated in an attached worktree; original local UI edits remain untouched.
 
 ## Architecture and recipe
 
@@ -78,3 +78,9 @@ The plan must not be marked Validated/Deployed until remaining live gates pass.
 ## Estimated monthly costs
 
 Low-traffic incremental dev $0–10; prod $0–25. Shared AXIOM baseline, retained old BDWUS resources, AI and egress excluded. September actual prod SQL $0 and existing BDWUS group approximately $5. Container Apps grants are shared per subscription; shared workspace ingestion is metered and may dominate costs. Budget alerts are not caps. See docs/azure-owner-review.md for actual cost evidence and sources.
+
+## Execution log — 12 October 2026
+
+Owner approval covers the documented subscription, East US location, budget email brian.d.walker@bdwus.com and all seven stages. No repeated approval is needed. Subscription Owner permission confirmed; no dev/prod resource-group conflicts. Inherited policy SecurityCenterBuiltIn is audit/security configuration, not an applicable provisioning deny. Dev azd provision --preview passed (19 seconds), azd package passed (5 seconds), and earlier local checks remain valid. Production SQL is Resuming following read-only connection; its existing firewall rules are unchanged. Foundation uses DEPLOY_PORTAL=false; placeholder client identifier is unused until real per-environment registrations are configured.
+
+Prod foundation preview passed (20 seconds); dev portal preview passed (19 seconds). Dev SQL free/AutoPause confirmed Online; baseline and approved additive migration applied successfully. Production catalog captured: 52 tables, 12 views, no procedures/functions; approved additive tables/views and least-privilege grants applied to prod, retaining existing data. Both databases now have 55 tables. Dev explicitly seeded; 47 tests and gitleaks passed afterward. Separate assigned-user Entra apps, owner Admin assignments, per-vault sign-in credentials, GitHub environments/main restrictions and OIDC identities configured. Secrets went directly from Graph memory to Key Vault and were never printed or saved in environment files.
