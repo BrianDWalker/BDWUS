@@ -40,8 +40,7 @@ AI_ENDPOINT = (
     or ""
 ).rstrip("/")
 AI_PROJECT_ENDPOINT = os.getenv("AZURE_AI_FOUNDRY_PROJECT_ENDPOINT", "").rstrip("/")
-AI_API_KEY = os.getenv("AZURE_AI_FOUNDRY_API_KEY") or os.getenv("AZURE_OPENAI_API_KEY")
-AI_AUTH_MODE = os.getenv("AI_AUTH_MODE", "auto").lower()
+AI_AUTH_MODE = os.getenv("AI_AUTH_MODE", "managed_identity").lower()
 AI_SCOPE = os.getenv("AZURE_AI_FOUNDRY_SCOPE", "https://ai.azure.com/.default")
 AI_OFFLINE = os.getenv("AI_ASSISTANT_OFFLINE", "false").lower() in {"1", "true", "yes"}
 
@@ -93,7 +92,11 @@ def ensure_allowed_repository(repository: str) -> None:
 
 
 def github_headers() -> dict[str, str]:
-    token = os.getenv("GITHUB_TOKEN", "").strip()
+    from azure.keyvault.secrets import SecretClient
+    vault_url = os.getenv("AZURE_KEY_VAULT_URL", "")
+    token = SecretClient(vault_url=vault_url, credential=DefaultAzureCredential(
+        exclude_environment_credential=True, managed_identity_client_id=os.getenv("AZURE_CLIENT_ID")
+    )).get_secret("github-token").value if vault_url else ""
     headers = {
         "Accept": "application/vnd.github+json",
         "User-Agent": "bdwus-assistant-service/1.0",
@@ -150,7 +153,7 @@ def normalize_openai_base_url(endpoint: str) -> str:
 
 def model_status() -> dict[str, Any]:
     base_url = normalize_openai_base_url(AI_ENDPOINT or AI_PROJECT_ENDPOINT)
-    configured = bool(base_url and (AI_API_KEY or AI_AUTH_MODE in {"bearer_token", "managed_identity", "entra"}))
+    configured = bool(base_url and (AI_AUTH_MODE in {"bearer_token", "managed_identity", "entra"}))
     return {
         "configured": configured,
         "endpoint": base_url,
@@ -168,25 +171,10 @@ def openai_client() -> OpenAI | None:
     if not base_url:
         return None
 
-    if AI_AUTH_MODE == "api_key":
-        return OpenAI(api_key=AI_API_KEY, base_url=base_url) if AI_API_KEY else None
-
-    if AI_AUTH_MODE in {"bearer_token", "managed_identity", "entra"}:
-        if DefaultAzureCredential is None or get_bearer_token_provider is None:
-            return None
-        token_provider = get_bearer_token_provider(
-            DefaultAzureCredential(exclude_interactive_browser_credential=False),
-            AI_SCOPE,
-        )
-        return OpenAI(api_key=token_provider, base_url=base_url)
-
-    if AI_API_KEY:
-        return OpenAI(api_key=AI_API_KEY, base_url=base_url)
-
     if DefaultAzureCredential is None or get_bearer_token_provider is None:
         return None
     token_provider = get_bearer_token_provider(
-        DefaultAzureCredential(exclude_interactive_browser_credential=False),
+        DefaultAzureCredential(exclude_environment_credential=True, managed_identity_client_id=os.getenv("AZURE_CLIENT_ID")),
         AI_SCOPE,
     )
     return OpenAI(api_key=token_provider, base_url=base_url)
