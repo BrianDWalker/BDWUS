@@ -10,7 +10,6 @@ from app.services.sales import (
     ensure_sales_storage,
     fetch_all,
     fetch_one,
-    get_sql_connection,
     get_view_row,
     invalidate_bootstrap_cache,
     trim,

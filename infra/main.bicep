@@ -73,7 +73,7 @@ module portal './modules/portal.bicep' = if (portalEnabled) {
     identityClientId: foundation.outputs.identityClientId
     vaultUri: foundation.outputs.vaultUri
     registryServer: registryAccess.outputs.registryServer
-    sqlServer: '${last(sqlParts)}.database.windows.net'
+    sqlServer: database.outputs.serverFqdn
     sqlDatabase: database.outputs.databaseName
     tenantId: tenantId
     entraClientId: entraClientId
@@ -90,6 +90,6 @@ output AZURE_KEY_VAULT_URL string = foundation.outputs.vaultUri
 output AZURE_MANAGED_IDENTITY_PRINCIPAL_ID string = foundation.outputs.principalId
 output AZURE_MANAGED_IDENTITY_NAME string = foundation.outputs.identityName
 output SERVICE_PORTAL_NAME string = 'ca-bdwus-${environmentName}'
-output SQL_SERVER string = '${last(sqlParts)}.database.windows.net'
+output SQL_SERVER string = database.outputs.serverFqdn
 output SQL_DATABASE string = database.outputs.databaseName
 output PORTAL_URL string = portalEnabled ? portal!.outputs.portalUrl : ''

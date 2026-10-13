@@ -23,3 +23,5 @@ resource dev 'Microsoft.Sql/servers/databases@2023-08-01' = if (environmentName 
   }
 }
 output databaseName string = environmentName == 'dev' ? dev!.name : prod.name
+
+output serverFqdn string = server.properties.fullyQualifiedDomainName

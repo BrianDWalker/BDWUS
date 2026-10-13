@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /web-ui
+    schedule: { interval: monthly }
+    groups: { npm: { patterns: ['*'] } }
+    open-pull-requests-limit: 1
+  - package-ecosystem: pip
+    directories: [/pricing-microservice, /assistant-service]
+    schedule: { interval: monthly }
+    groups: { python: { patterns: ['*'] } }
+    open-pull-requests-limit: 1
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+    groups: { actions: { patterns: ['*'] } }
+    open-pull-requests-limit: 1
+  - package-ecosystem: docker
+    directories: [/, /pricing-microservice, /assistant-service]
+    schedule: { interval: monthly }
+    groups: { docker: { patterns: ['*'] } }
+    open-pull-requests-limit: 1

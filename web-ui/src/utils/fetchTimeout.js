@@ -13,7 +13,7 @@ export async function fetchWithTimeout(url, options = {}) {
     });
   } catch (error) {
     if (error?.name === "AbortError") {
-      throw new Error(`Request timed out after ${timeoutMs}ms: ${url}`);
+      throw new Error(`Request timed out after ${timeoutMs}ms: ${url}`, { cause: error });
     }
     throw error;
   } finally {

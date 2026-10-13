@@ -136,6 +136,10 @@ def platform_principal(request: Request) -> dict:
         if not isinstance(principal, dict) or principal.get("auth_typ") != "aad":
             raise ValueError("Invalid identity provider")
         claims = principal.get("claims", [])
+        if not isinstance(claims, list) or not all(
+            isinstance(c, dict) and isinstance(c.get("typ"), str) and isinstance(c.get("val"), str) for c in claims
+        ):
+            raise ValueError("Invalid claims")
         tenant_claims = [c.get("val") for c in claims if c.get("typ") in {
             "tid", "http://schemas.microsoft.com/identity/claims/tenantid"
         }]
