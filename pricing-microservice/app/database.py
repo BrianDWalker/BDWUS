@@ -8,51 +8,31 @@ from azure.identity import DefaultAzureCredential
 
 
 SQL_SERVER = os.getenv("SQL_SERVER", "bdwus.database.windows.net")
-SQL_DATABASE = os.getenv("SQL_DATABASE", "AZBDWUSP")
-SQL_USERNAME = os.getenv("SQL_USER") or os.getenv("SQL_USERNAME")
-SQL_PASSWORD = os.getenv("SQL_PASSWORD")
+SQL_DATABASE = os.getenv("SQL_DATABASE", "AZBDWUSDEV")
 ODBC_DRIVER = os.getenv("ODBC_DRIVER", "ODBC Driver 18 for SQL Server")
 SQL_COPT_SS_ACCESS_TOKEN = 1256
-SQL_ENCRYPT = os.getenv("SQL_ENCRYPT", "true").lower() in {"1", "true", "yes"}
-SQL_TRUST_SERVER_CERTIFICATE = os.getenv("SQL_TRUST_SERVER_CERTIFICATE", "false").lower() in {"1", "true", "yes"}
-
 # Connection pool settings
 MAX_RETRIES = int(os.getenv("SQL_MAX_RETRIES", "3"))
 RETRY_DELAY_SECONDS = float(os.getenv("SQL_RETRY_DELAY_SECONDS", "0.5"))
 LOCK_TIMEOUT_MS = int(os.getenv("SQL_LOCK_TIMEOUT_MS", "5000"))
 
 
-def get_sql_connection() -> pyodbc.Connection:
-    """
-    Get a SQL Server connection with retry logic for transient failures.
-    
-    Implements exponential backoff to handle lock timeouts and transient connection issues.
-    """
-    if SQL_USERNAME and SQL_PASSWORD:
-        conn_str = (
-            f"Driver={{{ODBC_DRIVER}}};"
-            f"Server=tcp:{SQL_SERVER},1433;"
-            f"Database={SQL_DATABASE};"
-            f"Uid={SQL_USERNAME};"
-            f"Pwd={SQL_PASSWORD};"
-            f"Encrypt={'yes' if SQL_ENCRYPT else 'no'};"
-            f"TrustServerCertificate={'yes' if SQL_TRUST_SERVER_CERTIFICATE else 'no'};"
-            "Connection Timeout=30;"
-        )
-        connect_kwargs = {}
-    else:
-        credential = DefaultAzureCredential(exclude_interactive_browser_credential=False)
-        token = credential.get_token("https://database.windows.net/.default").token.encode("utf-16-le")
-        token_struct = struct.pack(f"<I{len(token)}s", len(token), token)
-        conn_str = (
-            f"Driver={{{ODBC_DRIVER}}};"
-            f"Server=tcp:{SQL_SERVER},1433;"
-            f"Database={SQL_DATABASE};"
-            f"Encrypt={'yes' if SQL_ENCRYPT else 'no'};"
-            f"TrustServerCertificate={'yes' if SQL_TRUST_SERVER_CERTIFICATE else 'no'};"
-            "Connection Timeout=30;"
-        )
-        connect_kwargs = {SQL_COPT_SS_ACCESS_TOKEN: token_struct}
+def get_sql_connection(database: str | None = None) -> pyodbc.Connection:
+    """Connect using Entra credentials locally or the assigned managed identity."""
+    credential = DefaultAzureCredential(
+        managed_identity_client_id=os.getenv("AZURE_CLIENT_ID"),
+        exclude_environment_credential=True,
+        exclude_interactive_browser_credential=True,
+    )
+    token = credential.get_token("https://database.windows.net/.default").token.encode("utf-16-le")
+    token_struct = struct.pack(f"<I{len(token)}s", len(token), token)
+    conn_str = (
+        f"Driver={{{ODBC_DRIVER}}};"
+        f"Server=tcp:{SQL_SERVER},1433;"
+        f"Database={database or SQL_DATABASE};"
+        "Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;"
+    )
+    connect_kwargs = {SQL_COPT_SS_ACCESS_TOKEN: token_struct}
 
     last_error = None
     for attempt in range(MAX_RETRIES):
@@ -69,7 +49,7 @@ def get_sql_connection() -> pyodbc.Connection:
             if attempt < MAX_RETRIES - 1:
                 # Use exponential backoff: 0.5s, 1s, 2s, etc.
                 delay = RETRY_DELAY_SECONDS * (2 ** attempt)
-                print(f"Connection attempt {attempt + 1}/{MAX_RETRIES} failed, retrying in {delay}s: {e}")
+                print(f"Connection attempt {attempt + 1}/{MAX_RETRIES} failed, retrying in {delay}s")
                 time.sleep(delay)
             else:
                 print(f"All {MAX_RETRIES} connection attempts failed")

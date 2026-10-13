@@ -4,3 +4,5 @@ pyodbc
 azure-identity
 pydantic
 openai
+
+azure-keyvault-secrets

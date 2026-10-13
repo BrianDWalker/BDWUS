@@ -38,11 +38,10 @@ AI_ENDPOINT = (
     or ""
 ).rstrip("/")
 AI_PROJECT_ENDPOINT = os.getenv("AZURE_AI_FOUNDRY_PROJECT_ENDPOINT", "").rstrip("/")
-AI_API_KEY = os.getenv("AZURE_AI_FOUNDRY_API_KEY") or os.getenv("AZURE_OPENAI_API_KEY")
-AI_AUTH_MODE = os.getenv("AI_AUTH_MODE", "auto").lower()
+AI_AUTH_MODE = os.getenv("AI_AUTH_MODE", "managed_identity").lower()
 AI_SCOPE = os.getenv("AZURE_AI_FOUNDRY_SCOPE", "https://ai.azure.com/.default")
 AI_OFFLINE = os.getenv("AI_ASSISTANT_OFFLINE", "false").lower() in {"1", "true", "yes"}
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+from app.services.secrets import github_token
 GITHUB_API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com").rstrip("/")
 
 MAX_HISTORY_MESSAGES = int(os.getenv("AI_ASSISTANT_MAX_HISTORY_MESSAGES", "8"))
@@ -95,21 +94,8 @@ def openai_client() -> OpenAI | None:
     if not base_url:
         return None
 
-    if AI_AUTH_MODE == "api_key":
-        return OpenAI(api_key=AI_API_KEY, base_url=base_url) if AI_API_KEY else None
-
-    if AI_AUTH_MODE in {"bearer_token", "managed_identity", "entra"}:
-        token_provider = get_bearer_token_provider(
-            DefaultAzureCredential(exclude_interactive_browser_credential=False),
-            AI_SCOPE,
-        )
-        return OpenAI(api_key=token_provider, base_url=base_url)
-
-    if AI_API_KEY:
-        return OpenAI(api_key=AI_API_KEY, base_url=base_url)
-
     token_provider = get_bearer_token_provider(
-        DefaultAzureCredential(exclude_interactive_browser_credential=False),
+        DefaultAzureCredential(exclude_environment_credential=True, managed_identity_client_id=os.getenv("AZURE_CLIENT_ID")),
         AI_SCOPE,
     )
     return OpenAI(api_key=token_provider, base_url=base_url)
@@ -585,8 +571,9 @@ def github_api_path(path: str, params: dict[str, str] | None = None) -> str:
 
 
 def github_request(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
-    if not GITHUB_TOKEN:
-      raise ValueError("GitHub execution is not configured. Add GITHUB_TOKEN to enable repository updates.")
+    token = github_token()
+    if not token:
+      raise ValueError("GitHub execution requires github-token in the environment Key Vault.")
     body = None if payload is None else json.dumps(payload).encode("utf-8")
     req = urlrequest.Request(
         f"{GITHUB_API_URL}{path}",
@@ -594,7 +581,7 @@ def github_request(method: str, path: str, payload: dict[str, Any] | None = None
         method=method,
         headers={
             "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {GITHUB_TOKEN}",
+            "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
             "X-GitHub-Api-Version": "2022-11-28",
         },

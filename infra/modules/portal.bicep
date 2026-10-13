@@ -36,6 +36,8 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           { name: 'SQL_SERVER', value: sqlServer }
           { name: 'SQL_DATABASE', value: sqlDatabase }
           { name: 'AZURE_CLIENT_ID', value: identityClientId }
+          { name: 'AZURE_KEY_VAULT_URL', value: vaultUri }
+          { name: 'AI_AUTH_MODE', value: 'managed_identity' }
           { name: 'ENTRA_TENANT_ID', value: tenantId }
           { name: 'PLATFORM_ENVIRONMENT', value: environmentName }
           { name: 'PLATFORM_AUTH_MODE', value: 'entra' }
