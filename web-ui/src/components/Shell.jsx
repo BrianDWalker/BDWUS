@@ -251,7 +251,11 @@ export function Shell({ activeRoute, setRoute, children }) {
   }, [isCompactNav]);
 
   useEffect(() => {
-    synchronizeRoleToken(platformApiBase, role).catch(() => {});
+    synchronizeRoleToken(platformApiBase, role).then(() => {
+      if (!import.meta.env.DEV) setRole(activeRole());
+    }).catch(() => {
+      if (!import.meta.env.DEV) setRole("Viewer");
+    });
   }, [role]);
 
   useEffect(() => {

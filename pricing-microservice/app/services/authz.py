@@ -7,6 +7,7 @@ import hmac
 import json
 import os
 import re
+import secrets
 import time
 
 from fastapi import HTTPException, Request
@@ -27,7 +28,7 @@ DEFAULT_ROLE = "Viewer"
 ROLE_HEADER = "x-user-role"
 DEMO_ROLE_HEADER = "x-demo-role"
 AUTHORIZATION_HEADER = "authorization"
-DEMO_AUTH_SECRET = os.getenv("PLATFORM_AUTH_TOKEN_SECRET", "fc-gpt-demo-role-secret")
+DEMO_AUTH_SECRET = secrets.token_urlsafe(32)
 DEMO_AUTH_TTL_SECONDS = int(os.getenv("PLATFORM_AUTH_TOKEN_TTL_SECONDS", "28800"))
 ALLOW_ROLE_HEADERS = os.getenv("ALLOW_ROLE_HEADERS", "").lower() in {"1", "true", "yes"}
 
@@ -78,6 +79,8 @@ def _sign_token(message: str) -> str:
 
 
 def issue_demo_role_token(role: str | None, ttl_seconds: int = DEMO_AUTH_TTL_SECONDS) -> dict[str, object]:
+    if auth_mode() != "local":
+        raise HTTPException(status_code=404, detail="Demo authentication is disabled")
     normalized_role = normalize_role(role)
     now = int(time.time())
     payload = {
@@ -120,7 +123,40 @@ def bearer_token_from_request(request: Request) -> str | None:
     return auth_header.split(" ", 1)[1].strip() or None
 
 
+def auth_mode() -> str:
+    return os.getenv("PLATFORM_AUTH_MODE", "local" if smoke_mode_enabled() else "entra")
+
+
+def platform_principal(request: Request) -> dict:
+    """Only trust this header behind Container Apps Easy Auth ingress."""
+    encoded = request.headers.get("x-ms-client-principal", "")
+    tenant = os.getenv("ENTRA_TENANT_ID", "")
+    try:
+        principal = json.loads(base64.b64decode(encoded, validate=True))
+        if not isinstance(principal, dict) or principal.get("auth_typ") != "aad":
+            raise ValueError("Invalid identity provider")
+        claims = principal.get("claims", [])
+        tenant_claims = [c.get("val") for c in claims if c.get("typ") in {
+            "tid", "http://schemas.microsoft.com/identity/claims/tenantid"
+        }]
+        if not tenant or tenant not in tenant_claims:
+            raise ValueError("Invalid tenant")
+        return principal
+    except (ValueError, TypeError, KeyError, AttributeError):
+        raise HTTPException(status_code=401, detail="Entra sign-in is required") from None
+
+
 def active_role_from_request(request: Request) -> str:
+    if auth_mode() == "entra":
+        principal = platform_principal(request)
+        role_type = principal.get("role_typ", "roles")
+        roles = {c.get("val") for c in principal.get("claims", []) if c.get("typ") in {
+            role_type, "roles", "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+        }}
+        # Pick one application role deterministically; unknown claims grant nothing.
+        return next((role for role in reversed(ROLE_CAPABILITIES) if role in roles), DEFAULT_ROLE)
+    if auth_mode() != "local":
+        return DEFAULT_ROLE
     token_role = role_from_bearer_token(bearer_token_from_request(request))
     if token_role:
         return token_role
