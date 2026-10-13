@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 requests
 pydantic
-openai>=1.35.0
+openai>=3.28.0
 azure-identity
 
 azure-keyvault-secrets
