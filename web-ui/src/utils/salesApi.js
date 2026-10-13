@@ -1,7 +1,7 @@
 import { fetchWithTimeout } from "./fetchTimeout";
 import { roleAuthHeaders } from "./permissions";
 
-const DEFAULT_SALES_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
+const DEFAULT_SALES_API_BASE = "";
 
 export const salesApiBase = (import.meta.env.VITE_SALES_API_BASE_URL || import.meta.env.VITE_AI_API_BASE_URL || DEFAULT_SALES_API_BASE).replace(/\/$/, "");
 

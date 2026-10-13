@@ -1,7 +1,7 @@
 import { fetchWithTimeout } from "./fetchTimeout";
 import { roleAuthHeaders } from "./permissions";
 
-const DEFAULT_PLATFORM_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
+const DEFAULT_PLATFORM_API_BASE = "";
 
 const platformApiBase = (
   import.meta.env.VITE_PLATFORM_API_BASE_URL ||

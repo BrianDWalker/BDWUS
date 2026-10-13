@@ -1,6 +1,6 @@
 import { fetchWithTimeout } from "./fetchTimeout";
 
-const DEFAULT_OPS_API_BASE = "https://bdwusca.delightfulsea-ef64ed74.westus2.azurecontainerapps.io";
+const DEFAULT_OPS_API_BASE = "";
 
 const opsApiBase = (
   import.meta.env.VITE_PLATFORM_API_BASE_URL ||

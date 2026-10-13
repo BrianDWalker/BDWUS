@@ -1,9 +1,11 @@
 import os
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.database import SQL_DATABASE, SQL_SERVER, get_sql_connection
 from app.models import (
@@ -121,6 +123,8 @@ app.include_router(test_support_router)
 
 @app.get("/")
 def root():
+    if os.getenv("PORTAL_STATIC_DIR"):
+        return FileResponse(Path(os.environ["PORTAL_STATIC_DIR"]) / "index.html")
     return {
         "service": SERVICE_NAME,
         "version": SERVICE_VERSION,
@@ -283,3 +287,21 @@ def health_pricing_context():
         "columns": columns,
         "sample": dict(zip(columns, row)),
     }
+
+
+# Registered last so API routes always take precedence over SPA fallback.
+static_dir = os.getenv("PORTAL_STATIC_DIR")
+if static_dir:
+    static_root = Path(static_dir).resolve()
+    app.mount("/assets", StaticFiles(directory=static_root / "assets"), name="assets")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def portal_page(path: str):
+        if path == "api" or path.startswith(("api/", "health/", ".auth/")):
+            raise HTTPException(status_code=404)
+        candidate = (static_root / path).resolve()
+        if not candidate.is_relative_to(static_root):
+            raise HTTPException(status_code=404)
+        if candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(static_root / "index.html")
