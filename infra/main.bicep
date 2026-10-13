@@ -18,6 +18,9 @@ param prodBudgetAmount int = 25
 @description('Leave false for foundation provisioning. Enable only after vault secrets and SQL grants are approved and ready.')
 @allowed(['false', 'true'])
 param deployPortal string = 'false'
+@description('Keep first app creation private until Easy Auth has been verified. Set true only for the final ingress stage.')
+@allowed(['false', 'true'])
+param publicIngress string = 'false'
 var portalEnabled = deployPortal == 'true'
 
 var registryParts = split(sharedRegistryResourceId, '/')
@@ -78,6 +81,7 @@ module portal './modules/portal.bicep' = if (portalEnabled) {
     tenantId: tenantId
     entraClientId: entraClientId
     portalImage: portalImage
+    publicIngressEnabled: publicIngress == 'true'
     insightsConnectionString: foundation.outputs.insightsConnectionString
   }
 }

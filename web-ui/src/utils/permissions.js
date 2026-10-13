@@ -8,7 +8,8 @@ export const roles = {
   Admin: ["*"]
 };
 
-export const defaultRole = import.meta.env.DEV ? "Admin" : "Viewer";
+const developmentMode = import.meta.env?.DEV === true;
+export const defaultRole = developmentMode ? "Admin" : "Viewer";
 const ROLE_STORAGE_KEY = "bdwus.role";
 const ROLE_TOKEN_STORAGE_KEY = "bdwus.role.token";
 const ROLE_TOKEN_ROLE_STORAGE_KEY = "bdwus.role.token.role";
@@ -16,7 +17,7 @@ const ROLE_TOKEN_EXP_STORAGE_KEY = "bdwus.role.token.exp";
 
 export function activeRole() {
   if (typeof window === "undefined") return defaultRole;
-  if (!import.meta.env.DEV) return window.bdwusIdentity?.role || "Viewer";
+  if (!developmentMode) return window.bdwusIdentity?.role || "Viewer";
   return window.localStorage?.getItem(ROLE_STORAGE_KEY) || defaultRole;
 }
 
@@ -39,7 +40,7 @@ function persistRoleToken(role, token, expiresAt) {
 }
 
 export async function synchronizeRoleToken(apiBase, role = activeRole()) {
-  if (!import.meta.env.DEV) {
+  if (!developmentMode) {
     const response = await window.fetch(`${apiBase}/api/auth/me`);
     if (!response.ok) throw new Error("Unable to load signed-in permissions");
     window.bdwusIdentity = await response.json();
@@ -61,7 +62,7 @@ export async function synchronizeRoleToken(apiBase, role = activeRole()) {
 }
 
 export async function roleAuthHeaders(apiBase, role = activeRole()) {
-  if (!import.meta.env.DEV) return {};
+  if (!developmentMode) return {};
   const token = await synchronizeRoleToken(apiBase, role);
   return token ? { Authorization: `Bearer ${token}` } : {};
 }

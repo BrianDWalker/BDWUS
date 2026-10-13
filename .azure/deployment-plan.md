@@ -70,8 +70,8 @@ Local checks use the Azure validation skill; no provision preview or live deploy
 | Image build | docker build --platform linux/amd64 -t bdwus-portal:review . | Pass |
 | Container smoke | network disabled; nonroot, ODBC, health, identity, SPA/404/traversal | Pass |
 | Billing UI | playwright test tests/billing-facts.spec.js | Pass: loading, real rows, empty, error/retry |
-| SQL read-only metadata | Entra/ODBC catalog connection | Timed out; no changes |
-| Azure live validation | azd provision preview, policy, deployed identity/data tests | Not run; owner gate and missing configuration |
+| SQL catalog and API data | Captured schema, built dev, 8 API reads each environment | Pass after prod resumed; existing production data retained |
+| Azure live validation | Foundation and dev portal previews/package | Pass; environment creation in progress, public portal tests pending |
 
 The plan must not be marked Validated/Deployed until remaining live gates pass.
 
@@ -84,3 +84,5 @@ Low-traffic incremental dev $0–10; prod $0–25. Shared AXIOM baseline, retain
 Owner approval covers the documented subscription, East US location, budget email brian.d.walker@bdwus.com and all seven stages. No repeated approval is needed. Subscription Owner permission confirmed; no dev/prod resource-group conflicts. Inherited policy SecurityCenterBuiltIn is audit/security configuration, not an applicable provisioning deny. Dev azd provision --preview passed (19 seconds), azd package passed (5 seconds), and earlier local checks remain valid. Production SQL is Resuming following read-only connection; its existing firewall rules are unchanged. Foundation uses DEPLOY_PORTAL=false; placeholder client identifier is unused until real per-environment registrations are configured.
 
 Prod foundation preview passed (20 seconds); dev portal preview passed (19 seconds). Dev SQL free/AutoPause confirmed Online; baseline and approved additive migration applied successfully. Production catalog captured: 52 tables, 12 views, no procedures/functions; approved additive tables/views and least-privilege grants applied to prod, retaining existing data. Both databases now have 55 tables. Dev explicitly seeded; 47 tests and gitleaks passed afterward. Separate assigned-user Entra apps, owner Admin assignments, per-vault sign-in credentials, GitHub environments/main restrictions and OIDC identities configured. Secrets went directly from Graph memory to Key Vault and were never printed or saved in environment files.
+
+Additional execution evidence: dev/prod each passed eight live SQL-backed API reads. SQL impersonation confirmed SELECT/UPDATE permissions and denied CREATE TABLE/db_owner. $10/$25 budgets and owner email verified. Old deployment workflows disabled, seven PRs plus schema reconciliation merged into fc-gpt and release PR #14 merged into main. Main branch protection and owner-only prod environment protection verified. All five pre-commit hooks passed; 8 permissions/billing browser checks passed after guarding Node import.meta.env. UI bundle SHA-256 matches the published image byte-for-byte. Initial portal creation is private until enabled Easy Auth is verified, then public ingress is a separate provision stage.

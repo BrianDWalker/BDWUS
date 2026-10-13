@@ -2,17 +2,46 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "environmentName": {"value": "${AZURE_ENV_NAME}"},
-    "location": {"value": "${AZURE_LOCATION}"},
-    "sharedRegistryResourceId": {"value": "${SHARED_REGISTRY_RESOURCE_ID}"},
-    "sharedWorkspaceResourceId": {"value": "${SHARED_WORKSPACE_RESOURCE_ID}"},
-    "sqlServerResourceId": {"value": "${SQL_SERVER_RESOURCE_ID}"},
-    "tenantId": {"value": "${ENTRA_TENANT_ID}"},
-    "entraClientId": {"value": "${ENTRA_CLIENT_ID}"},
-    "portalImage": {"value": "${SERVICE_PORTAL_IMAGE_NAME}"},
-    "budgetEmails": {"value": ["${BUDGET_EMAIL}"]},
-    "budgetStartDate": {"value": "${BUDGET_START_DATE}"},
-    "budgetEndDate": {"value": "${BUDGET_END_DATE}"},
-    "deployPortal": {"value": "${DEPLOY_PORTAL}"}
+    "environmentName": {
+      "value": "${AZURE_ENV_NAME}"
+    },
+    "location": {
+      "value": "${AZURE_LOCATION}"
+    },
+    "sharedRegistryResourceId": {
+      "value": "${SHARED_REGISTRY_RESOURCE_ID}"
+    },
+    "sharedWorkspaceResourceId": {
+      "value": "${SHARED_WORKSPACE_RESOURCE_ID}"
+    },
+    "sqlServerResourceId": {
+      "value": "${SQL_SERVER_RESOURCE_ID}"
+    },
+    "tenantId": {
+      "value": "${ENTRA_TENANT_ID}"
+    },
+    "entraClientId": {
+      "value": "${ENTRA_CLIENT_ID}"
+    },
+    "portalImage": {
+      "value": "${SERVICE_PORTAL_IMAGE_NAME}"
+    },
+    "budgetEmails": {
+      "value": [
+        "${BUDGET_EMAIL}"
+      ]
+    },
+    "budgetStartDate": {
+      "value": "${BUDGET_START_DATE}"
+    },
+    "budgetEndDate": {
+      "value": "${BUDGET_END_DATE}"
+    },
+    "deployPortal": {
+      "value": "${DEPLOY_PORTAL}"
+    },
+    "publicIngress": {
+      "value": "${PORTAL_PUBLIC_INGRESS}"
+    }
   }
 }

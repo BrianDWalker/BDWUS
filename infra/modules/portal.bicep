@@ -10,6 +10,7 @@ param sqlServer string
 param sqlDatabase string
 param tenantId string
 param entraClientId string
+param publicIngressEnabled bool
 param portalImage string
 param insightsConnectionString string
 resource app 'Microsoft.App/containerApps@2024-03-01' = {
@@ -24,7 +25,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
       activeRevisionsMode: 'Single'
       registries: [{ server: registryServer, identity: identityId }]
       secrets: [{ name: 'entra-client-secret', keyVaultUrl: '${vaultUri}secrets/entra-client-secret', identity: identityId }]
-      ingress: { external: true, targetPort: 8000, transport: 'auto', allowInsecure: false }
+      ingress: { external: publicIngressEnabled, targetPort: 8000, transport: 'auto', allowInsecure: false }
     }
     template: {
       scale: { minReplicas: 0, maxReplicas: 1, rules: [{ name: 'http', http: { metadata: { concurrentRequests: '10' } } }] }
