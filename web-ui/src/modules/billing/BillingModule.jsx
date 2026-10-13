@@ -1,3 +1,4 @@
+import BillingFacts from "./BillingFacts";
 import React, { useEffect, useMemo, useState } from "react";
 import { GatedButton } from "../../components/PermissionGate";
 import { PageHeader } from "../../components/Shell";
@@ -130,6 +131,7 @@ export default function BillingModule({ setRoute, showToast }) {
   return (
     <>
       <PageHeader title="Billing" description="API-backed invoices, workflow actions, adjustments, and billing customers." />
+      {error && <div role="alert" className="empty-state">{error}<button onClick={loadBilling}>Retry</button></div>}
       {loading ? <div className="empty-state">Loading billing workflows...</div> : (
         <>
           <section className="overview-grid">
@@ -138,7 +140,8 @@ export default function BillingModule({ setRoute, showToast }) {
             <MetricCard label="Open Balance" value={formatMoney(totalBalance)} delta="Outstanding" />
             <MetricCard label="Adjustments" value={adjustments.length} delta="Credits and charges" />
           </section>
-          <div className="record-tabs" role="tablist">{["Invoices", "Actions", "Adjustments", "Customers"].map(item => <button key={item} className={item === tab ? "active" : ""} type="button" onClick={() => setTab(item)}>{item}</button>)}</div>
+          <div className="record-tabs" role="tablist">{["Invoices", "Actions", "Adjustments", "Customers", "Subscriptions", "Payments", "Usage"].map(item => <button key={item} className={item === tab ? "active" : ""} type="button" onClick={() => setTab(item)}>{item}</button>)}</div>
+          {["Subscriptions", "Payments", "Usage"].includes(tab) && <BillingFacts key={tab} resource={tab} />}
           {tab === "Invoices" && <Panel title="Invoices" description="Invoices from /api/billing-workflows/invoices.">{invoices.length ? <DataTable onRowClick={row => { setSelectedInvoice(row.InvoiceId); setTab("Actions"); }} columns={[{ key: "InvoiceNumber", label: "Invoice" }, { key: "AccountName", label: "Account" }, { key: "Amount", label: "Amount", render: row => formatMoney(row.Amount || 0) }, { key: "Balance", label: "Balance", render: row => formatMoney(row.Balance || 0) }, { key: "Status", label: "Status", render: row => <StatusTag tone={row.Status === "Paid" ? "success" : "warn"}>{row.Status}</StatusTag> }, { key: "DueDate", label: "Due" }, { key: "details", label: "", render: row => <button className="link-button compact-action" type="button" onClick={event => { event.stopPropagation(); setRoute?.(`details/invoice/${encodeURIComponent(row.InvoiceId)}`); }}>Details</button> }]} rows={invoices} /> : null}</Panel>}
           {tab === "Actions" && <Panel title="Invoice Actions" description={`Workflow actions for ${selectedCustomerName}.`} action={<GatedButton action="create:invoice-action" className="ghost-button" disabled={saving || !selectedInvoice} onClick={createSampleAction}>Create sample action</GatedButton>}>{loadingActions ? <div className="empty-state">Loading invoice actions...</div> : actions.length ? <DataTable columns={[{ key: "ActionType", label: "Action" }, { key: "Status", label: "Status" }, { key: "RequestedBy", label: "Requested By" }, { key: "Notes", label: "Notes" }, { key: "CreatedAtUtc", label: "Created" }]} rows={actions} /> : null}</Panel>}
           {tab === "Adjustments" && <Panel title="Adjustments" description="Billing adjustments from /api/billing-workflows/adjustments." action={<GatedButton action="create:adjustment" className="ghost-button" disabled={saving} onClick={createSampleAdjustment}>Create sample adjustment</GatedButton>}>{adjustments.length ? <DataTable columns={[{ key: "AdjustmentNumber", label: "Adjustment" }, { key: "AdjustmentType", label: "Type" }, { key: "Amount", label: "Amount", render: row => formatMoney(row.Amount || 0) }, { key: "Status", label: "Status" }, { key: "Reason", label: "Reason" }]} rows={adjustments} /> : null}</Panel>}
