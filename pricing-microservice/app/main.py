@@ -1,127 +1,284 @@
 import os
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from uuid import UUID
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
-from app.database import SQL_DATABASE, SQL_SERVER
-from app.models import (
-    CustomerMetadataOptionsResponse,
-    CustomerProfileResponse,
-    OpportunityDetailsResponse,
-    OpportunityListItem,
-    QuoteCreateRequest,
-    QuoteCreateResponse,
-    QuoteReviseRequest,
+from app.database import SQL_DATABASE, SQL_SERVER, get_sql_connection
+from app.services.assistant import (
+    router as assistant_router,
 )
-from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
-from app.services.quotes import (
-    create_quote,
-    get_opportunity_details,
-    get_opportunity_latest,
-    get_quote_history,
-    list_opportunities,
-    reprice_opportunity,
-    revise_quote,
-)
+from app.services.auth_api import router as auth_router
+from app.services.billing_facts import router as billing_facts_router
+from app.services.authz import auth_mode, platform_principal, active_role_from_request, required_capability_for_request, role_can
+from app.services.context import BILLING_CONTEXT_OBJECT
+from app.services.customer_service import router as customer_service_router
+from app.services.ops import admin_router, billing_workflow_router, ops_router
+from app.services.ops_write import admin_write_router, billing_write_router, ops_write_router
+from app.services.platform import router as platform_router
+from app.services.sales import billing_router, router as sales_router, sales_dashboard
+from app.services.sales_compat import router as sales_compat_router
+from app.services.smoke_data import smoke_mode_enabled
+from app.services.test_support import router as test_support_router
+
+
+SERVICE_NAME = os.getenv("PLATFORM_API_SERVICE_NAME", "BDWUS Platform API")
+SERVICE_VERSION = os.getenv("PLATFORM_API_VERSION", "5.0.0")
+DEFAULT_ALLOWED_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
 
 
 app = FastAPI(
-    title="Billing Pricing Microservice",
-    version="4.0.0",
-    description="Quote pricing API backed by Azure SQL using billing-style query history data.",
+    title=SERVICE_NAME,
+    version=SERVICE_VERSION,
+    description="Telecom platform API for pricing, assistant workflows, sales storage, and Azure SQL-backed portal services.",
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
+def parse_allowed_origins() -> list[str]:
+    raw = os.getenv("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS)
+    origins = [item.strip() for item in raw.split(",") if item.strip()]
+    if "*" in origins:
+        raise ValueError("ALLOWED_ORIGINS must contain explicit portal origins")
+    return origins
+
+
+allowed_origins = parse_allowed_origins()
+if allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+
+
+@app.middleware("http")
+async def enforce_role_permissions(request: Request, call_next):
+    if auth_mode() == "entra" and request.url.path != "/health":
+        try:
+            platform_principal(request)
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    required_capability = required_capability_for_request(request.method, request.url.path)
+    if required_capability:
+        role = active_role_from_request(request)
+        if not role_can(role, required_capability):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "detail": {
+                        "message": f"{role} does not have permission for {required_capability}.",
+                        "role": role,
+                        "requiredCapability": required_capability,
+                    }
+                },
+            )
+    return await call_next(request)
+
+# Compatibility routes must be registered before the full sales router because they preserve
+# migrated UI flows for routes that existed conceptually before the API-backed sales module.
+app.include_router(auth_router)
+app.include_router(billing_facts_router)
+app.include_router(sales_compat_router)
+app.include_router(sales_router)
+app.include_router(billing_router)
+app.include_router(assistant_router)
+app.include_router(platform_router)
+app.include_router(customer_service_router)
+app.include_router(ops_router)
+app.include_router(admin_router)
+app.include_router(billing_workflow_router)
+app.include_router(ops_write_router)
+app.include_router(admin_write_router)
+app.include_router(billing_write_router)
+app.include_router(test_support_router)
 
 
 @app.get("/")
 def root():
+    if os.getenv("PORTAL_STATIC_DIR"):
+        return FileResponse(Path(os.environ["PORTAL_STATIC_DIR"]) / "index.html")
     return {
-        "service": "Billing Pricing Microservice",
-        "version": "4.0.0",
+        "service": SERVICE_NAME,
+        "version": SERVICE_VERSION,
         "status": "ok",
         "sqlServer": SQL_SERVER,
         "sqlDatabase": SQL_DATABASE,
         "billingContextObject": BILLING_CONTEXT_OBJECT,
+        "modules": {
+            "assistant": True,
+            "sales": True,
+            "pricing": True,
+            "billing": True,
+            "platform": True,
+            "customerService": True,
+            "operations": True,
+            "administration": True,
+            "billingWorkflows": True,
+        },
     }
 
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "service": SERVICE_NAME,
+        "version": SERVICE_VERSION,
+        "allowedOrigins": allowed_origins,
+    }
+
+
+@app.get("/health/ready")
+def ready():
+    if smoke_mode_enabled():
+        return {
+            "status": "healthy",
+            "checks": {
+                "sql": True,
+                "pricingContext": True,
+                "assistantStorage": True,
+                "salesStorage": True,
+                "opsStorage": True,
+                "careStorage": True,
+            },
+            "details": {
+                "mode": "PLATFORM_RUNTIME_SMOKE_MODE",
+                "sqlServer": SQL_SERVER,
+                "sqlDatabase": SQL_DATABASE,
+                "billingContextObject": BILLING_CONTEXT_OBJECT,
+                "errors": [],
+            },
+        }
+    checks = {
+        "sql": False,
+        "pricingContext": False,
+        "assistantStorage": False,
+        "salesStorage": False,
+        "opsStorage": False,
+        "careStorage": False,
+    }
+    details = {
+        "sqlServer": SQL_SERVER,
+        "sqlDatabase": SQL_DATABASE,
+        "billingContextObject": BILLING_CONTEXT_OBJECT,
+        "errors": [],
+    }
+
+    try:
+        conn = get_sql_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 AS Healthy")
+            cursor.fetchone()
+            checks["sql"] = True
+
+            cursor.execute(f"SELECT TOP 1 1 AS Healthy FROM {BILLING_CONTEXT_OBJECT}")
+            checks["pricingContext"] = cursor.fetchone() is not None
+
+            cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ai' AND TABLE_NAME = 'ChangeRequests'")
+            checks["assistantStorage"] = cursor.fetchone() is not None
+
+            cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ms' AND TABLE_NAME = 'Leads'")
+            checks["salesStorage"] = cursor.fetchone() is not None
+
+            cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'ops' AND TABLE_NAME = 'Orders'")
+            checks["opsStorage"] = cursor.fetchone() is not None
+
+            cursor.execute("SELECT 1 AS Healthy FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'care' AND TABLE_NAME = 'Tickets'")
+            checks["careStorage"] = cursor.fetchone() is not None
+        finally:
+            conn.close()
+    except Exception as exc:
+        details["errors"].append(str(exc))
+
+    return {
+        "status": "healthy" if all(checks.values()) else "degraded",
+        "checks": checks,
+        "details": details,
+    }
+
+
+@app.get("/health/assistant")
+def health_assistant():
+    return {
+        "status": "healthy",
+        "sqlServer": SQL_SERVER,
+        "sqlDatabase": SQL_DATABASE,
+        "assistantStorage": "ready",
+    }
+
+
+@app.get("/health/sales")
+def health_sales():
+    dashboard = sales_dashboard()
+    return {
+        "status": "healthy",
+        "sqlServer": SQL_SERVER,
+        "sqlDatabase": SQL_DATABASE,
+        "salesStorage": "ready",
+        "leadCount": dashboard.get("LeadCount", 0),
+        "opportunityCount": dashboard.get("OpportunityCount", 0),
+        "quoteCount": dashboard.get("QuoteCount", 0),
+    }
 
 
 @app.get("/health/pricing-context")
 def health_pricing_context():
-    from app.database import get_sql_connection
-
-    conn = get_sql_connection()
     try:
-        row = conn.cursor().execute(f"SELECT TOP 1 * FROM {BILLING_CONTEXT_OBJECT}").fetchone()
+        conn = get_sql_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(f"SELECT TOP 1 * FROM {BILLING_CONTEXT_OBJECT}")
+            columns = [column[0] for column in cursor.description]
+            row = cursor.fetchone()
+        finally:
+            conn.close()
+    except Exception as exc:
         return {
-            "status": "healthy",
+            "status": "error",
+            "sqlServer": SQL_SERVER,
+            "sqlDatabase": SQL_DATABASE,
             "billingContextObject": BILLING_CONTEXT_OBJECT,
-            "sampleRowFound": row is not None,
+            "error": str(exc),
         }
-    finally:
-        conn.close()
+
+    if not row:
+        return {
+            "status": "empty",
+            "sqlServer": SQL_SERVER,
+            "sqlDatabase": SQL_DATABASE,
+            "billingContextObject": BILLING_CONTEXT_OBJECT,
+            "columns": columns,
+        }
+
+    return {
+        "status": "healthy",
+        "sqlServer": SQL_SERVER,
+        "sqlDatabase": SQL_DATABASE,
+        "billingContextObject": BILLING_CONTEXT_OBJECT,
+        "columns": columns,
+        "sample": dict(zip(columns, row)),
+    }
 
 
-@app.post("/quotes", response_model=QuoteCreateResponse)
-def post_quote(request: QuoteCreateRequest):
-    return create_quote(request)
+# Registered last so API routes always take precedence over SPA fallback.
+static_dir = os.getenv("PORTAL_STATIC_DIR")
+if static_dir:
+    static_root = Path(static_dir).resolve()
+    app.mount("/assets", StaticFiles(directory=static_root / "assets"), name="assets")
 
-
-@app.post("/quotes/{quote_id}/reprice", response_model=QuoteCreateResponse)
-def post_quote_reprice(quote_id: UUID, request: QuoteReviseRequest):
-    return revise_quote(quote_id, request)
-
-
-@app.get("/quotes/{quote_id}/history")
-def quote_history(quote_id: UUID):
-    return get_quote_history(quote_id)
-
-
-@app.get("/opportunities/{opportunity_id}")
-def opportunity_latest(opportunity_id: UUID):
-    return get_opportunity_latest(opportunity_id)
-
-
-@app.get("/opportunities", response_model=list[OpportunityListItem])
-def opportunities():
-    return list_opportunities()
-
-
-@app.get("/opportunities/{opportunity_id}/details", response_model=OpportunityDetailsResponse)
-def opportunity_details(opportunity_id: UUID):
-    return get_opportunity_details(opportunity_id)
-
-
-@app.get("/customers/{customer_number}", response_model=CustomerProfileResponse)
-def customer_profile(customer_number: str):
-    profile = lookup_customer_profile(customer_number)
-    if not profile:
-        raise HTTPException(status_code=404, detail="Customer not found.")
-    return profile
-
-
-@app.get("/accounts/{account_id}", response_model=CustomerProfileResponse)
-def account_profile(account_id: str):
-    return customer_profile(account_id)
-
-
-@app.get("/billing/lookup-options", response_model=CustomerMetadataOptionsResponse)
-def billing_lookup_options():
-    return get_customer_metadata_options()
-
-
-@app.post("/opportunities/{opportunity_id}/reprice", response_model=QuoteCreateResponse)
-def opportunity_reprice(opportunity_id: UUID, request: QuoteReviseRequest):
-    return reprice_opportunity(opportunity_id, request)
+    @app.get("/{path:path}", include_in_schema=False)
+    def portal_page(path: str):
+        if path == "api" or path.startswith(("api/", "health/", ".auth/")):
+            raise HTTPException(status_code=404)
+        candidate = (static_root / path).resolve()
+        if not candidate.is_relative_to(static_root):
+            raise HTTPException(status_code=404)
+        if candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(static_root / "index.html")

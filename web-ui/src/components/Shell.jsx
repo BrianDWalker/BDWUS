@@ -1,58 +1,425 @@
-import React from "react";
-import { navGroups } from "../data/mockData";
+import React, { createContext, useEffect, useMemo, useRef, useState } from "react";
+import { topNavSections } from "../navigationConfig";
+import { activeRole, synchronizeRoleToken } from "../utils/permissions";
+import { platformApiBase } from "../utils/platformApi";
+import { useProfileSettings } from "../utils/profileSettings";
+import { AiAssistPopover } from "./AiAssistPopover";
 import { Icon } from "./Icons";
 
-export function Shell({ activeRoute, setRoute, children }) {
+export const PermissionRoleContext = createContext(null);
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const handleChange = () => setMatches(media.matches);
+    handleChange();
+    media.addEventListener?.("change", handleChange);
+    return () => media.removeEventListener?.("change", handleChange);
+  }, [query]);
+
+  return matches;
+}
+
+function routeMatches(section, route) {
+  return section.routes?.some(match => route === match || route.startsWith(`${match}/`) || route.startsWith(`${match}?`));
+}
+
+function routeGroupLabel(route) {
+  const groups = [
+    { label: "Command", matches: ["dashboard", "knowledge", "reports"] },
+    { label: "Commercial", matches: ["sales", "orders", "product-pricing", "details/lead", "details/opportunity", "details/quote", "details/contract"] },
+    { label: "Customer", matches: ["customer-service", "customer-360", "billing", "details/customer", "details/account", "details/billing-account", "details/invoice", "details/service", "details/ticket"] },
+    { label: "Network & Service", matches: ["network", "service-management", "provisioning", "details/network"] },
+    { label: "Finance", matches: ["carrier-settlement"] },
+    { label: "Administration", matches: ["administration", "details/record"] }
+  ];
+  const match = groups.find(group => group.matches.some(item => route === item || route.startsWith(`${item}/`) || route.startsWith(`${item}?`)));
+  return match?.label || "Section";
+}
+
+function navigate(setRoute, route) {
+  setRoute(route);
+}
+
+function TopNavButton({ section, active, onNavigate }) {
   return (
-    <div className="app-shell">
-      <aside className="sidebar platform-sidebar">
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true"></div>
-          <div className="brand-copy">
-            <strong>Northstar Telecom</strong>
-            <span>Unified operations platform</span>
-          </div>
-        </div>
+    <button
+      className={active ? "topnav-nav-button active" : "topnav-nav-button"}
+      type="button"
+      onClick={() => onNavigate(section.route || section.id)}
+      aria-current={active ? "page" : undefined}
+    >
+      <Icon name={section.icon} className="button-icon" />
+      <span>{section.label}</span>
+    </button>
+  );
+}
 
-        <nav className="sidebar-nav grouped-nav" aria-label="Primary">
-          {navGroups.map(group => (
-            <div className="nav-group" key={group.label}>
-              <div className="nav-group-label">{group.label}</div>
-              {group.items.map(item => (
-                <a
-                  data-nav
-                  href={`#/${item.id}`}
-                  className={activeRoute === item.id ? "active" : ""}
-                  key={item.id}
-                  onClick={() => setRoute(item.id)}
-                >
-                  <Icon name={item.icon} />
-                  <span className="nav-label">{item.label}</span>
-                </a>
-              ))}
+function UtilityPopover({ utility, onClose, onNavigate, profile }) {
+  const menuSets = {
+    notifications: [
+      { label: "No notifications", description: "You are all caught up!"}
+      // { label: "Reports", description: "Open operational reporting", route: "reports" },
+      // { label: "Billing", description: "Review ledger and invoices", route: "billing" },
+      // { label: "Orders", description: "Inspect delivery queue", route: "orders" },
+      // { label: "Customer 360", description: "Jump into an account area", route: "customer-360" }
+    ],
+    profile: []
+  };
+  const profileItems = [
+    { label: "Settings", route: "administration", icon: "settings" },
+    { label: "Sign out", route: "dashboard", icon: "logout" }
+  ];
+  const items = menuSets[utility] || [];
+  return (
+    <div className="topnav-utility-panel" role="menu" aria-label={utility}>
+      {utility === "profile" ? (
+        <section className="topnav-profile-summary" aria-label="Profile summary">
+          <div className="topnav-profile-photo-wrap">
+            <div className="topnav-profile-photo topnav-profile-photo-fallback">
+              <Icon name="user" className="topnav-profile-user-icon" />
             </div>
+          </div>
+          <div className="topnav-profile-copy">
+            <strong>{profile.name}</strong>
+            <span className="topnav-profile-title">{profile.jobTitle}</span>
+            <span>Role: {profile.role}</span>
+            <span>{profile.email}</span>
+          </div>
+        </section>
+      ) : null}
+      {utility === "profile" ? (
+        <div className="topnav-profile-actions" role="presentation">
+          {profileItems.map(item => (
+            <button
+              key={item.label}
+              className="topnav-profile-action"
+              type="button"
+              onClick={() => {
+                onNavigate(item.route);
+                onClose();
+              }}
+            >
+              <Icon name={item.icon} className="topnav-profile-action-icon" />
+              <div className="topnav-profile-action-copy">
+                <strong>{item.label}</strong>
+              </div>
+              <Icon name="chevronRight" className="button-icon topnav-profile-action-chevron" />
+            </button>
           ))}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div className="label">Platform status</div>
-          <div className="value">Demo data layer online</div>
-          <div className="footer-note">React/Vite shell with reusable modules, grouped nav, and export-ready reports.</div>
         </div>
-      </aside>
-      <main className="content">{children}</main>
+      ) : (
+        items.map(item => (
+          <button
+            key={item.label}
+            className="nav-menu-link"
+            type="button"
+            onClick={() => {
+              onNavigate(item.route);
+              onClose();
+            }}
+          >
+            <div className="nav-menu-link-copy">
+              <strong>{item.label}</strong>
+              <span>{item.description}</span>
+            </div>
+            <Icon name="chevronRight" className="button-icon" />
+          </button>
+        ))
+      )}
     </div>
   );
 }
 
-export function PageHeader({ title, description, actions }) {
+function SearchPopover({ query, results, onChange, onNavigate, onClose, mobile = false }) {
   return (
-    <header className="topbar">
+    <div className={mobile ? "topnav-search-sheet" : "topnav-search-popover"} role="dialog" aria-label="Global search">
+      <label className="topnav-search-field">
+        <Icon name="search" className="button-icon" />
+        <input
+          value={query}
+          onChange={event => onChange(event.target.value)}
+          placeholder="Search modules and sections"
+          autoFocus={mobile}
+        />
+      </label>
+      <div className="topnav-search-results">
+        {results.length ? results.map(item => (
+          <button key={`${item.route}-${item.label}`} className="nav-menu-link" type="button" onClick={() => onNavigate(item.route)}>
+            <div className="nav-menu-link-copy">
+              <strong>{item.label}</strong>
+              <span>{item.description}</span>
+            </div>
+            <Icon name="chevronRight" className="button-icon" />
+          </button>
+        )) : (
+          <div className="topnav-empty-search">No matches found.</div>
+        )}
+      </div>
+      {mobile && (
+        <button className="ghost-button topnav-search-close" type="button" onClick={onClose}>
+          Close
+        </button>
+      )}
+    </div>
+  );
+}
+
+function MobileDrawer({ activeRoute, onNavigate, onClose }) {
+  return (
+    <div className="topnav-drawer" role="dialog" aria-label="Primary navigation">
+      <div className="topnav-drawer-header">
+        <div className="topnav-drawer-title">
+          <strong>Navigation</strong>
+          <span>{routeGroupLabel(activeRoute)} section</span>
+        </div>
+        <button className="topnav-mega-close" type="button" onClick={onClose} aria-label="Close navigation">
+          <Icon name="close" className="button-icon" />
+        </button>
+      </div>
+      <div className="topnav-drawer-list">
+        {topNavSections.map(section => {
+          const active = routeMatches(section, activeRoute);
+          return (
+            <button
+              key={section.id}
+              className={active ? "topnav-drawer-item active" : "topnav-drawer-item"}
+              type="button"
+              onClick={() => {
+                onNavigate(section.route || section.id);
+                onClose();
+              }}
+            >
+              <span className="topnav-drawer-item-icon">
+                <Icon name={section.icon} className="button-icon" />
+              </span>
+              <span className="topnav-drawer-item-copy">
+                <strong>{section.label}</strong>
+                <span>{active ? "Current section" : "Open module"}</span>
+              </span>
+              <Icon name="chevronRight" className="button-icon topnav-drawer-item-chevron" />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export function Shell({ activeRoute, setRoute, children }) {
+  const isCompactNav = useMediaQuery("(max-width: 920px)");
+  const shellRef = useRef(null);
+  const [utility, setUtility] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [role, setRole] = useState(activeRole());
+  const [profile] = useProfileSettings();
+
+  function changeRole(nextRole) {
+    window.localStorage?.setItem("bdwus.role", nextRole);
+    setRole(nextRole);
+  }
+
+  const searchIndex = useMemo(() => {
+    return topNavSections.map(section => ({ label: section.label, description: section.label, route: section.route || section.id, icon: section.icon }));
+  }, []);
+
+  const searchResults = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    const scored = searchIndex.filter(item => {
+      if (!query) return true;
+      return [item.label, item.description, item.route].some(value => String(value).toLowerCase().includes(query));
+    });
+    return scored.slice(0, 8);
+  }, [searchIndex, searchQuery]);
+  const activeSection = topNavSections.find(section => routeMatches(section, activeRoute));
+  const activeGroup = routeGroupLabel(activeRoute);
+
+  useEffect(() => {
+    setUtility(null);
+    setSearchOpen(false);
+    setDrawerOpen(false);
+    setAiOpen(false);
+  }, [activeRoute]);
+
+  useEffect(() => {
+    if (!isCompactNav) setDrawerOpen(false);
+  }, [isCompactNav]);
+
+  useEffect(() => {
+    synchronizeRoleToken(platformApiBase, role).then(() => {
+      if (!import.meta.env.DEV) setRole(activeRole());
+    }).catch(() => {
+      if (!import.meta.env.DEV) setRole("Viewer");
+    });
+  }, [role]);
+
+  useEffect(() => {
+    function handlePointerDown(event) {
+      if (!shellRef.current?.contains(event.target)) {
+        setUtility(null);
+        setSearchOpen(false);
+        setDrawerOpen(false);
+        setAiOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, []);
+
+  function go(route) {
+    navigate(setRoute, route);
+    setUtility(null);
+    setSearchOpen(false);
+    setDrawerOpen(false);
+    setAiOpen(false);
+    setSearchQuery("");
+  }
+
+  return (
+    <PermissionRoleContext.Provider value={role}>
+      <div className="app-shell" ref={shellRef}>
+      <header className="app-topnav">
+        <div className="topnav-left">
+          {isCompactNav && (
+            <button className="topnav-icon-button" type="button" aria-label="Open navigation" onClick={() => {
+              setUtility(null);
+              setSearchOpen(false);
+              setDrawerOpen(open => !open);
+            }}>
+              <Icon name={drawerOpen ? "close" : "menu"} className="button-icon" />
+            </button>
+          )}
+          <button className="topnav-brand" type="button" onClick={() => go("dashboard")}>
+            <span className="topnav-brand-mark">AT&T</span>
+            <span className="topnav-brand-copy">
+              <strong>BDWUS Telecom</strong>
+              {/* <span>{activeGroup}{activeSection ? ` · ${activeSection.label}` : ""}</span> */}
+            </span>
+          </button>
+        </div>
+
+        {!isCompactNav && (
+          <nav className="topnav-center" aria-label="Primary">
+            {topNavSections.map(section => (
+              <div className="topnav-menu-anchor" key={section.id}>
+                <TopNavButton
+                  section={section}
+                  active={routeMatches(section, activeRoute)}
+                  onNavigate={route => {
+                    setUtility(null);
+                    setSearchOpen(false);
+                    setDrawerOpen(false);
+                    go(route);
+                  }}
+                />
+              </div>
+            ))}
+          </nav>
+        )}
+
+        <div className="topnav-right">
+          <div className="topnav-ai-shell">
+            <button className="topnav-icon-button" type="button" aria-label="AI Assist" onClick={() => {
+              setUtility(null);
+              setDrawerOpen(false);
+              setSearchOpen(false);
+              setAiOpen(open => !open);
+            }}>
+              <Icon name="sparkles" className="button-icon" />
+            </button>
+            <AiAssistPopover
+              open={aiOpen}
+              onClose={() => setAiOpen(false)}
+              context={{
+                route: activeRoute,
+                pageTitle: activeSection?.label || activeGroup,
+                pageSummary: `${activeSection?.label || activeGroup} section`
+              }}
+            />
+          </div>
+          <button className="topnav-icon-button" type="button" aria-label="Search" onClick={() => {
+            setUtility(null);
+            setDrawerOpen(false);
+            setAiOpen(false);
+            setSearchOpen(open => !open);
+          }}>
+            <Icon name="search" className="button-icon" />
+          </button>
+          {searchOpen && !isCompactNav ? (
+            <SearchPopover
+              query={searchQuery}
+              results={searchResults}
+              onChange={setSearchQuery}
+              onNavigate={go}
+              onClose={() => setSearchOpen(false)}
+            />
+          ) : null}
+          <button className="topnav-icon-button" type="button" aria-label="Notifications" onClick={() => {
+            setSearchOpen(false);
+            setDrawerOpen(false);
+            setAiOpen(false);
+            setUtility(current => current === "notifications" ? null : "notifications");
+          }}>
+            <Icon name="bell" className="button-icon" />
+          </button>
+          <button className="topnav-avatar" type="button" aria-label="Profile" onClick={() => {
+            setSearchOpen(false);
+            setDrawerOpen(false);
+            setAiOpen(false);
+            setUtility(current => current === "profile" ? null : "profile");
+          }}>
+            {profile.avatarUrl ? (
+              <img className="topnav-avatar-image" src={profile.avatarUrl} alt={profile.name} />
+            ) : (
+              <span>{profile.name.split(" ").filter(Boolean).slice(0, 2).map(part => part[0]).join("").toUpperCase() || "BW"}</span>
+            )}
+          </button>
+        </div>
+
+        {utility && (
+          <UtilityPopover
+            utility={utility}
+            onClose={() => setUtility(null)}
+            onNavigate={go}
+            profile={profile}
+          />
+        )}
+        {isCompactNav && searchOpen && (
+          <SearchPopover
+            mobile
+            query={searchQuery}
+            results={searchResults}
+            onChange={setSearchQuery}
+            onNavigate={go}
+            onClose={() => setSearchOpen(false)}
+          />
+        )}
+        {isCompactNav && drawerOpen && (
+          <MobileDrawer
+            activeRoute={activeRoute}
+            onNavigate={go}
+            onClose={() => setDrawerOpen(false)}
+          />
+        )}
+      </header>
+        <main className="content">{children}</main>
+      </div>
+    </PermissionRoleContext.Provider>
+  );
+}
+
+export function PageHeader({ title, description, actions, className = "" }) {
+  return (
+    <header className={`topbar ${className}`}>
       <div className="topbar-title">
         <h1>{title}</h1>
-        <p>{description}</p>
       </div>
-      <div className="topbar-actions">{actions}</div>
+      {actions ? <div className="topbar-actions">{actions}</div> : null}
     </header>
   );
 }

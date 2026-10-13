@@ -1,10 +1,30 @@
 {
   "globalHeaders": {
-    "Cache-Control": "public, max-age=300, stale-while-revalidate=86400",
-    "X-Content-Type-Options": "nosniff"
+    "Cache-Control": "no-store, max-age=0, must-revalidate",
+    "X-Content-Type-Options": "nosniff",
+    "X-Robots-Tag": "index, follow"
   },
   "navigationFallback": {
-    "rewrite": "/index.html",
-    "exclude": ["/assets/*"]
+    "rewrite": "/index.html"
+  },
+  "routes": [
+    {
+      "route": "/*",
+      "allowedRoles": ["anonymous"]
+    }
+  ],
+  "responseOverrides": {
+    "401": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    },
+    "403": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    },
+    "404": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    }
   }
 }

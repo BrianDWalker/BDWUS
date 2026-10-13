@@ -1,0 +1,22 @@
+.floating-workflow-action {
+  width: min(100%, 1360px);
+  margin: -4px auto 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.floating-workflow-action .button {
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+@media (max-width: 920px) {
+  .floating-workflow-action {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .floating-workflow-action > * {
+    width: 100%;
+  }
+}
