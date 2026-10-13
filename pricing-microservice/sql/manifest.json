@@ -1,1 +1,1 @@
-["sales_schema.sql", "phase2_schema_hardening.sql", "assistant_schema.sql"]
+["production_baseline.sql", "billing_facts_proposal.sql"]

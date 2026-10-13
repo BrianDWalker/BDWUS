@@ -1,4 +1,6 @@
--- PROPOSAL ONLY: not in manifest, not applied. Confirm actual prod contracts first.
+-- Owner-approved additive migration, 12 October 2026.
+-- Production catalog confirmed these three tables/views do not exist.
+-- This file is included after the schema-only production baseline for dev.
 -- These views support the new UI tabs without fabricated billing facts.
 -- No stored procedures are needed for these read-only pages. Future mutations
 -- need approved procedures enforcing invoice/customer relationships and audit.
