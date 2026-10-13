@@ -35,7 +35,7 @@ from app.services.assistant import (
     reject_change_request,
 )
 from app.services.auth_api import router as auth_router
-from app.services.authz import active_role_from_request, required_capability_for_request, role_can
+from app.services.authz import auth_mode, platform_principal, active_role_from_request, required_capability_for_request, role_can
 from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
 from app.services.customer_service import router as customer_service_router
 from app.services.ops import admin_router, billing_workflow_router, ops_router
@@ -70,23 +70,31 @@ app = FastAPI(
 
 def parse_allowed_origins() -> list[str]:
     raw = os.getenv("ALLOWED_ORIGINS", DEFAULT_ALLOWED_ORIGINS)
-    if raw.strip() == "*":
-        return ["*"]
-    return [item.strip() for item in raw.split(",") if item.strip()]
+    origins = [item.strip() for item in raw.split(",") if item.strip()]
+    if "*" in origins:
+        raise ValueError("ALLOWED_ORIGINS must contain explicit portal origins")
+    return origins
 
 
 allowed_origins = parse_allowed_origins()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=False if allowed_origins == ["*"] else True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if allowed_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
 
 
 @app.middleware("http")
 async def enforce_role_permissions(request: Request, call_next):
+    if auth_mode() == "entra" and request.url.path != "/health":
+        try:
+            platform_principal(request)
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
     required_capability = required_capability_for_request(request.method, request.url.path)
     if required_capability:
         role = active_role_from_request(request)
