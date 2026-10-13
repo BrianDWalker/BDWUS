@@ -21,6 +21,9 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    from app.database import SQL_DATABASE
+    if SQL_DATABASE.casefold() != "azbdwusdev":
+        raise RuntimeError("Demo seeding is allowed only in AZBDWUSDEV")
     selected_any = args.sales or args.ops or args.care
     run_sales = args.sales or not selected_any
     run_ops = args.ops or not selected_any

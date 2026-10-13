@@ -153,89 +153,19 @@ def safe_json(value: Any) -> str:
 
 
 def ensure_ai_storage() -> None:
-    ddl = f"""
-    IF SCHEMA_ID('{AI_SCHEMA}') IS NULL EXEC('CREATE SCHEMA {AI_SCHEMA}');
-
-    IF OBJECT_ID('{AI_SCHEMA}.Conversations', 'U') IS NULL
-    BEGIN
-      CREATE TABLE {AI_SCHEMA}.Conversations (
-        ConversationId NVARCHAR(64) NOT NULL PRIMARY KEY,
-        Mode NVARCHAR(32) NOT NULL,
-        Page NVARCHAR(64) NOT NULL,
-        CreatedBy NVARCHAR(128) NULL,
-        CreatedAtUtc DATETIME2 NOT NULL,
-        LastMessageAtUtc DATETIME2 NULL
-      );
-    END;
-
-    IF OBJECT_ID('{AI_SCHEMA}.Messages', 'U') IS NULL
-    BEGIN
-      CREATE TABLE {AI_SCHEMA}.Messages (
-        MessageId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
-        ConversationId NVARCHAR(64) NOT NULL,
-        Role NVARCHAR(20) NOT NULL,
-        Content NVARCHAR(MAX) NOT NULL,
-        MetadataJson NVARCHAR(MAX) NULL,
-        CreatedAtUtc DATETIME2 NOT NULL
-      );
-      CREATE INDEX IX_{AI_SCHEMA}_Messages_ConversationId ON {AI_SCHEMA}.Messages (ConversationId, CreatedAtUtc);
-    END;
-
-    IF OBJECT_ID('{AI_SCHEMA}.ChangeRequests', 'U') IS NULL
-    BEGIN
-      CREATE TABLE {AI_SCHEMA}.ChangeRequests (
-        ChangeRequestId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
-        ConversationId NVARCHAR(64) NOT NULL,
-        RequestedBy NVARCHAR(128) NULL,
-        Mode NVARCHAR(32) NOT NULL,
-        Page NVARCHAR(64) NOT NULL,
-        Title NVARCHAR(200) NOT NULL,
-        Summary NVARCHAR(MAX) NOT NULL,
-        Target NVARCHAR(200) NOT NULL,
-        Kind NVARCHAR(50) NOT NULL,
-        PatchJson NVARCHAR(MAX) NOT NULL,
-        Status NVARCHAR(32) NOT NULL,
-        CreatedAtUtc DATETIME2 NOT NULL,
-        ApprovedAtUtc DATETIME2 NULL,
-        ApprovedBy NVARCHAR(128) NULL,
-        AppliedAtUtc DATETIME2 NULL,
-        AppliedBy NVARCHAR(128) NULL
-      );
-      CREATE INDEX IX_{AI_SCHEMA}_ChangeRequests_Status ON {AI_SCHEMA}.ChangeRequests (Status, CreatedAtUtc DESC);
-    END;
-
-    IF OBJECT_ID('{AI_SCHEMA}.UiOverrides', 'U') IS NULL
-    BEGIN
-      CREATE TABLE {AI_SCHEMA}.UiOverrides (
-        OverrideId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
-        ChangeRequestId UNIQUEIDENTIFIER NOT NULL,
-        Scope NVARCHAR(64) NOT NULL,
-        TargetKey NVARCHAR(200) NOT NULL,
-        ValueJson NVARCHAR(MAX) NOT NULL,
-        Active BIT NOT NULL,
-        CreatedAtUtc DATETIME2 NOT NULL
-      );
-      CREATE INDEX IX_{AI_SCHEMA}_UiOverrides_Scope ON {AI_SCHEMA}.UiOverrides (Scope, Active, CreatedAtUtc DESC);
-    END;
-
-    IF OBJECT_ID('{AI_SCHEMA}.AuditLog', 'U') IS NULL
-    BEGIN
-      CREATE TABLE {AI_SCHEMA}.AuditLog (
-        AuditId UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
-        EventType NVARCHAR(100) NOT NULL,
-        EntityType NVARCHAR(100) NOT NULL,
-        EntityId NVARCHAR(100) NOT NULL,
-        DetailsJson NVARCHAR(MAX) NULL,
-        CreatedAtUtc DATETIME2 NOT NULL
-      );
-    END;
-    """
+    # Runtime identity has no DDL permissions; schema changes are reviewed files.
     conn = get_sql_connection()
     try:
-      conn.cursor().execute(ddl)
-      conn.commit()
+        cursor = conn.cursor()
+        for name in ("Conversations", "Messages", "ChangeRequests", "UiOverrides", "AuditLog"):
+            exists = cursor.execute(
+                "SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?",
+                (AI_SCHEMA, name),
+            ).fetchone()
+            if not exists:
+                raise RuntimeError("Assistant schema is not ready; review assistant_schema.sql")
     finally:
-      conn.close()
+        conn.close()
 
 
 def log_audit(event_type: str, entity_type: str, entity_id: str, details: dict[str, Any] | None = None) -> None:

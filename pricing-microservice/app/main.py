@@ -35,6 +35,7 @@ from app.services.assistant import (
     reject_change_request,
 )
 from app.services.auth_api import router as auth_router
+from app.services.billing_facts import router as billing_facts_router
 from app.services.authz import auth_mode, platform_principal, active_role_from_request, required_capability_for_request, role_can
 from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
 from app.services.customer_service import router as customer_service_router
@@ -114,6 +115,7 @@ async def enforce_role_permissions(request: Request, call_next):
 # Compatibility routes must be registered before the full sales router because they preserve
 # migrated UI flows for routes that existed conceptually before the API-backed sales module.
 app.include_router(auth_router)
+app.include_router(billing_facts_router)
 app.include_router(sales_compat_router)
 app.include_router(sales_router)
 app.include_router(billing_router)
