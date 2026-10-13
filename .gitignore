@@ -5,10 +5,18 @@ __pycache__/
 **/__pycache__/
 .vscode/
 
-.databricks
+.databricks/
 web-ui/dist/
 web-ui/node_modules/
 web-ui/playwright-report/
 web-ui/test-results/
 .pytest_cache/
 **/.pytest_cache/
+
+# Local data, credentials and azd environments
+billing-demo/seed_output/
+.env
+.env.*
+!.env.example
+.azure/*/
+.ruff_cache/
