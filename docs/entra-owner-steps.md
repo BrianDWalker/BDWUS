@@ -25,3 +25,7 @@ az deployment sub create --location eastus --template-file infra/github-deploy/m
 Use the returned nonsecret client ID as that GitHub environment's AZURE_CLIENT_ID. Runtime and deployment identities are separate.
 
 Initial app creation uses PORTAL_PUBLIC_INGRESS=false so public requests cannot reach the container before Easy Auth is installed. Verify the enabled auth configuration, tenant and audience, then enable PORTAL_PUBLIC_INGRESS and provision again. Maintain true for subsequent approved releases. No temporary firewall or authentication bypass is used.
+
+## Initial configuration completed — 13 October 2026
+
+Dev client ID `4aaa3bab-43a3-4f4c-9f6c-ebfcfb88de97`, vault `kv-bdwus-dev-n7g4bi`; production client ID `02880795-d949-4cc1-beac-47ec2e1b880c`, vault `kv-bdwus-prod-vwimhm`. Both sign-in credentials are already stored as `entra-client-secret`, expire 13 October 2027, and are referenced by the app. Owner Admin assignments and callback URIs are configured. No secret entry or registration setup remains for the owner. The optional `github-token` is not configured; AI/repository operations remain disabled. GitHub deployment identities, environment variables, main-only restrictions and owner-only production review are configured; `BDWUS_DEPLOY_APPROVED=true` is enabled. Future production runs still require the GitHub environment review.

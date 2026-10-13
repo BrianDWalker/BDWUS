@@ -1,8 +1,8 @@
 # BDWUS Azure deployment plan
 
-Status: Validated for dev/prod foundations and dev portal — live application validation pending.
+Status: Deployed — dev/prod portals live; interactive owner sign-in awaits password/MFA.
 
-Prepared 12 October 2026 from the attached owner-approved seven-part scope. Owner explicitly approved all prepared changes on 12 October 2026. Dev foundation preview and azd package passed; no provisioning or SQL changes executed yet. Work is isolated in an attached worktree; original local UI edits remain untouched.
+Prepared 12 October 2026 from the attached owner-approved seven-part scope. Owner explicitly approved all prepared changes on 12 October 2026. Foundation provisioning and approved SQL changes are complete. The existing production database, shared AXIOM resources and legacy hosting resources are retained. Work is isolated in an attached worktree; original local UI edits remain untouched.
 
 ## Architecture and recipe
 
@@ -14,7 +14,7 @@ Follow AXIOM's subscription entry point, resources modules and azd portal struct
 - Logs: /subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-financial-advisor-8a42/providers/Microsoft.OperationalInsights/workspaces/log-financial-advisor-8a42-vuti2u
 - SQL server: /subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/AZURE-SQL-PNG/providers/Microsoft.Sql/servers/bdwus
 
-Detected subscription Azure subscription 1 (`a8f3fd5d-0d2f-4715-b685-728b21d1cc10`), tenant `4e1db426-c797-4336-bd16-7e771a5de494`; proposed location East US, matching SQL and shared AXIOM resources. Owner confirms context before live execution.
+Detected subscription Azure subscription 1 (`a8f3fd5d-0d2f-4715-b685-728b21d1cc10`), tenant `4e1db426-c797-4336-bd16-7e771a5de494`; proposed location East US, matching SQL and shared AXIOM resources. Owner approved this context on 12 October 2026.
 
 ## Resources and capacity
 
@@ -22,15 +22,15 @@ Detected subscription Azure subscription 1 (`a8f3fd5d-0d2f-4715-b685-728b21d1cc1
 | --- | ---: | --- |
 | Resource groups | 2 | Separate workload groups; no existing-resource deletion |
 | Container Apps environments | 2 | East US usages API: current 1, limit 20; total 3 within limit |
-| Container Apps | 2 | maxReplicas=1; runtime consumption capacity must be checked at provisioning |
-| User-assigned managed identities | 2 runtime + 2 optional GitHub | Roles declared on vault/registry; creation remains pending |
-| Key Vaults | 2 | Standard, RBAC, soft delete and purge protection; availability/name validation pending live preview |
+| Container Apps | 2 | maxReplicas=1; created and running; consumption replicas verified |
+| User-assigned managed identities | 2 runtime + 2 GitHub | Roles declared on vault/registry; created and verified |
+| Key Vaults | 2 | Standard, RBAC, soft delete and purge protection; created and verified |
 | App Insights | 2 | Existing workspace; no shared workspace settings modified |
 | SQL database | 1 dev only | Free offer allows 10 per subscription; prod already free. Exact eligibility validated during approved provision |
 | Budgets | 2 | Defaults $10/$25, email 80%/100% actual and 100% forecast |
 | Shared registry/workspace/prod SQL | 0 | Existing only |
 
-`az quota list` was attempted first: Microsoft.Quota is not registered. Provider registration would mutate Azure, so it was not performed. Read-only fallback `az rest .../Microsoft.App/locations/eastus/usages?api-version=2024-03-01` verified environment count. Other live quota/policy/provisioning validation remains an explicit deployment gate, not an assumed pass.
+`az quota list` was attempted first: Microsoft.Quota is not registered. Provider registration would mutate Azure, so it was not performed. Read-only fallback `az rest .../Microsoft.App/locations/eastus/usages?api-version=2024-03-01` verified environment count. Subsequent foundation and app previews/provisioning succeeded, establishing available capacity for this rollout.
 
 ## Security and data
 
@@ -38,23 +38,25 @@ Entra Easy Auth, assigned-user single-tenant registrations, Key Vault reference 
 
 Runtime roles: AcrPull scoped to the shared registry; Key Vault Secrets User scoped to the dedicated vault. SQL data-plane role grants are shown in grant_portal_access.sql; no DDL privileges. No automatic grant hook is included because the owner requires reviewing SQL first. No storage integration exists in the current seeder.
 
-Prod AZBDWUSP is an existing Bicep resource only. Dev uses AZBDWUSDEV, AutoPause at its free allowance. A single guarded SQL runner reads an ordered manifest and refuses prod. Runtime assistant DDL was extracted into SQL. Production catalog connection timed out; production stored procedures/schema parity and proposed subscriptions/payment/usage contracts remain unresolved. Dev is not yet built or seeded.
+Prod AZBDWUSP is an existing Bicep resource only. Dev uses AZBDWUSDEV, AutoPause at its free allowance. A single guarded SQL runner reads an ordered manifest and refuses prod. Runtime assistant DDL was extracted into SQL. The production database resumed and its actual catalog was captured as production_baseline.sql: 52 tables and 12 views, no stored procedures/functions. The guarded runner built dev and the dev-only seeder populated sample records. The approved additive billing migration and runtime grants were applied separately to both databases, bringing each to 55 tables. No existing production records were changed.
 
-## Approval stages
+## Execution stages
 
-1. Review seven stacked draft PRs and SQL files. Confirm East US/subscription, alert email and Entra registrations.
-2. Explicitly approve foundations: DEPLOY_PORTAL=false; create env/identity/vault/Insights/budget and dev SQL only.
-3. Owner configures assignment-required Entra apps/roles and Key Vault entra-client-secret. Optional github-token stays disabled unless required.
-4. Approve SQL reconciliation, dev migration and SQL grants separately. Restore approved read-only network connectivity first; never add firewall exceptions implicitly.
-5. Approve image publishing and portal provision with DEPLOY_PORTAL=true. Configure callbacks and validate dev sign-in/authorization/data.
-6. Configure GitHub dev/prod environments and OIDC deployment identities. Owner as sole required reviewer on prod; workflow checks the owner review policy before Azure login. Enable BDWUS_DEPLOY_APPROVED only after explicit approval.
-7. Approve production cutover and later retirement of legacy resources. No deletion included.
+Owner's blanket approval covers the prepared stages; no repeated approval is needed.
 
-See README for the exact review commands and docs/entra-owner-steps.md for secret and registration instructions.
+1. Seven PRs plus SQL reconciliation merged into fc-gpt; release and bootstrap hardening merged into main.
+2. Dev/prod foundation deployments succeeded. Dev database free/AutoPause confirmed. No legacy resources deleted.
+3. Assignment-required, single-tenant sign-in registrations, owner Admin assignments and dedicated Key Vault credentials configured.
+4. Actual production schema captured; dev built/seeded; approved additive billing SQL and least-privilege grants executed. Existing firewall rules/tier unchanged.
+5. Reviewed image published. Runtime AcrPull assignments confirmed after foundation completion. Initial apps stay private until Easy Auth is verified; enable public ingress in a separate provision stage.
+6. GitHub environments/main restrictions, owner-only production review policy and OIDC identities/variables configured. Activated after live app validation; dev OIDC deployment succeeded and prod uses the required owner review.
+7. Production rollout follows dev validation. Legacy resource retirement is outside this change and remains an owner decision.
+
+See README for deployment commands and docs/entra-owner-steps.md for ongoing registration/secret maintenance.
 
 ## Validation proof
 
-Local checks use the Azure validation skill; no provision preview or live deployment has been run.
+Local checks, live provisioning previews and deployments completed under the owner approval.
 
 | Check | Command / evidence | Result |
 | --- | --- | --- |
@@ -71,9 +73,9 @@ Local checks use the Azure validation skill; no provision preview or live deploy
 | Container smoke | network disabled; nonroot, ODBC, health, identity, SPA/404/traversal | Pass |
 | Billing UI | playwright test tests/billing-facts.spec.js | Pass: loading, real rows, empty, error/retry |
 | SQL catalog and API data | Captured schema, built dev, 8 API reads each environment | Pass after prod resumed; existing production data retained |
-| Azure live validation | Foundation and dev portal previews/package | Pass; environment creation in progress, public portal tests pending |
+| Azure live validation | Foundation and dev portal previews/package | Pass; foundations, private bootstrap and public ingress provisioned |
 
-The plan must not be marked Validated/Deployed until remaining live gates pass.
+Interactive Microsoft sign-in remains a human authentication check; no access-policy or deployment approval is pending.
 
 ## Estimated monthly costs
 
@@ -86,3 +88,11 @@ Owner approval covers the documented subscription, East US location, budget emai
 Prod foundation preview passed (20 seconds); dev portal preview passed (19 seconds). Dev SQL free/AutoPause confirmed Online; baseline and approved additive migration applied successfully. Production catalog captured: 52 tables, 12 views, no procedures/functions; approved additive tables/views and least-privilege grants applied to prod, retaining existing data. Both databases now have 55 tables. Dev explicitly seeded; 47 tests and gitleaks passed afterward. Separate assigned-user Entra apps, owner Admin assignments, per-vault sign-in credentials, GitHub environments/main restrictions and OIDC identities configured. Secrets went directly from Graph memory to Key Vault and were never printed or saved in environment files.
 
 Additional execution evidence: dev/prod each passed eight live SQL-backed API reads. SQL impersonation confirmed SELECT/UPDATE permissions and denied CREATE TABLE/db_owner. $10/$25 budgets and owner email verified. Old deployment workflows disabled, seven PRs plus schema reconciliation merged into fc-gpt and release PR #14 merged into main. Main branch protection and owner-only prod environment protection verified. All five pre-commit hooks passed; 8 permissions/billing browser checks passed after guarding Node import.meta.env. UI bundle SHA-256 matches the published image byte-for-byte. Initial portal creation is private until enabled Easy Auth is verified, then public ingress is a separate provision stage.
+
+## Resumed execution — 13 October 2026
+
+Both long-running foundation deployments and Container Apps environments reached Succeeded. Runtime AcrPull assignments are present. Automatic App Insights alerts were repaired after registering Microsoft.AlertsManagement. Dev azd foundation completion restored saved initial settings; these were detected before app creation and corrected to the actual Entra client ID, DEPLOY_PORTAL=true and PORTAL_PUBLIC_INGRESS=false. Fresh dev private-app preview passed (20 seconds), and production private-app preview passed (18 seconds).
+
+Dev and production private bootstrap and public ingress deployments succeeded. Easy Auth tenant/client/audience settings were verified before public ingress. Both managed identities read the correct SQL database and billing views, with SELECT=1, CREATE TABLE=0 and db_owner=0. Production SQL resumed from auto-pause on retry. Dev runtime HTTP checks passed: Admin identity, wrong-tenant 401, Viewer mutation 403, SPA 200 and eight SQL-backed APIs 200. These loopback diagnostics exercise application behavior; they do not replace an actual owner browser sign-in. Public browser navigation reached Microsoft sign-in; owner password/MFA is needed to complete that check. Fresh browser-style unauthenticated and forged-header requests redirect to sign-in. Non-browser clients can receive the platform Bearer challenge (401).
+
+Production runtime HTTP checks also passed Admin/wrong-tenant/Viewer authorization, SPA and all eight SQL-backed API reads. Production public /health is 200; portal/API browser requests, including forged platform identity headers, return Microsoft sign-in redirects. GitHub dev workflow [38395456218](https://github.com/BrianDWalker/BDWUS/actions/runs/38395456218) succeeded through OIDC login, shared-registry build/push and Container App update. Production workflow [38395679316](https://github.com/BrianDWalker/BDWUS/actions/runs/38395679316) also succeeded: owner review recorded using the authenticated owner account under the explicit chat approval, reviewer-policy verification, OIDC login, image push and app update. Both environments run image tag `8314bd8dd001d33938e14b50b86d4d28cd90aff6`. Dev runtime API checks passed again after the GitHub rollout.
