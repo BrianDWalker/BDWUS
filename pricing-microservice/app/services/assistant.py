@@ -19,10 +19,10 @@ from app.models import (
     AssistantChatRequest,
     AssistantChatResponse,
     AssistantChangeRequest,
-    AssistantContext,
     AssistantProposal,
     AssistantUiOverride,
 )
+from app.services.secrets import github_token
 from app.services.sales import create_lead as create_sales_lead, ensure_sales_storage
 
 
@@ -41,7 +41,6 @@ AI_PROJECT_ENDPOINT = os.getenv("AZURE_AI_FOUNDRY_PROJECT_ENDPOINT", "").rstrip(
 AI_AUTH_MODE = os.getenv("AI_AUTH_MODE", "managed_identity").lower()
 AI_SCOPE = os.getenv("AZURE_AI_FOUNDRY_SCOPE", "https://ai.azure.com/.default")
 AI_OFFLINE = os.getenv("AI_ASSISTANT_OFFLINE", "false").lower() in {"1", "true", "yes"}
-from app.services.secrets import github_token
 GITHUB_API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com").rstrip("/")
 
 MAX_HISTORY_MESSAGES = int(os.getenv("AI_ASSISTANT_MAX_HISTORY_MESSAGES", "8"))
@@ -993,7 +992,6 @@ def reject_change_request(change_request_id: uuid.UUID, rejected_by: str = "admi
       raise ValueError("Change request not found.")
     conn = get_sql_connection()
     try:
-      rejected_at = utc_now()
       conn.cursor().execute(
           f"""
           UPDATE {AI_SCHEMA}.ChangeRequests

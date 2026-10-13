@@ -14,7 +14,7 @@ Cost Management ActualCost, 1–30 September 2026, grouped by ResourceId, USD be
 | bdwuscr | Separate BDWUS registry | $4.99804 |
 | workspaceazuresqlpngb07c | Separate BDWUS logging workspace | $0.000027 |
 | BDWUS resource group total | Current observed cost | $4.99807 |
-| Whole subscription | Includes AXIOM resources and AI consumption | $121.83857 |
+| Whole subscription | Includes AXIOM resources and AI consumption | $120.83856 |
 
 Keep prod SQL on its existing free serverless offer. It already meets the requested cost controls. An existing paid database cannot be converted to the free offer in place; no migration is necessary here. Do not recreate, rename, drop or move AZBDWUSP.
 

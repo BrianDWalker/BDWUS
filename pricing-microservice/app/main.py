@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,49 +7,17 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.database import SQL_DATABASE, SQL_SERVER, get_sql_connection
-from app.models import (
-    AssistantApprovalRequest,
-    AssistantChatRequest,
-    AssistantChatResponse,
-    AssistantChangeRequest,
-    AssistantUiOverride,
-    CustomerMetadataOptionsResponse,
-    CustomerProfileResponse,
-    OpportunityDetailsResponse,
-    OpportunityListItem,
-    QuoteCreateRequest,
-    QuoteCreateResponse,
-    QuoteReviseRequest,
-)
 from app.services.assistant import (
     router as assistant_router,
-    approve_change_request,
-    chat,
-    get_change_request,
-    get_github_branches,
-    get_github_commits,
-    get_github_file,
-    get_github_tree,
-    list_ui_overrides,
-    reject_change_request,
 )
 from app.services.auth_api import router as auth_router
 from app.services.billing_facts import router as billing_facts_router
 from app.services.authz import auth_mode, platform_principal, active_role_from_request, required_capability_for_request, role_can
-from app.services.context import BILLING_CONTEXT_OBJECT, get_customer_metadata_options, lookup_customer_profile
+from app.services.context import BILLING_CONTEXT_OBJECT
 from app.services.customer_service import router as customer_service_router
 from app.services.ops import admin_router, billing_workflow_router, ops_router
 from app.services.ops_write import admin_write_router, billing_write_router, ops_write_router
 from app.services.platform import router as platform_router
-from app.services.quotes import (
-    create_quote,
-    get_opportunity_details,
-    get_opportunity_latest,
-    get_quote_history,
-    list_opportunities,
-    reprice_opportunity,
-    revise_quote,
-)
 from app.services.sales import billing_router, router as sales_router, sales_dashboard
 from app.services.sales_compat import router as sales_compat_router
 from app.services.smoke_data import smoke_mode_enabled

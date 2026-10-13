@@ -67,7 +67,7 @@ resource auth 'Microsoft.App/containerApps/authConfigs@2024-03-01' = {
         enabled: true
         registration: {
           clientId: entraClientId
-          openIdIssuer: 'https://login.microsoftonline.com/${tenantId}/v2.0'
+          openIdIssuer: uri(az.environment().authentication.loginEndpoint, '${tenantId}/v2.0')
           clientSecretSettingName: 'entra-client-secret'
         }
         validation: { allowedAudiences: [entraClientId, 'api://${entraClientId}'] }

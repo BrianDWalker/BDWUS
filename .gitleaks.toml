@@ -1,0 +1,13 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Generated and installed dependencies only"
+paths = [
+  '(?:^|/)[.]git/',
+  '(?:^|/)[.]venv/',
+  '(?:^|/)node_modules/',
+  '(?:^|/)dist/',
+  '(?:^|/)playwright-report/',
+  '(?:^|/)test-results/'
+]

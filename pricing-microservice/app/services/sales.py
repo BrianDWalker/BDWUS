@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
-import re
 import uuid
 import threading
 from datetime import datetime, date, timezone
@@ -13,7 +11,6 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from app.database import get_sql_connection
-from app.services.context import lookup_customer_profile
 from app.services.pricing import calculate_price
 from app.services.sql_access import sql_transaction
 from app.services import smoke_data
@@ -1885,7 +1882,7 @@ def reject_approval(approval_id: uuid.UUID, payload: dict[str, Any]):
 @router.post("/approvals/{approval_id}/request-changes")
 def request_changes_approval(approval_id: uuid.UUID, payload: dict[str, Any]):
     ensure_sales_storage()
-    approval = get_approval(approval_id)
+    get_approval(approval_id)
     execute(
         "UPDATE ms.Approvals SET Status = ?, RequestedChanges = ?, UpdatedAtUtc = SYSUTCDATETIME() WHERE ApprovalId = ?",
         ("Changes Requested", trim(payload.get("requestedChanges")), str(approval_id)),

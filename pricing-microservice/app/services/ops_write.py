@@ -5,7 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from app.services.ops import ensure_ops_storage, execute, fetch_one, require_row, utc_now, jdump
+from app.services.ops import ensure_ops_storage, execute, require_row, utc_now, jdump
 
 ops_write_router = APIRouter(prefix="/api/ops", tags=["ops-write"])
 admin_write_router = APIRouter(prefix="/api/admin", tags=["admin-write"])

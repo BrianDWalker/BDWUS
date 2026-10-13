@@ -21,7 +21,7 @@ async function requestJson(path, options = {}) {
     ...options
   });
   if (!response.ok) {
-    let detail = "";
+    let detail;
     try {
       const payload = await response.json();
       detail = payload.detail || payload.message || JSON.stringify(payload);

@@ -1,2 +1,6 @@
 -r requirements.txt
 pytest
+
+httpx
+ruff==0.17.0
+pre-commit
