@@ -1,0 +1,50 @@
+name: Deploy BDWUS portal
+on:
+  push:
+    branches: [main]
+    paths: ['web-ui/**', 'pricing-microservice/app/**', 'pricing-microservice/requirements.txt', 'Dockerfile', '.github/workflows/portal-deploy.yml']
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Owner-approved target
+        type: choice
+        options: [dev, prod]
+        default: dev
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: bdwus-${{ inputs.environment || 'dev' }}
+  cancel-in-progress: false
+jobs:
+  deploy:
+    # Owner enables this only after approving Azure changes and configuring
+    # dev/prod GitHub environments; prod must require an owner reviewer.
+    if: vars.BDWUS_DEPLOY_APPROVED == 'true' && github.ref == 'refs/heads/main'
+    environment: ${{ inputs.environment || 'dev' }}
+    runs-on: ubuntu-latest
+    env:
+      ACR_NAME: ${{ vars.ACR_NAME }}
+      ACR_LOGIN_SERVER: ${{ vars.ACR_LOGIN_SERVER }}
+      PORTAL_RESOURCE_GROUP: ${{ vars.PORTAL_RESOURCE_GROUP }}
+      PORTAL_APP_NAME: ${{ vars.PORTAL_APP_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Build once and push to the shared registry
+        run: |
+          set -euo pipefail
+          az acr login --name "$ACR_NAME"
+          image="$ACR_LOGIN_SERVER/bdwus-portal:$GITHUB_SHA"
+          docker build --platform linux/amd64 -t "$image" .
+          docker push "$image"
+          echo "PORTAL_IMAGE=$image" >> "$GITHUB_ENV"
+      - name: Deploy image to the already-provisioned app
+        run: |
+          set -euo pipefail
+          az containerapp update --resource-group "$PORTAL_RESOURCE_GROUP" \
+            --name "$PORTAL_APP_NAME" --image "$PORTAL_IMAGE" --only-show-errors --output none
