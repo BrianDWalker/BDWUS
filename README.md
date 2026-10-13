@@ -127,8 +127,10 @@ npm --prefix web-ui run build
 
 Hooks run Ruff, ESLint, redacted gitleaks, Vite production build and pytest. Tests mock SQL and forbid acquiring Azure credentials or real connections. Monthly grouped Dependabot covers npm, pip, Actions and Docker. Run legacy assistant tests separately with `cd assistant-service && ../.venv/bin/python -m pytest tests -q -o pythonpath=.` after installing its requirements.
 
-## Costs and remaining approvals
+## Costs and deployment status
 
 See [read-only inventory and cost report](docs/azure-owner-review.md). September observed BDWUS cost was about $5, mostly its separate registry; SQL was $0. Low-traffic incremental planning ranges are $0–10/month dev and $0–25/month prod, excluding shared AXIOM baseline costs, retained old resources, optional AI and egress. Container Apps free grants are subscription-wide and shared with AXIOM; logging is metered. These estimates are not billing caps.
 
-Pending: Azure provisioning/deployment approval, dev SQL and grants approval, actual prod catalog/DDL reconciliation, Entra app creation/user assignment, Key Vault secret population, GitHub environments/OIDC roles and deployment enablement. Never use azd down to clean up the existing production data or shared AXIOM resources.
+Owner approval received and executed on 12–13 October 2026: dev/prod resources, production catalog reconciliation, dev schema/seed, additive billing SQL, runtime grants, assignment-required Entra apps, owner Admin assignments, Key Vault credentials and GitHub OIDC environments are configured. Both portals are live behind Easy Auth. The repository deployment approval flag is enabled. Microsoft password/MFA sign-in must be completed by the owner for the final interactive sign-in check. Never use azd down to clean up the existing production data or shared AXIOM resources.
+
+Live portals: [dev](https://ca-bdwus-dev.politesmoke-b8649377.eastus.azurecontainerapps.io) · [production](https://ca-bdwus-prod.happytree-d3cda5bf.eastus.azurecontainerapps.io). See [.azure/deployment-plan.md](.azure/deployment-plan.md) for validation evidence and workflow results.
