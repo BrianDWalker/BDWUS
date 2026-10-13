@@ -34,4 +34,4 @@ az resource list --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
 az sql db show -g AZURE-SQL-PNG -s bdwus -n AZBDWUSP
 ```
 
-The remaining changes are prepared in separate PRs. Provisioning, deployment, Entra configuration, SQL migrations and access grants require explicit owner approval before execution.
+Owner approved all prepared changes on 12 October 2026. The seven PRs and SQL reconciliation were merged into fc-gpt; the reviewed portal release was merged into main. Foundations are provisioning; see .azure/deployment-plan.md for current evidence. No legacy resource deletion is included.

@@ -69,7 +69,7 @@ Per-environment vault names come from azd output AZURE_KEY_VAULT_NAME. Store **e
 
 ## Owner-approved deployment sequence — commands to review, not run yet
 
-[Entra/GitHub setup](docs/entra-owner-steps.md) describes single-tenant registrations, user assignment, callback URIs, role claims, secret names and OIDC trust. No registration has been created. Configure prod GitHub with the owner as its sole required reviewer before enabling deployments. Keep BDWUS_DEPLOY_APPROVED unset until explicit deployment authorization.
+[Entra/GitHub setup](docs/entra-owner-steps.md) describes single-tenant registrations, user assignment, callback URIs, role claims, secret names and OIDC trust. Owner-approved dev/prod registrations, owner Admin assignments and vault credentials are configured. Configure prod GitHub with the owner as its sole required reviewer before enabling deployments. Keep BDWUS_DEPLOY_APPROVED unset until explicit deployment authorization.
 
 After explicit approval, configure each azd environment (repeat with prod):
 
@@ -85,6 +85,7 @@ azd env set BUDGET_START_DATE <first-day-of-current-month-YYYY-MM-DD>
 azd env set BUDGET_END_DATE <future-first-day-YYYY-MM-DD>
 azd env set SERVICE_PORTAL_IMAGE_NAME crfinancialadvisor8a42vuti2u.azurecr.io/bdwus-portal:<reviewed-commit-sha>
 azd env set DEPLOY_PORTAL false
+azd env set PORTAL_PUBLIC_INGRESS false
 # Review locally; this does not call Azure provisioning.
 az bicep build --file infra/main.bicep --outfile /tmp/bdwus-infra.json
 # MUTATION: owner approval required before this command.
@@ -93,13 +94,17 @@ azd provision
 
 Foundations create the dev database, identity, vault, consumption environment, Insights and budget. Before the second provisioning: populate entra-client-secret, configure assignment-required Entra sign-in, review and apply dev SQL, review and execute grant_portal_access.sql in each database as the Entra SQL administrator, and publish the reviewed image. Do not grant db_owner/db_ddladmin to runtime identities. Do not apply dev schema files to prod.
 
-After that separate approval:
+After the required setup and approval:
 
 ```sh
 az acr login --name crfinancialadvisor8a42vuti2u
 docker build --platform linux/amd64 -t crfinancialadvisor8a42vuti2u.azurecr.io/bdwus-portal:<reviewed-commit-sha> .
 docker push crfinancialadvisor8a42vuti2u.azurecr.io/bdwus-portal:<reviewed-commit-sha>
 azd env set DEPLOY_PORTAL true
+# First app creation is private while Easy Auth is installed.
+azd provision
+# Verify authConfigs/current platform.enabled and the tenant registration.
+azd env set PORTAL_PUBLIC_INGRESS true
 azd provision
 azd deploy portal
 ```
