@@ -1,0 +1,12 @@
+name: bdwus-northstar-portal
+infra:
+  provider: bicep
+  path: infra
+services:
+  portal:
+    project: .
+    host: containerapp
+    language: python
+    docker:
+      path: Dockerfile
+      remoteBuild: false
