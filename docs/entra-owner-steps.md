@@ -14,15 +14,7 @@ Create a deployment identity per environment with federated credential issuer `h
 
 Sources: [Container Apps Entra authentication](https://learn.microsoft.com/en-us/azure/container-apps/authentication-entra), [Identity claims](https://learn.microsoft.com/en-us/azure/container-apps/authentication), [Key Vault references](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets).
 
-After explicit approval and foundation provisioning, the separate GitHub identity template creates the per-environment identity, environment-bound OIDC credential, portal resource-group Contributor and shared-registry AcrPush. It cannot provision the portal or SQL. Review and repeat for prod:
-
-```sh
-az bicep build --file infra/github-deploy/main.bicep --outfile /tmp/bdwus-github.json
-# MUTATION — owner approval required:
-az deployment sub create --location eastus --template-file infra/github-deploy/main.bicep --parameters environmentName=dev sharedRegistryResourceId=/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-financial-advisor-8a42/providers/Microsoft.ContainerRegistry/registries/crfinancialadvisor8a42vuti2u --query properties.outputs.clientId.value -o tsv
-```
-
-Use the returned nonsecret client ID as that GitHub environment's AZURE_CLIENT_ID. Runtime and deployment identities are separate.
+The original GitHub identity bootstrap is complete. The template in infra/github-deploy/main.bicep is now a **pending least-privilege proposal**, not the old Contributor/AcrPush bootstrap. Do not run it against either legacy-mode registry as a maintenance/recreation step. See [deployment permission proposal](deployment-permissions-proposal.md): owner must select the registry, approve mode migration (including bdwuscr reuse), verify ABAC mode, approve replacement roles/cutover and only then remove exact old grants. No live role changes were made.
 
 Initial app creation uses PORTAL_PUBLIC_INGRESS=false so public requests cannot reach the container before Easy Auth is installed. Verify the enabled auth configuration, tenant and audience, then enable PORTAL_PUBLIC_INGRESS and provision again. Maintain true for subsequent approved releases. No temporary firewall or authentication bypass is used.
 

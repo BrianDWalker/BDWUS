@@ -4,7 +4,7 @@ No live roles or registry settings changed. Both deployment identities still hav
 
 ## Recommended decision
 
-Retain/reuse existing Basic `bdwuscr` as a BDWUS-only registry after confirming no other workload uses it. Its observed September cost was about $5/month already paid; retaining it adds no second registry bill. Alternatively create one new shared dev/prod BDWUS-only Basic registry with dedicated-registry-proposal.bicep: plan approximately $5/month plus excess storage/egress. Do not create one registry per environment. This avoids altering AXIOM's registry authorization mode. Either path needs owner approval, image copying, new runtime pull assignments, app image/registry updates, GitHub environment variable updates and deployment validation before revoking old access. Reusing `bdwuscr` means it is no longer a deletion candidate.
+Retain/reuse existing Basic `bdwuscr` as a BDWUS-only registry after confirming no other workload uses it. Its observed September cost was about $5/month already paid; retaining it adds no second registry bill. Alternatively create one new shared dev/prod BDWUS-only Basic registry with dedicated-registry-proposal.bicep: plan approximately $5/month plus excess storage/egress. Do not create one registry per environment. This avoids altering AXIOM's registry authorization mode. Both existing registries currently use LegacyRegistryPermissions. Reusing `bdwuscr` with this template ALSO requires an owner-approved ABAC mode migration after inventorying all its consumers; the new-registry template starts in ABAC mode. Either path needs owner approval, image copying, new runtime pull assignments, app image/registry updates, GitHub environment variable updates and deployment validation before revoking old access. Reusing `bdwuscr` means it is no longer a deletion candidate.
 
 ## Shared registry ABAC alternative
 
@@ -26,3 +26,9 @@ Azure RBAC cannot restrict containerApps/write to the image field: an identity t
 - prod AcrPush: `/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourcegroups/rg-financial-advisor-8a42/providers/Microsoft.ContainerRegistry/registries/crfinancialadvisor8a42vuti2u/providers/Microsoft.Authorization/roleAssignments/8fcda206-8850-557a-85cc-423903506ad6`
 
 Do not run either provisioning template yet. Approval must identify the registry option, the new assignments, app/variable cutover, and the four old assignments above. No branch or Azure resource deletion is bundled with this proposal.
+
+## Mandatory registry-mode gate for EVERY target
+
+Before applying the identity template, read `az acr show --ids <chosen-registry-resource-id> --query roleAssignmentMode -o tsv`. It must report `AbacRepositoryPermissions`. If it reports `LegacyRegistryPermissions`, STOP: this applies equally to existing `bdwuscr` and AXIOM's shared registry. Inventory all current role assignments/consumers and approve a specific mode migration first. Only after verifying the live result, pass `verifiedRegistryRoleAssignmentMode=AbacRepositoryPermissions` explicitly; the template accepts no other value and has no default. This acknowledgement does not itself inspect or change the registry. Incremental deployment cannot revoke the old broad roles.
+
+The identity template is a maintenance proposal for the already-existing portal apps and environments; it is not an initial empty-resource-group bootstrap. Its live deployment compatibility remains unverified until approved.

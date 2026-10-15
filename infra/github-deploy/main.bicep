@@ -4,6 +4,9 @@ param environmentName string
 param location string = 'eastus'
 param repository string = 'BrianDWalker/BDWUS'
 param sharedRegistryResourceId string
+// Required acknowledgement only after the read-only live mode check in the runbook.
+@allowed(['AbacRepositoryPermissions'])
+param verifiedRegistryRoleAssignmentMode string
 // Existing shared registry MUST first undergo an owner-approved ABAC migration.
 // This template deliberately does not change shared registry configuration.
 var registryParts = split(sharedRegistryResourceId, '/')
@@ -49,3 +52,5 @@ module registryPull './repository-access.bicep' = {
   params: { registryName: last(registryParts), principalId: identity.outputs.runtimePrincipalId, writeAccess: false }
 }
 output clientId string = identity.outputs.clientId
+
+output requiredRegistryMode string = verifiedRegistryRoleAssignmentMode
