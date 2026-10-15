@@ -999,10 +999,9 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
         raise HTTPException(status_code=409, detail="Request is already claimed or no longer proposed")
     if record.kind not in {"lead_create", "github_update", "ui_override", "ui_patch", "note"}:
         raise HTTPException(status_code=400, detail="Unsupported change request kind")
+    validate_proposal_payload(record)
     if record.kind == "github_update":
         require_github_write()
-        normalize_github_repository(str((record.patch.get("github") or {}).get("repository") or ""))
-    validate_proposal_payload(record)
     if not claim_change_request(change_request_id):
         raise HTTPException(status_code=409, detail="Request was claimed concurrently")
     # The durable claim is committed BEFORE external effects. A crash or uncertain
