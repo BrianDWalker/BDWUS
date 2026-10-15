@@ -1476,7 +1476,7 @@ def update_custom_pricing(request_id: uuid.UUID, payload: dict[str, Any]):
             payload.get("opportunityId", current.get("OpportunityId")),
             trim(payload.get("status", current.get("Status"))),
             trim(payload.get("reason", current.get("Reason"))),
-            trim(authenticated_actor()),
+            current.get("RequestedBy"),
             str(request_id),
         ),
     )

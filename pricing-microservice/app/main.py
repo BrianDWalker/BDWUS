@@ -58,12 +58,16 @@ if allowed_origins:
 
 @app.middleware("http")
 async def enforce_role_permissions(request: Request, call_next):
+    if request.method == "OPTIONS" and request.headers.get("origin") and request.headers.get("access-control-request-method"):
+        return await call_next(request)
     if auth_mode() == "entra" and request.url.path != "/health":
         try:
             platform_principal(request)
         except HTTPException as exc:
             return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
     required_capability = required_capability_for_request(request.method, request.url.path)
+    if request.url.path.startswith("/health/"):
+        required_capability = "admin:read"
     if request.url.path.startswith("/api/") and required_capability is None:
         return JSONResponse(status_code=403, content={"detail": "API route has no authorization policy"})
     if required_capability:
