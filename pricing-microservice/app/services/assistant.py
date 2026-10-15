@@ -943,6 +943,33 @@ def get_change_request(change_request_id: uuid.UUID) -> AssistantChangeRequest |
       conn.close()
 
 
+def validate_proposal_payload(record: AssistantChangeRequest) -> None:
+    """Reject deterministic validation errors before committing the durable claim."""
+    if not isinstance(record.patch, dict):
+        raise HTTPException(status_code=400, detail="Proposal patch must be an object")
+    try:
+        if record.kind == "lead_create":
+            if not isinstance(record.patch.get("leadDraft"), dict):
+                raise ValueError("Lead proposal needs a leadDraft object")
+        elif record.kind == "github_update":
+            github = record.patch.get("github")
+            if not isinstance(github, dict):
+                raise ValueError("GitHub proposal needs a github object")
+            normalize_github_repository(str(github.get("repository") or ""))
+            normalize_github_branch(str(github.get("branch") or ""))
+            normalize_github_files_patch(github)
+        elif record.kind in {"ui_override", "ui_patch"}:
+            overrides = record.patch.get("overrides")
+            if not isinstance(overrides, list) or not overrides:
+                raise ValueError("UI proposal needs nonempty overrides")
+            for override in overrides:
+                if not isinstance(override, dict) or not isinstance(override.get("targetKey"), str) or not override["targetKey"].strip() or "value" not in override:
+                    raise ValueError("Each override needs targetKey and value")
+            safe_json(overrides)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
 def claim_change_request(change_request_id: uuid.UUID) -> bool:
     conn = get_sql_connection()
     try:
@@ -970,11 +997,12 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
         return record
     if record.status != "Proposed":
         raise HTTPException(status_code=409, detail="Request is already claimed or no longer proposed")
-    if record.kind not in {"lead_create", "github_update", "ui_override", "ui_patch"}:
+    if record.kind not in {"lead_create", "github_update", "ui_override", "ui_patch", "note"}:
         raise HTTPException(status_code=400, detail="Unsupported change request kind")
     if record.kind == "github_update":
         require_github_write()
         normalize_github_repository(str((record.patch.get("github") or {}).get("repository") or ""))
+    validate_proposal_payload(record)
     if not claim_change_request(change_request_id):
         raise HTTPException(status_code=409, detail="Request was claimed concurrently")
     # The durable claim is committed BEFORE external effects. A crash or uncertain

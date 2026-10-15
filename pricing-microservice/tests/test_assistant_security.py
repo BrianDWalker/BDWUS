@@ -107,7 +107,7 @@ def test_claim_is_atomic_conditional_update(monkeypatch):
 
 
 def test_concurrent_or_retried_approval_never_repeats_uncertain_effect(monkeypatch):
-    record = SimpleNamespace(status="Proposed", kind="lead_create", patch={})
+    record = SimpleNamespace(status="Proposed", kind="lead_create", patch={"leadDraft": {"accountName": "Demo"}})
     lock = Lock()
     effects = []
     monkeypatch.setattr(assistant, "ensure_ai_storage", lambda: None)
@@ -150,3 +150,21 @@ def test_completed_approval_returns_without_side_effect(monkeypatch):
         assistant, "execute_lead_create", lambda _: pytest.fail("must not repeat")
     )
     assert assistant.approve_change_request(uuid4(), SimpleNamespace()) is record
+
+
+@pytest.mark.parametrize("kind,patch", [("lead_create", {}), ("github_update", {"github": {"repository": "BrianDWalker/BDWUS"}}), ("ui_override", {"overrides": [{"value": "missing target"}]})])
+def test_invalid_proposal_remains_proposed(monkeypatch, kind, patch):
+    record = SimpleNamespace(status="Proposed", kind=kind, patch=patch)
+    monkeypatch.setattr(assistant, "ensure_ai_storage", lambda: None)
+    monkeypatch.setattr(assistant, "get_change_request", lambda _: record)
+    monkeypatch.setattr(assistant, "require_github_write", lambda: None)
+    monkeypatch.setenv("ASSISTANT_ALLOWED_REPOSITORIES", "BrianDWalker/BDWUS")
+    monkeypatch.setattr(assistant, "claim_change_request", lambda _: pytest.fail("must validate before claim"))
+    with pytest.raises(HTTPException) as error:
+        assistant.approve_change_request(uuid4(), SimpleNamespace())
+    assert error.value.status_code == 400
+    assert record.status == "Proposed"
+
+
+def test_note_proposal_is_valid_without_side_effects():
+    assistant.validate_proposal_payload(SimpleNamespace(kind="note", patch={}))
