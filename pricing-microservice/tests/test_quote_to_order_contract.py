@@ -57,23 +57,6 @@ def test_quote_order_payload_derives_context(monkeypatch):
     assert payload["sourceOpportunityId"] == opportunity_id
 
 
-def test_convert_quote_to_order_requires_approved_quote(monkeypatch):
-    quote_id = str(uuid.uuid4())
-
-    def fake_get_view_row(view_name, key_name, value):
-        if view_name == "ms.vQuoteDetail":
-            return {"QuoteId": quote_id, "QuoteNumber": "Q-1001", "OpportunityId": str(uuid.uuid4()), "ApprovalStatus": "Pending"}
-        raise AssertionError(view_name)
-
-    monkeypatch.setattr(sales_compat, "ensure_sales_storage", lambda: None)
-    monkeypatch.setattr(sales_compat, "ensure_ops_storage", lambda: None)
-    monkeypatch.setattr(sales_compat, "get_view_row", fake_get_view_row)
-
-    with pytest.raises(HTTPException) as exc_info:
-        sales_compat.convert_quote_to_order(uuid.UUID(quote_id), {})
-
-    assert exc_info.value.status_code == 400
-    assert "approved" in exc_info.value.detail.lower()
 
 
 def test_repeated_and_concurrent_conversion_returns_one_order(monkeypatch):
@@ -83,6 +66,7 @@ def test_repeated_and_concurrent_conversion_returns_one_order(monkeypatch):
     lock = Lock()
     orders = {}
     inserts = []
+    approval = ["Approved"]
     quote_id = uuid.uuid4()
     monkeypatch.setattr(sales_compat, "ensure_sales_storage", lambda: None)
     monkeypatch.setattr(sales_compat, "ensure_ops_storage", lambda: None)
@@ -93,7 +77,7 @@ def test_repeated_and_concurrent_conversion_returns_one_order(monkeypatch):
         description = [("OrderId",), ("SourceQuoteId",)]
         def execute(self, sql, params):
             if "UPDLOCK, HOLDLOCK" in sql:
-                self.result = ("Approved",)
+                self.result = (approval[0],)
             elif "INSERT INTO ops.Orders" in sql:
                 assert "SourceQuoteId" in sql
                 inserts.append(params)
@@ -116,7 +100,11 @@ def test_repeated_and_concurrent_conversion_returns_one_order(monkeypatch):
     monkeypatch.setattr(sales_compat, "sql_transaction", transaction)
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(lambda _: sales_compat.convert_quote_to_order(quote_id, {}), range(2)))
+    approval[0] = "Rejected"
     third = sales_compat.convert_quote_to_order(quote_id, {})
+    with pytest.raises(HTTPException) as error:
+        sales_compat.convert_quote_to_order(uuid.uuid4(), {})
+    assert error.value.status_code == 400
     assert len(inserts) == 1
     assert results[0]["order"] == results[1]["order"] == third["order"]
     assert third["order"]["SourceQuoteId"] == str(quote_id)

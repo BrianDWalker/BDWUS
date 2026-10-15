@@ -254,9 +254,6 @@ def create_opportunity_note_compat(opportunity_id: uuid.UUID, payload: dict[str,
 def convert_quote_to_order(quote_id: uuid.UUID, payload: dict[str, Any] | None = None):
     ensure_sales_storage()
     ensure_ops_storage()
-    quote = get_view_row("ms.vQuoteDetail", "QuoteId", str(quote_id))
-    if str(quote.get("ApprovalStatus") or "").lower() not in {"approved", "ready"}:
-        raise HTTPException(status_code=400, detail="Quote must be approved before creating an order.")
     order_payload = _quote_order_payload(str(quote_id), payload or {})
     try:
         with sql_transaction() as conn:
