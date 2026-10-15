@@ -1,3 +1,4 @@
+from app.services.authz import authenticated_actor
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
@@ -73,8 +74,8 @@ def _build_opportunity_insert_data(request: QuoteCreateRequest, quote_id: UUID) 
         "LatestPriceAmount": None,  # populated later in create_quote
         "LatestMarginPct": None,    # populated later in create_quote
         "LatestScore": None,        # populated later in create_quote
-        "CreatedBy": request.opportunity.changedBy,
-        "ModifiedBy": request.opportunity.changedBy,
+        "CreatedBy": authenticated_actor(),
+        "ModifiedBy": authenticated_actor(),
         "CustomerType": _first_non_empty(request.opportunity.customerType, profile.get("customerType") if profile else None),
         "IndustryType": _first_non_empty(request.opportunity.industryType, profile.get("industryType") if profile else None),
         "CustomerRegion": _first_non_empty(request.opportunity.customerRegion, profile.get("customerRegion") if profile else None),
@@ -288,8 +289,8 @@ def create_quote(request: QuoteCreateRequest) -> QuoteCreateResponse:
             """,
             str(quote_id),
             str(opportunity_id),
-            request.opportunity.changedBy,
-            request.opportunity.changedBy,
+            authenticated_actor(),
+            authenticated_actor(),
         )
 
         _insert_quote_history_row(
@@ -301,7 +302,7 @@ def create_quote(request: QuoteCreateRequest) -> QuoteCreateResponse:
                 context=context,
                 request=request,
                 pricing=pricing,
-                changed_by=request.opportunity.changedBy,
+                changed_by=authenticated_actor(),
             ),
         )
 
@@ -386,8 +387,8 @@ def revise_quote(quote_id: UUID, request: QuoteReviseRequest) -> QuoteCreateResp
             """,
             str(new_quote_id),
             str(opportunity_id),
-            request.changedBy,
-            request.changedBy,
+            authenticated_actor(),
+            authenticated_actor(),
         )
 
         _insert_quote_history_row(
@@ -399,7 +400,7 @@ def revise_quote(quote_id: UUID, request: QuoteReviseRequest) -> QuoteCreateResp
                 context=context,
                 request=request,
                 pricing=pricing,
-                changed_by=request.changedBy,
+                changed_by=authenticated_actor(),
             ),
         )
 
@@ -416,7 +417,7 @@ def revise_quote(quote_id: UUID, request: QuoteReviseRequest) -> QuoteCreateResp
             str(pricing.finalPrice),
             str(pricing.expectedMarginPct),
             str(pricing.score),
-            request.changedBy,
+            authenticated_actor(),
         ]
         if "ContractTermMonths" in available_columns:
             update_sql += ", ContractTermMonths = ?"

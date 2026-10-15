@@ -7,11 +7,11 @@ from app.main import app
 from app.services import billing_facts, sales
 from app.services.authz import issue_demo_role_token
 
-client = TestClient(app)
+client = TestClient(app, headers={"authorization": f"Bearer {issue_demo_role_token('Admin')['token']}"})
 
 
 def principal(tenant="test-tenant", role="Admin"):
-    return {"x-ms-client-principal": base64.b64encode(json.dumps({"auth_typ": "aad", "role_typ": "roles", "claims": [{"typ": "tid", "val": tenant}, {"typ": "roles", "val": role}]}).encode()).decode()}
+    return {"x-ms-client-principal": base64.b64encode(json.dumps({"auth_typ": "aad", "role_typ": "roles", "claims": [{"typ": "oid", "val": "test-owner"}, {"typ": "tid", "val": tenant}, {"typ": "roles", "val": role}]}).encode()).decode()}
 
 
 def test_customers_route_with_database_mocked(monkeypatch):
@@ -50,7 +50,7 @@ def test_invalid_facts_requests(path):
 
 
 def test_entra_ignores_demo_token_and_role_header(monkeypatch):
-    token = issue_demo_role_token("Admin")["token"]
+    token = issue_demo_role_token('Admin')['token']
     monkeypatch.setenv("PLATFORM_AUTH_MODE", "entra")
     monkeypatch.setenv("ENTRA_TENANT_ID", "test-tenant")
     response = client.get("/api/auth/me", headers={"authorization": f"Bearer {token}", "x-user-role": "Admin"})

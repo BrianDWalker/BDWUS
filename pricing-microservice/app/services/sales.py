@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.services.authz import authenticated_actor
+
 import json
 import uuid
 import threading
@@ -1119,7 +1121,7 @@ def convert_lead(lead_id: uuid.UUID, payload: dict[str, Any]):
                 opportunity_id,
                 "Conversion",
                 f"Lead converted from {lead.LeadNumber}.",
-                trim(payload.get("approvedBy")) or lead.OwnerName,
+                trim(authenticated_actor()) or lead.OwnerName,
             ),
         )
     invalidate_bootstrap_cache()
@@ -1149,7 +1151,7 @@ def create_lead_activity(lead_id: uuid.UUID, payload: dict[str, Any]):
             trim(payload.get("outcome")) or "Logged",
             trim(payload.get("notes")) or trim(payload.get("summary")) or "",
             trim(payload.get("nextStep")) or "",
-            trim(payload.get("createdBy")) or "Admin",
+            trim(authenticated_actor()) or "Admin",
         ),
     )
     return get_lead_activities(lead_id)
@@ -1418,7 +1420,7 @@ def create_opportunity_note(opportunity_id: uuid.UUID, payload: dict[str, Any]):
             str(opportunity_id),
             trim(payload.get("noteType")) or "General",
             trim(payload.get("note")) or "",
-            trim(payload.get("createdBy")) or "Admin",
+            trim(authenticated_actor()) or "Admin",
         ),
     )
     return get_opportunity_notes(opportunity_id)
@@ -1453,7 +1455,7 @@ def create_custom_pricing(payload: dict[str, Any]):
             payload.get("requestNumber") or f"CPR-{request_id[:4].upper()}",
             trim(payload.get("status")) or "Draft",
             trim(payload.get("reason")) or "",
-            trim(payload.get("requestedBy")) or "Admin",
+            trim(authenticated_actor()) or "Admin",
         ),
     )
     return get_custom_pricing(uuid.UUID(request_id))
@@ -1474,7 +1476,7 @@ def update_custom_pricing(request_id: uuid.UUID, payload: dict[str, Any]):
             payload.get("opportunityId", current.get("OpportunityId")),
             trim(payload.get("status", current.get("Status"))),
             trim(payload.get("reason", current.get("Reason"))),
-            trim(payload.get("requestedBy", current.get("RequestedBy"))),
+            trim(authenticated_actor()),
             str(request_id),
         ),
     )
@@ -1510,7 +1512,7 @@ def submit_custom_pricing(request_id: uuid.UUID, payload: dict[str, Any] | None 
             "Pricing",
             "Review",
             "Pending",
-            trim((payload or {}).get("requestedBy")) or request.get("RequestedBy") or "Admin",
+            trim(authenticated_actor()) or request.get("RequestedBy") or "Admin",
         ),
     )
     return get_custom_pricing(request_id)
@@ -1781,7 +1783,7 @@ def submit_quote_approval(quote_id: uuid.UUID, payload: dict[str, Any]):
             "Pricing",
             "Review",
             "Pending",
-            trim(payload.get("requestedBy")) or "Pricing Desk",
+            trim(authenticated_actor()) or "Pricing Desk",
             trim(payload.get("requestedChanges")),
         ),
     )
@@ -1869,14 +1871,14 @@ def reject_entity(approval: dict[str, Any], rejected_by: str | None = None) -> d
 def approve_approval(approval_id: uuid.UUID, payload: dict[str, Any]):
     ensure_sales_storage()
     approval = get_approval(approval_id)
-    return approve_entity(approval, trim(payload.get("approvedBy")) or "Admin")
+    return approve_entity(approval, trim(authenticated_actor()) or "Admin")
 
 
 @router.post("/approvals/{approval_id}/reject")
 def reject_approval(approval_id: uuid.UUID, payload: dict[str, Any]):
     ensure_sales_storage()
     approval = get_approval(approval_id)
-    return reject_entity(approval, trim(payload.get("approvedBy")) or "Admin")
+    return reject_entity(approval, trim(authenticated_actor()) or "Admin")
 
 
 @router.post("/approvals/{approval_id}/request-changes")
@@ -1986,7 +1988,7 @@ def create_contract_file(contract_id: uuid.UUID, payload: dict[str, Any]):
         (ContractHistoryId, ContractId, EventType, Notes, CreatedBy)
         VALUES (?, ?, ?, ?, ?)
         """,
-        (str(uuid.uuid4()), str(contract_id), "FileUploaded", trim(payload.get("notes")) or "File metadata uploaded.", trim(payload.get("createdBy")) or "Admin"),
+        (str(uuid.uuid4()), str(contract_id), "FileUploaded", trim(payload.get("notes")) or "File metadata uploaded.", trim(authenticated_actor()) or "Admin"),
     )
     return get_contract_files(contract_id)
 

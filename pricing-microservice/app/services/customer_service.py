@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.services.authz import authenticated_actor
+
 import threading
 import uuid
 from typing import Any
@@ -287,7 +289,7 @@ def create_ticket(payload: dict[str, Any]) -> dict[str, Any]:
         "EscalationLevel": payload.get("escalationLevel") or "Tier 1",
         "SlaTargetHours": payload.get("slaTargetHours") or 24,
         "ClosureReason": payload.get("closureReason"),
-        "CreatedBy": payload.get("createdBy") or "Care Ops",
+        "CreatedBy": authenticated_actor() or "Care Ops",
         "CreatedAtUtc": smoke_data.utc_now_iso(),
     }
     if smoke_data.smoke_mode_enabled():
@@ -369,7 +371,7 @@ def update_ticket(ticket_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         if payload.get("note"):
             cur.execute(
                 "INSERT INTO care.TicketNotes (TicketNoteId, TicketId, NoteType, Note, CreatedBy) VALUES (?, ?, ?, ?, ?)",
-                (str(uuid.uuid4()), current["TicketId"], payload.get("noteType") or "Update", payload["note"], payload.get("createdBy") or "Care Ops"),
+                (str(uuid.uuid4()), current["TicketId"], payload.get("noteType") or "Update", payload["note"], authenticated_actor() or "Care Ops"),
             )
     return _require_ticket(str(current["TicketId"]))
 
@@ -383,7 +385,7 @@ def add_ticket_note(ticket_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         ticket = _find_smoke_ticket(ticket_id)
         if not ticket:
             raise HTTPException(status_code=404, detail="Ticket not found.")
-        return _add_note(ticket.get("TicketId"), note, payload.get("noteType") or "Comment", payload.get("createdBy") or "Care Ops")
+        return _add_note(ticket.get("TicketId"), note, payload.get("noteType") or "Comment", authenticated_actor() or "Care Ops")
     ensure_customer_service_storage()
     ticket = _require_ticket(ticket_id)
-    return _add_note(str(ticket["TicketId"]), note, payload.get("noteType") or "Comment", payload.get("createdBy") or "Care Ops")
+    return _add_note(str(ticket["TicketId"]), note, payload.get("noteType") or "Comment", authenticated_actor() or "Care Ops")
