@@ -14,6 +14,7 @@ import {
   createQuote,
   createQuoteLineItem,
   convertLead,
+  convertQuoteToOrder,
   deleteLead,
   deleteOpportunity,
   deleteOpportunityProduct,
@@ -1441,6 +1442,8 @@ export function SalesQuoteDetail({ id, setRoute, showToast }) {
   const [priceModal, setPriceModal] = useState(false);
   const [approvalModal, setApprovalModal] = useState(false);
   const [contractModal, setContractModal] = useState(false);
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const [orderError, setOrderError] = useState("");
   const [lineItemModal, setLineItemModal] = useState(null);
   const [selectedLineItem, setSelectedLineItem] = useState(null);
 
@@ -1539,16 +1542,31 @@ export function SalesQuoteDetail({ id, setRoute, showToast }) {
       {contractModal && (
         <Modal
           title="Create order"
-          subtitle="Begin entering order details."
+          subtitle="Save an order linked to this approved quote."
           onClose={() => setContractModal(false)}
           actions={(
             <>
-              <button className="button" type="button" onClick={() => { showToast("Order creation started"); setRoute("orders"); }}>Create</button>
+              <button className="button" type="button" disabled={creatingOrder} onClick={async () => {
+                setCreatingOrder(true);
+                setOrderError("");
+                try {
+                  const result = await convertQuoteToOrder(id);
+                  if (!result?.order?.OrderId) throw new Error("The order was not returned. Please retry.");
+                  showToast("Order saved");
+                  setContractModal(false);
+                  setRoute("orders");
+                } catch (error) {
+                  setOrderError(error.message || "Unable to save the order. Please retry.");
+                } finally {
+                  setCreatingOrder(false);
+                }
+              }}>{creatingOrder ? "Saving…" : "Create"}</button>
               <button className="ghost-button" type="button" onClick={() => setContractModal(false)}>Cancel</button>
             </>
           )}
         >
-          <p>This starts the order flow from the quote.</p>
+          <p>The order will be saved before opening Orders. Retrying returns the same order.</p>
+          {orderError && <p role="alert">{orderError}</p>}
         </Modal>
       )}
       {lineItemModal && (

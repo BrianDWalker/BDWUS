@@ -74,3 +74,49 @@ def test_convert_quote_to_order_requires_approved_quote(monkeypatch):
 
     assert exc_info.value.status_code == 400
     assert "approved" in exc_info.value.detail.lower()
+
+
+def test_repeated_and_concurrent_conversion_returns_one_order(monkeypatch):
+    from contextlib import contextmanager
+    from threading import Lock
+    from concurrent.futures import ThreadPoolExecutor
+    lock = Lock()
+    orders = {}
+    inserts = []
+    quote_id = uuid.uuid4()
+    monkeypatch.setattr(sales_compat, "ensure_sales_storage", lambda: None)
+    monkeypatch.setattr(sales_compat, "ensure_ops_storage", lambda: None)
+    monkeypatch.setattr(sales_compat, "get_view_row", lambda *args: {"ApprovalStatus": "Approved"})
+    payload = {key: "value" for key in ("orderNumber", "customerNumber", "accountName", "serviceName", "lifecycleStage", "overallStatus", "slaStatus", "dueDate", "assignedTeam", "circuitId", "location", "sourceQuoteNumber", "sourceOpportunityId", "quoteApprovalStatus")}
+    monkeypatch.setattr(sales_compat, "_quote_order_payload", lambda *args: payload)
+    class Cursor:
+        description = [("OrderId",), ("SourceQuoteId",)]
+        def execute(self, sql, params):
+            if "UPDLOCK, HOLDLOCK" in sql:
+                self.result = ("Approved",)
+            elif "INSERT INTO ops.Orders" in sql:
+                assert "SourceQuoteId" in sql
+                inserts.append(params)
+                orders[params[1]] = (params[0], params[1])
+                self.result = None
+            elif "WHERE SourceQuoteId" in sql:
+                self.result = orders.get(params[0])
+            else:
+                self.result = next(row for row in orders.values() if row[0] == params[0])
+            return self
+        def fetchone(self):
+            return self.result
+    class Connection:
+        def cursor(self):
+            return Cursor()
+    @contextmanager
+    def transaction():
+        with lock:
+            yield Connection()
+    monkeypatch.setattr(sales_compat, "sql_transaction", transaction)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: sales_compat.convert_quote_to_order(quote_id, {}), range(2)))
+    third = sales_compat.convert_quote_to_order(quote_id, {})
+    assert len(inserts) == 1
+    assert results[0]["order"] == results[1]["order"] == third["order"]
+    assert third["order"]["SourceQuoteId"] == str(quote_id)
