@@ -10,15 +10,14 @@ function salesUrl(path) {
 }
 
 async function requestJson(path, options = {}) {
-  const method = (options.method || "GET").toUpperCase();
-  const authHeaders = ["GET", "HEAD", "OPTIONS"].includes(method) ? {} : await roleAuthHeaders(salesApiBase);
+  const authHeaders = await roleAuthHeaders(salesApiBase);
   const response = await fetchWithTimeout(salesUrl(path), {
+    ...options,
     headers: {
       "Content-Type": "application/json",
-      ...authHeaders,
-      ...(options.headers || {})
-    },
-    ...options
+      ...(options.headers || {}),
+      ...authHeaders
+    }
   });
   if (!response.ok) {
     const message = await response.text().catch(() => "");

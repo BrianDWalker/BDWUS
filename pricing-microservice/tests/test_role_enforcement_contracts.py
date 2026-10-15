@@ -137,3 +137,25 @@ def test_bootstrap_does_not_bypass_read_permissions():
     payload = {"generatedAtUtc": "now", "dashboard": {}, "customers": [], "quotes": ["secret"], "users": ["secret"], "roles": ["secret"], "unknown": ["secret"]}
     assert set(filter_bootstrap(payload, "Care")) == {"generatedAtUtc", "dashboard", "customers"}
     assert set(filter_bootstrap(payload, "Viewer")) == {"generatedAtUtc"}
+
+
+def test_cors_preflight_reaches_cors_without_granting_api_access():
+    client = TestClient(app)
+    response = client.options("/api/ops/orders", headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "authorization,content-type"})
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert client.post("/api/ops/orders", json={}).status_code == 403
+    assert client.options("/api/ops/orders", headers={"Origin": "https://unapproved.example", "Access-Control-Request-Method": "POST"}).status_code == 400
+
+
+def test_edit_preserves_original_requester(monkeypatch):
+    from app.services import sales
+    from uuid import uuid4
+    values = []
+    monkeypatch.setattr(sales, "ensure_sales_storage", lambda: None)
+    monkeypatch.setattr(sales, "get_custom_pricing", lambda _: {"RequestedBy": "original-owner"})
+    monkeypatch.setattr(sales, "execute", lambda sql, params: values.append(params))
+    monkeypatch.setattr(sales, "get_view_row", lambda *args: {})
+    sales.update_custom_pricing(uuid4(), {"requestedBy": "forged-editor"})
+    assert "original-owner" in values[0]
+    assert "forged-editor" not in values[0]
