@@ -12,7 +12,7 @@ from app.services.sql_access import sql_transaction
 
 
 router = APIRouter(prefix="/api/test-support", tags=["test-support"])
-TEST_SUPPORT_ENABLED = os.getenv("ENABLE_TEST_SUPPORT_API", "true").lower() in {"1", "true", "yes"}
+TEST_SUPPORT_ENABLED = os.getenv("ENABLE_TEST_SUPPORT_API", "false").lower() in {"1", "true", "yes"}
 
 
 def _require_test_support() -> None:
