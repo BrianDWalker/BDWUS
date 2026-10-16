@@ -110,3 +110,4 @@ def test_repeated_and_concurrent_conversion_returns_one_order(monkeypatch):
     assert len(inserts) == 1
     assert results[0]["order"] == results[1]["order"] == third["order"]
     assert third["order"]["SourceQuoteId"] == str(quote_id)
+    assert third["source"] == {"QuoteId": str(quote_id), "QuoteNumber": None, "OpportunityId": None, "ApprovalStatus": None}
