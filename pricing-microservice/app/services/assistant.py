@@ -783,6 +783,11 @@ def normalize_github_files_patch(github: dict[str, Any]) -> list[dict[str, str]]
     deduped: dict[str, str] = {}
     for item in files:
         deduped[item["filePath"]] = item["content"]
+    paths = set(deduped)
+    for file_path in paths:
+        parts = file_path.split("/")
+        if any("/".join(parts[:index]) in paths for index in range(1, len(parts))):
+            raise ValueError("GitHub file paths cannot include both a file and its descendants")
     return [
         {"filePath": file_path, "content": content}
         for file_path, content in deduped.items()

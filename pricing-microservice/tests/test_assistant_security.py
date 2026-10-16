@@ -224,3 +224,17 @@ def test_locally_invalid_lead_fields_are_rejected(draft):
 def test_commit_message_falls_back_to_title_only_for_absent_or_empty_text():
     assert assistant.github_commit_message({}, "Proposal title") == "Proposal title"
     assert assistant.github_commit_message({"commitMessage": ""}, "Proposal title") == "Proposal title"
+
+
+@pytest.mark.parametrize("paths", [["dir", "dir/file.txt"], ["a/b/c.txt", "a"], ["a/b", "a/b/c.txt"]])
+def test_ancestor_conflicting_files_are_rejected_before_claim(monkeypatch, paths):
+    monkeypatch.setenv("ASSISTANT_ALLOWED_REPOSITORIES", "BrianDWalker/BDWUS")
+    monkeypatch.setattr(assistant, "ensure_ai_storage", lambda: None)
+    record = SimpleNamespace(status="Proposed", kind="github_update", title="Demo", patch={"github": {"repository": "BrianDWalker/BDWUS", "branch": "main", "files": [{"path": p, "content": "demo"} for p in paths]}})
+    monkeypatch.setattr(assistant, "get_change_request", lambda _: record)
+    monkeypatch.setattr(assistant, "claim_change_request", lambda _: pytest.fail("conflicting paths must not be claimed"))
+    with pytest.raises(HTTPException) as error:
+        assistant.approve_change_request(uuid4(), SimpleNamespace())
+    assert error.value.status_code == 400
+    assert "descendants" in error.value.detail
+    assert record.status == "Proposed"
