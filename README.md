@@ -29,7 +29,7 @@ flowchart LR
   Portal --> Insights[Per-environment App Insights]
   Insights --> Logs[Existing AXIOM Log Analytics]
   Env[Per-environment consumption environment] --> Logs
-  Registry[Existing AXIOM registry] -->|managed identity image pull| Portal
+  Registry[BDWUS bdwuscr registry] -->|managed identity image pull| Portal
   Actions[GitHub OIDC / approved environment] --> Portal
 ```
 
@@ -65,7 +65,7 @@ Default monthly budgets are $10 dev and $25 prod, with actual 80%/100% and forec
 
 [.env.example](.env.example) lists nonsecret settings with empty values. It is an inventory, not a ready-to-source environment. Set only needed values; blank numeric overrides cause validation errors. Never place secrets in .env or azd files. All VITE_ values are public build settings; use their same-origin defaults in deployment.
 
-Per-environment vault names come from azd output AZURE_KEY_VAULT_NAME. Store **entra-client-secret** in each environment vault; Container Apps references it through managed identity. **github-token** is optional, for assistant repository operations, and is read directly from that vault by managed identity. No SQL password, storage key, registry password or AI API key is required. Do not copy AXIOM broker secrets. Configure/rotate secrets using the Azure portal after approval. Runtime managed identities need AcrPull and Key Vault Secrets User; reviewed SQL roles grant data access without DDL rights. Optional Azure AI access uses managed identity and needs a separately approved role/deployment.
+Per-environment vault names come from azd output AZURE_KEY_VAULT_NAME. Store **entra-client-secret** in each environment vault; Container Apps references it through managed identity. **github-token** is optional, for assistant repository operations, and is read directly from that vault by managed identity. No SQL password, storage key, registry password or AI API key is required. Do not copy AXIOM broker secrets. Configure/rotate secrets using the Azure portal after approval. Runtime managed identities need repository-scoped Container Registry Repository Reader on bdwuscr and Key Vault Secrets User; reviewed SQL roles grant data access without DDL rights. Optional Azure AI access uses managed identity and needs a separately approved role/deployment.
 
 ## Owner-approved deployment sequence — commands to review, not run yet
 
@@ -98,9 +98,9 @@ Foundations create the dev database, identity, vault, consumption environment, I
 After the required setup and approval:
 
 ```sh
-az acr login --name crfinancialadvisor8a42vuti2u
-docker build --platform linux/amd64 -t crfinancialadvisor8a42vuti2u.azurecr.io/bdwus-portal:<reviewed-commit-sha> .
-docker push crfinancialadvisor8a42vuti2u.azurecr.io/bdwus-portal:<reviewed-commit-sha>
+az acr login --name bdwuscr
+docker build --platform linux/amd64 -t bdwuscr.azurecr.io/bdwus-portal:<reviewed-commit-sha> .
+docker push bdwuscr.azurecr.io/bdwus-portal:<reviewed-commit-sha>
 azd env set DEPLOY_PORTAL true
 # First app creation is private while Easy Auth is installed.
 azd provision
