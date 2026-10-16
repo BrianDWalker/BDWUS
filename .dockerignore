@@ -11,3 +11,6 @@
 **/test-results
 **/playwright-report
 billing-demo/seed_output
+
+# Local Databricks connection state is unrelated to the portal image.
+**/.databricks

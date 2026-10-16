@@ -1,12 +1,12 @@
 # BDWUS Azure deployment plan
 
-Status: Deployed — dev/prod portals live; interactive owner sign-in awaits password/MFA.
+Status: Deployed — dev/prod portals live; initial owner sign-in confirmed successful.
 
 Prepared 12 October 2026 from the attached owner-approved seven-part scope. Owner explicitly approved all prepared changes on 12 October 2026. Foundation provisioning and approved SQL changes are complete. The existing production database, shared AXIOM resources and legacy hosting resources are retained. Work is isolated in an attached worktree; original local UI edits remain untouched.
 
 ## Architecture and recipe
 
-Modernize React 19/Vite + FastAPI using Bicep and azd. One Container App serves the UI and /api. Separate dev/prod resource groups, consumption environments/apps, user-assigned identities, Key Vault and App Insights. minReplicas=0, maxReplicas=1, 0.5 vCPU / 1 GiB. The old assistant remains source-only; portal routes already provide that function. AI is disabled until separately approved. Data API builder is unnecessary for the current business API.
+Modernize React 19/Vite + FastAPI using Bicep and azd. One Container App serves the UI and /api. Separate dev/prod resource groups, consumption environments/apps, user-assigned identities, Key Vault and App Insights. minReplicas=0, maxReplicas=1, 0.5 vCPU / 1 GiB. The unused separate assistant-service is removed in the follow-up; portal assistant routes remain in the FastAPI app. AI is disabled until separately approved. Data API builder is unnecessary for the current business API.
 
 Follow AXIOM's subscription entry point, resources modules and azd portal structure; AXIOM has no standalone shared template. Reference, never recreate, its registry and workspace by resource ID:
 
@@ -75,7 +75,7 @@ Local checks, live provisioning previews and deployments completed under the own
 | SQL catalog and API data | Captured schema, built dev, 8 API reads each environment | Pass after prod resumed; existing production data retained |
 | Azure live validation | Foundation and dev portal previews/package | Pass; foundations, private bootstrap and public ingress provisioned |
 
-Interactive Microsoft sign-in remains a human authentication check; no access-policy or deployment approval is pending.
+The owner confirmed successful initial Microsoft sign-in. The security follow-up remains preparation-only and requires specific approval before any new Azure changes.
 
 ## Estimated monthly costs
 
@@ -93,7 +93,7 @@ Additional execution evidence: dev/prod each passed eight live SQL-backed API re
 
 Both long-running foundation deployments and Container Apps environments reached Succeeded. Runtime AcrPull assignments are present. Automatic App Insights alerts were repaired after registering Microsoft.AlertsManagement. Dev azd foundation completion restored saved initial settings; these were detected before app creation and corrected to the actual Entra client ID, DEPLOY_PORTAL=true and PORTAL_PUBLIC_INGRESS=false. Fresh dev private-app preview passed (20 seconds), and production private-app preview passed (18 seconds).
 
-Dev and production private bootstrap and public ingress deployments succeeded. Easy Auth tenant/client/audience settings were verified before public ingress. Both managed identities read the correct SQL database and billing views, with SELECT=1, CREATE TABLE=0 and db_owner=0. Production SQL resumed from auto-pause on retry. Dev runtime HTTP checks passed: Admin identity, wrong-tenant 401, Viewer mutation 403, SPA 200 and eight SQL-backed APIs 200. These loopback diagnostics exercise application behavior; they do not replace an actual owner browser sign-in. Public browser navigation reached Microsoft sign-in; owner password/MFA is needed to complete that check. Fresh browser-style unauthenticated and forged-header requests redirect to sign-in. Non-browser clients can receive the platform Bearer challenge (401).
+Dev and production private bootstrap and public ingress deployments succeeded. Easy Auth tenant/client/audience settings were verified before public ingress. Both managed identities read the correct SQL database and billing views, with SELECT=1, CREATE TABLE=0 and db_owner=0. Production SQL resumed from auto-pause on retry. Dev runtime HTTP checks passed: Admin identity, wrong-tenant 401, Viewer mutation 403, SPA 200 and eight SQL-backed APIs 200. These loopback diagnostics exercise application behavior; they do not replace an actual owner browser sign-in. Public browser navigation reached Microsoft sign-in; the owner subsequently confirmed successful sign-in. Fresh browser-style unauthenticated and forged-header requests redirect to sign-in. Non-browser clients can receive the platform Bearer challenge (401).
 
 Production runtime HTTP checks also passed Admin/wrong-tenant/Viewer authorization, SPA and all eight SQL-backed API reads. Production public /health is 200; portal/API browser requests, including forged platform identity headers, return Microsoft sign-in redirects. GitHub dev workflow [38395456218](https://github.com/BrianDWalker/BDWUS/actions/runs/38395456218) succeeded through OIDC login, shared-registry build/push and Container App update. Production workflow [38395679316](https://github.com/BrianDWalker/BDWUS/actions/runs/38395679316) also succeeded: owner review recorded using the authenticated owner account under the explicit chat approval, reviewer-policy verification, OIDC login, image push and app update. Both environments run image tag `8314bd8dd001d33938e14b50b86d4d28cd90aff6`. Dev runtime API checks passed again after the GitHub rollout.
 
@@ -102,3 +102,7 @@ Production runtime HTTP checks also passed Admin/wrong-tenant/Viewer authorizati
 Status: Preparation authorized; Azure changes and deployment NOT authorized.
 
 Owner requests security-first follow-up PRs: deny-by-default route/actor authorization, assistant boundaries/idempotency, quote conversion and modal fixes, deployment identity Bicep proposals, legacy/docs/SEO cleanup, a lean CI proposal, explicit production demo-data proposal, branch audit and read-only live inventory. Every PR requires Codex review; findings must be fixed or answered before merge. App PR merges would trigger Azure dev deployment, so keep PRs open until the owner approves a specific Azure change list. No Azure mutations, branch deletions, production data changes or branch-protection activation in this follow-up.
+
+## Follow-up status — 15 October 2026
+
+The owner reported “it worked” for initial interactive sign-in. Legacy assistant-service source and stale handoff notes are removed in the cleanup PR. The portal assistant is retained in pricing-microservice. Security follow-up PRs and infrastructure/data proposals are not merged or deployed: no Azure changes, Azure resource or branch deletions, production data load, or branch-protection activation are authorized in this follow-up.

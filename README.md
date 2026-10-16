@@ -2,7 +2,7 @@
 
 BDWUS is a telecom operations portal for customer accounts, product and rate-plan pricing, sales quotes/opportunities, billing, care and service operations. React 19 + Vite provides the UI; FastAPI provides pricing and SQL-backed workflows. Azure SQL remains the system of record.
 
-**Deployment is not authorized yet.** These PRs prepare the move from Static Web Apps to Container Apps. No Azure resources, Entra objects, SQL schemas or data have been changed. Production schema parity and real subscriptions/payment/usage views remain unverified because the read-only SQL catalog connection timed out. See [SQL review](docs/database-review.md) and [data sources](docs/data-source-status.md).
+**Dev and production are deployed** behind tenant-restricted Entra sign-in on Azure Container Apps. The owner confirmed initial sign-in worked. Dev has seeded demo records; production billing facts are empty until a separately approved data load. The October security follow-up PRs are prepared and are not deployed; their merges would trigger dev deployment and require specific owner approval. See [SQL review](docs/database-review.md), [data sources](docs/data-source-status.md).
 
 ## Repository
 
@@ -10,7 +10,6 @@ BDWUS is a telecom operations portal for customer accounts, product and rate-pla
 | --- | --- |
 | web-ui | React portal and Playwright tests |
 | pricing-microservice | FastAPI, pricing calculations, managed-identity SQL connection, versioned SQL and mocked tests |
-| assistant-service | Legacy separate assistant; retained source, excluded from the proposed deployment because equivalent routes are in the portal API |
 | infra | Bicep foundations, portal, SQL references and access assignments |
 | azure.yaml | azd portal service and Bicep configuration |
 | scripts/local_checks.py | Local checks, no cloud calls |
@@ -67,11 +66,11 @@ Default monthly budgets are $10 dev and $25 prod, with actual 80%/100% and forec
 
 Per-environment vault names come from azd output AZURE_KEY_VAULT_NAME. Store **entra-client-secret** in each environment vault; Container Apps references it through managed identity. **github-token** is optional, for assistant repository operations, and is read directly from that vault by managed identity. No SQL password, storage key, registry password or AI API key is required. Do not copy AXIOM broker secrets. Configure/rotate secrets using the Azure portal after approval. Runtime managed identities need AcrPull and Key Vault Secrets User; reviewed SQL roles grant data access without DDL rights. Optional Azure AI access uses managed identity and needs a separately approved role/deployment.
 
-## Owner-approved deployment sequence — commands to review, not run yet
+## Deployment reference — initial rollout completed
 
-[Entra/GitHub setup](docs/entra-owner-steps.md) describes single-tenant registrations, user assignment, callback URIs, role claims, secret names and OIDC trust. Owner-approved dev/prod registrations, owner Admin assignments and vault credentials are configured. Configure prod GitHub with the owner as its sole required reviewer before enabling deployments. Keep BDWUS_DEPLOY_APPROVED unset until explicit deployment authorization.
+[Entra/GitHub setup](docs/entra-owner-steps.md) describes single-tenant registrations, user assignment, callback URIs, role claims, secret names and OIDC trust. Owner-approved dev/prod registrations, owner Admin assignments and vault credentials are configured. Production already requires the owner as reviewer, and BDWUS_DEPLOY_APPROVED=true is already set. Changes to that policy or future deployments require the applicable owner approval.
 
-After explicit approval, configure each azd environment (repeat with prod):
+The initial rollout and its settings are complete. The commands below are recreation/maintenance reference, not outstanding setup. Re-run only for a specifically approved change, in the intended environment (example dev; repeat deliberately for prod):
 
 ```sh
 azd env new dev --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10 --location eastus
@@ -125,12 +124,12 @@ npm --prefix web-ui run lint
 npm --prefix web-ui run build
 ```
 
-Hooks run Ruff, ESLint, redacted gitleaks, Vite production build and pytest. Tests mock SQL and forbid acquiring Azure credentials or real connections. Monthly grouped Dependabot covers npm, pip, Actions and Docker. Run legacy assistant tests separately with `cd assistant-service && ../.venv/bin/python -m pytest tests -q -o pythonpath=.` after installing its requirements.
+Hooks run Ruff, ESLint, redacted gitleaks, Vite production build and pytest. Tests mock SQL and forbid acquiring Azure credentials or real connections. Monthly grouped Dependabot covers npm, pip, Actions and Docker.
 
 ## Costs and deployment status
 
 See [read-only inventory and cost report](docs/azure-owner-review.md). September observed BDWUS cost was about $5, mostly its separate registry; SQL was $0. Low-traffic incremental planning ranges are $0–10/month dev and $0–25/month prod, excluding shared AXIOM baseline costs, retained old resources, optional AI and egress. Container Apps free grants are subscription-wide and shared with AXIOM; logging is metered. These estimates are not billing caps.
 
-Owner approval received and executed on 12–13 October 2026: dev/prod resources, production catalog reconciliation, dev schema/seed, additive billing SQL, runtime grants, assignment-required Entra apps, owner Admin assignments, Key Vault credentials and GitHub OIDC environments are configured. Both portals are live behind Easy Auth. The repository deployment approval flag is enabled. Microsoft password/MFA sign-in must be completed by the owner for the final interactive sign-in check. Never use azd down to clean up the existing production data or shared AXIOM resources.
+Owner approval received and executed on 12–13 October 2026: dev/prod resources, production catalog reconciliation, dev schema/seed, additive billing SQL, runtime grants, assignment-required Entra apps, owner Admin assignments, Key Vault credentials and GitHub OIDC environments are configured. Both portals are live behind Easy Auth. The repository deployment approval flag is enabled. The owner confirmed initial Microsoft sign-in succeeded. Never use azd down to clean up the existing production data or shared AXIOM resources.
 
 Live portals: [dev](https://ca-bdwus-dev.politesmoke-b8649377.eastus.azurecontainerapps.io) · [production](https://ca-bdwus-prod.happytree-d3cda5bf.eastus.azurecontainerapps.io). See [.azure/deployment-plan.md](.azure/deployment-plan.md) for validation evidence and workflow results.
