@@ -143,7 +143,7 @@ function money(value) {
   return Number.isNaN(num) ? "$0" : formatMoney(num);
 }
 
-function Modal({ title, subtitle, children, actions, onClose }) {
+function Modal({ title, subtitle, children, actions, onClose, busy = false }) {
   return (
     <div className="modal-backdrop">
       <section className="modal workflow-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -152,7 +152,7 @@ function Modal({ title, subtitle, children, actions, onClose }) {
             <strong id="modalTitle">{title}</strong>
             <span>{subtitle || "Telecom sales workflow"}</span>
           </div>
-          <button className="icon-close" type="button" onClick={onClose}>x</button>
+          <button className="icon-close" type="button" disabled={busy} onClick={onClose}>x</button>
         </div>
         {children}
         <div className="modal-actions">{actions}</div>
@@ -1543,7 +1543,8 @@ export function SalesQuoteDetail({ id, setRoute, showToast }) {
         <Modal
           title="Create order"
           subtitle="Save an order linked to this approved quote."
-          onClose={() => setContractModal(false)}
+          busy={creatingOrder}
+          onClose={() => { if (!creatingOrder) setContractModal(false); }}
           actions={(
             <>
               <button className="button" type="button" disabled={creatingOrder} onClick={async () => {
@@ -1561,7 +1562,7 @@ export function SalesQuoteDetail({ id, setRoute, showToast }) {
                   setCreatingOrder(false);
                 }
               }}>{creatingOrder ? "Saving…" : "Create"}</button>
-              <button className="ghost-button" type="button" onClick={() => setContractModal(false)}>Cancel</button>
+              <button className="ghost-button" type="button" disabled={creatingOrder} onClick={() => setContractModal(false)}>Cancel</button>
             </>
           )}
         >

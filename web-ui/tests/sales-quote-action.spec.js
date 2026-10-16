@@ -66,3 +66,24 @@ test("failed order save stays in modal with retry", async ({ page }) => {
   await expect(page).toHaveURL(/#\/details\/quote/);
   await expect(page.getByRole("button", { name: "Create", exact: true })).toBeEnabled();
 });
+
+
+test("saving an order disables cancel and close until the result arrives", async ({ page }) => {
+  await mockSalesApis(page);
+  await page.route("**/api/auth/me", route => route.fulfill({ json: { role: "Admin" } }));
+  let finish;
+  const pending = new Promise(resolve => { finish = resolve; });
+  await page.route("**/api/sales/quotes/quote-1/convert-to-order", async route => {
+    await pending;
+    await route.fulfill({ json: { order: { OrderId: "order-1" } } });
+  });
+  await page.goto("/#/details/quote/quote-1");
+  await page.getByRole("button", { name: "Create Order", exact: true }).click();
+  await page.getByRole("button", { name: "Create", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Create order", exact: true });
+  await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "x", exact: true })).toBeDisabled();
+  await expect(dialog.getByRole("button", { name: "Saving…", exact: true })).toBeDisabled();
+  finish();
+  await expect(page).toHaveURL(/#\/orders/);
+});
