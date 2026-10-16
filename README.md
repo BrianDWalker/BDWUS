@@ -28,7 +28,7 @@ flowchart LR
   Portal --> Insights[Per-environment App Insights]
   Insights --> Logs[Existing AXIOM Log Analytics]
   Env[Per-environment consumption environment] --> Logs
-  Registry[Existing AXIOM registry] -->|managed identity image pull| Portal
+  Registry[BDWUS bdwuscr registry] -->|managed identity image pull| Portal
   Actions[GitHub OIDC / approved environment] --> Portal
 ```
 
@@ -64,7 +64,7 @@ Default monthly budgets are $10 dev and $25 prod, with actual 80%/100% and forec
 
 [.env.example](.env.example) lists nonsecret settings with empty values. It is an inventory, not a ready-to-source environment. Set only needed values; blank numeric overrides cause validation errors. Never place secrets in .env or azd files. All VITE_ values are public build settings; use their same-origin defaults in deployment.
 
-Per-environment vault names come from azd output AZURE_KEY_VAULT_NAME. Store **entra-client-secret** in each environment vault; Container Apps references it through managed identity. **github-token** is optional, for assistant repository operations, and is read directly from that vault by managed identity. No SQL password, storage key, registry password or AI API key is required. Do not copy AXIOM broker secrets. Configure/rotate secrets using the Azure portal after approval. Runtime managed identities need AcrPull and Key Vault Secrets User; reviewed SQL roles grant data access without DDL rights. Optional Azure AI access uses managed identity and needs a separately approved role/deployment.
+Per-environment vault names come from azd output AZURE_KEY_VAULT_NAME. Store **entra-client-secret** in each environment vault; Container Apps references it through managed identity. **github-token** is optional, for assistant repository operations, and is read directly from that vault by managed identity. No SQL password, storage key, registry password or AI API key is required. Do not copy AXIOM broker secrets. Configure/rotate secrets using the Azure portal after approval. Runtime managed identities need repository-scoped Container Registry Repository Reader on bdwuscr and Key Vault Secrets User; reviewed SQL roles grant data access without DDL rights. Optional Azure AI access uses managed identity and needs a separately approved role/deployment.
 
 ## Deployment reference — initial rollout completed
 
@@ -74,7 +74,8 @@ The initial rollout and its settings are complete. The commands below are recrea
 
 ```sh
 azd env new dev --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10 --location eastus
-azd env set SHARED_REGISTRY_RESOURCE_ID /subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-financial-advisor-8a42/providers/Microsoft.ContainerRegistry/registries/crfinancialadvisor8a42vuti2u
+azd env set SHARED_REGISTRY_RESOURCE_ID /subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/AZURE-SQL-PNG/providers/Microsoft.ContainerRegistry/registries/bdwuscr
+azd env set REGISTRY_ROLE_ASSIGNMENT_MODE AbacRepositoryPermissions
 azd env set SHARED_WORKSPACE_RESOURCE_ID /subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-financial-advisor-8a42/providers/Microsoft.OperationalInsights/workspaces/log-financial-advisor-8a42-vuti2u
 azd env set SQL_SERVER_RESOURCE_ID /subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/AZURE-SQL-PNG/providers/Microsoft.Sql/servers/bdwus
 azd env set ENTRA_TENANT_ID 4e1db426-c797-4336-bd16-7e771a5de494
@@ -82,7 +83,7 @@ azd env set ENTRA_CLIENT_ID <that-environment-registration-client-id>
 azd env set BUDGET_EMAIL <owner-alert-email>
 azd env set BUDGET_START_DATE <first-day-of-current-month-YYYY-MM-DD>
 azd env set BUDGET_END_DATE <future-first-day-YYYY-MM-DD>
-azd env set SERVICE_PORTAL_IMAGE_NAME crfinancialadvisor8a42vuti2u.azurecr.io/bdwus-portal:<reviewed-commit-sha>
+azd env set SERVICE_PORTAL_IMAGE_NAME bdwuscr.azurecr.io/bdwus-portal:<reviewed-commit-sha>
 azd env set DEPLOY_PORTAL false
 azd env set PORTAL_PUBLIC_INGRESS false
 # Review locally; this does not call Azure provisioning.
@@ -93,12 +94,22 @@ azd provision
 
 Foundations create the dev database, identity, vault, consumption environment, Insights and budget. Before the second provisioning: populate entra-client-secret, configure assignment-required Entra sign-in, review and apply dev SQL, review and execute grant_portal_access.sql in each database as the Entra SQL administrator, and publish the reviewed image. Do not grant db_owner/db_ddladmin to runtime identities. Do not apply dev schema files to prod.
 
-After the required setup and approval:
+After the required setup and approval, local image publishing additionally needs an authorized Repository Writer assignment for bdwus-portal; Owner alone grants no repository data access in ABAC mode. Existing releases normally use the GitHub OIDC workflow, whose identities already have that assignment.
+
+Update and verify the separate GitHub variables for BOTH dev and prod during registry cutover (repeat with `--env prod`):
 
 ```sh
-az acr login --name crfinancialadvisor8a42vuti2u
-docker build --platform linux/amd64 -t crfinancialadvisor8a42vuti2u.azurecr.io/bdwus-portal:<reviewed-commit-sha> .
-docker push crfinancialadvisor8a42vuti2u.azurecr.io/bdwus-portal:<reviewed-commit-sha>
+gh variable set ACR_NAME --repo BrianDWalker/BDWUS --env dev --body bdwuscr
+gh variable set ACR_LOGIN_SERVER --repo BrianDWalker/BDWUS --env dev --body bdwuscr.azurecr.io
+gh variable list --repo BrianDWalker/BDWUS --env dev
+```
+
+Both environments were updated and their OIDC deployments verified during the approved follow-up. For an authorized local publishing identity:
+
+```sh
+az acr login --name bdwuscr
+docker build --platform linux/amd64 -t bdwuscr.azurecr.io/bdwus-portal:<reviewed-commit-sha> .
+docker push bdwuscr.azurecr.io/bdwus-portal:<reviewed-commit-sha>
 azd env set DEPLOY_PORTAL true
 # First app creation is private while Easy Auth is installed.
 azd provision
