@@ -38,10 +38,13 @@ az rest --method GET --url 'https://management.azure.com/subscriptions/a8f3fd5d-
 az rest --method GET --url 'https://management.azure.com/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-bdwus-prod/providers/Microsoft.Consumption/budgets?api-version=2023-11-01' --query 'value[].properties.{amount:amount,notifications:notifications}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
 az resource list --resource-type Microsoft.Web/staticSites --query '[].{name:name,id:id}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
 az acr show -n bdwuscr --query '{id:id,sku:sku.name,mode:roleAssignmentMode}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
+az acr show -n crfinancialadvisor8a42vuti2u --query '{id:id,sku:sku.name,mode:roleAssignmentMode}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
 gh secret list --repo BrianDWalker/BDWUS
+gh secret list --repo BrianDWalker/BDWUS --env dev
+gh secret list --repo BrianDWalker/BDWUS --env prod
 gh variable get BDWUS_DEPLOY_APPROVED --repo BrianDWalker/BDWUS
 gh api repos/BrianDWalker/BDWUS/environments/prod --jq '{protection_rules,deployment_branch_policy,can_admins_bypass}'
-gh api repos/BrianDWalker/BDWUS/branches/main/protection --jq '{required_status_checks,required_pull_request_reviews,enforce_admins}'
+gh api repos/BrianDWalker/BDWUS/branches/main/protection --jq '{required_status_checks,required_pull_request_reviews,enforce_admins,allow_force_pushes,allow_deletions}'
 ```
 
 For SQL, execute the following SELECTs through the portal container's managed-identity connection (`from app.database import get_sql_connection; c=get_sql_connection()`), or use an Entra-authenticated SQL editor. Run in each DB; do not use a human administrator's effective privileges as proof of runtime privileges.
