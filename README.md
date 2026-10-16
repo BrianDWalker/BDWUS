@@ -75,7 +75,8 @@ After explicit approval, configure each azd environment (repeat with prod):
 
 ```sh
 azd env new dev --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10 --location eastus
-azd env set SHARED_REGISTRY_RESOURCE_ID /subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-financial-advisor-8a42/providers/Microsoft.ContainerRegistry/registries/crfinancialadvisor8a42vuti2u
+azd env set SHARED_REGISTRY_RESOURCE_ID /subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/AZURE-SQL-PNG/providers/Microsoft.ContainerRegistry/registries/bdwuscr
+azd env set REGISTRY_ROLE_ASSIGNMENT_MODE AbacRepositoryPermissions
 azd env set SHARED_WORKSPACE_RESOURCE_ID /subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-financial-advisor-8a42/providers/Microsoft.OperationalInsights/workspaces/log-financial-advisor-8a42-vuti2u
 azd env set SQL_SERVER_RESOURCE_ID /subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/AZURE-SQL-PNG/providers/Microsoft.Sql/servers/bdwus
 azd env set ENTRA_TENANT_ID 4e1db426-c797-4336-bd16-7e771a5de494
@@ -83,7 +84,7 @@ azd env set ENTRA_CLIENT_ID <that-environment-registration-client-id>
 azd env set BUDGET_EMAIL <owner-alert-email>
 azd env set BUDGET_START_DATE <first-day-of-current-month-YYYY-MM-DD>
 azd env set BUDGET_END_DATE <future-first-day-YYYY-MM-DD>
-azd env set SERVICE_PORTAL_IMAGE_NAME crfinancialadvisor8a42vuti2u.azurecr.io/bdwus-portal:<reviewed-commit-sha>
+azd env set SERVICE_PORTAL_IMAGE_NAME bdwuscr.azurecr.io/bdwus-portal:<reviewed-commit-sha>
 azd env set DEPLOY_PORTAL false
 azd env set PORTAL_PUBLIC_INGRESS false
 # Review locally; this does not call Azure provisioning.
