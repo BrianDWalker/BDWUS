@@ -12,7 +12,7 @@ from app.services.assistant import (
 )
 from app.services.auth_api import router as auth_router
 from app.services.billing_facts import router as billing_facts_router
-from app.services.authz import auth_mode, platform_principal, active_role_from_request, required_capability_for_request, role_can
+from app.services.authz import ACTOR, actor_from_request, auth_mode, platform_principal, active_role_from_request, required_capability_for_request, role_can
 from app.services.context import BILLING_CONTEXT_OBJECT
 from app.services.customer_service import router as customer_service_router
 from app.services.ops import admin_router, billing_workflow_router, ops_router
@@ -20,9 +20,11 @@ from app.services.ops_write import admin_write_router, billing_write_router, ops
 from app.services.platform import router as platform_router
 from app.services.sales import billing_router, router as sales_router, sales_dashboard
 from app.services.sales_compat import router as sales_compat_router
-from app.services.smoke_data import smoke_mode_enabled
+from app.services.smoke_data import smoke_mode_enabled, validate_runtime_security
 from app.services.test_support import router as test_support_router
 
+
+validate_runtime_security()
 
 SERVICE_NAME = os.getenv("PLATFORM_API_SERVICE_NAME", "BDWUS Platform API")
 SERVICE_VERSION = os.getenv("PLATFORM_API_VERSION", "5.0.0")
@@ -58,12 +60,18 @@ if allowed_origins:
 
 @app.middleware("http")
 async def enforce_role_permissions(request: Request, call_next):
+    if request.method == "OPTIONS" and request.headers.get("origin") and request.headers.get("access-control-request-method"):
+        return await call_next(request)
     if auth_mode() == "entra" and request.url.path != "/health":
         try:
             platform_principal(request)
         except HTTPException as exc:
             return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
     required_capability = required_capability_for_request(request.method, request.url.path)
+    if request.url.path.startswith("/health/"):
+        required_capability = "admin:read"
+    if request.url.path.startswith("/api/") and required_capability is None:
+        return JSONResponse(status_code=403, content={"detail": "API route has no authorization policy"})
     if required_capability:
         role = active_role_from_request(request)
         if not role_can(role, required_capability):
@@ -77,7 +85,16 @@ async def enforce_role_permissions(request: Request, call_next):
                     }
                 },
             )
-    return await call_next(request)
+    token = None
+    try:
+        if request.method not in {"GET", "HEAD", "OPTIONS"} and request.url.path.startswith("/api/"):
+            token = ACTOR.set(actor_from_request(request))
+        return await call_next(request)
+    except HTTPException as exc:
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    finally:
+        if token is not None:
+            ACTOR.reset(token)
 
 # Compatibility routes must be registered before the full sales router because they preserve
 # migrated UI flows for routes that existed conceptually before the API-backed sales module.

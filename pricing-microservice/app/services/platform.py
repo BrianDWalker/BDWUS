@@ -4,7 +4,8 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from app.services.authz import active_role_from_request, role_can
 
 from app.services.sales import ensure_sales_storage, sales_bootstrap as sales_module_bootstrap
 from app.services import smoke_data
@@ -192,17 +193,30 @@ def report_rows(report_id: str) -> list[dict[str, Any]]:
     return rows
 
 
+def filter_bootstrap(payload: dict, role: str) -> dict:
+    capabilities = {
+        "dashboard": "view:dashboard", "customers": "view:customers",
+        **{key: "view:sales" for key in ("accounts", "leads", "opportunities", "quotes", "contracts", "approvals")},
+        **{key: "view:pricing" for key in ("products", "billingCodes", "offers", "promotions", "ratePlans")},
+        "reportDefinitions": "view:reports",
+        **{key: "admin:read" for key in ("users", "roles", "integrations")},
+    }
+    return {key: value for key, value in payload.items() if key == "generatedAtUtc" or (key in capabilities and role_can(role, capabilities[key]))}
+
+
 @router.get("/bootstrap")
-def platform_bootstrap() -> dict[str, Any]:
+def platform_bootstrap(request: Request) -> dict[str, Any]:
     if smoke_data.smoke_mode_enabled():
-        return smoke_data.platform_bootstrap()
+        payload = smoke_data.platform_bootstrap()
+        return filter_bootstrap(payload, active_role_from_request(request))
     ensure_sales_storage()
     sales_payload = sales_module_bootstrap()
-    reports = report_definitions()
-    users = admin_users()
-    roles = admin_roles()
-    integrations = admin_integrations()
-    return {
+    role = active_role_from_request(request)
+    reports = report_definitions() if role_can(role, "view:reports") else []
+    users = admin_users() if role_can(role, "admin:read") else []
+    roles = admin_roles() if role_can(role, "admin:read") else []
+    integrations = admin_integrations() if role_can(role, "admin:read") else []
+    return filter_bootstrap({
         "generatedAtUtc": utc_now_iso(),
         "dashboard": sales_payload.get("dashboard", {}),
         "customers": sales_payload.get("billingCustomers", []),
@@ -221,7 +235,7 @@ def platform_bootstrap() -> dict[str, Any]:
         "users": users,
         "roles": roles,
         "integrations": integrations,
-    }
+    }, role)
 
 
 @router.get("/reports/definitions")

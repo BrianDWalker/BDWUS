@@ -97,6 +97,12 @@ Dev and production private bootstrap and public ingress deployments succeeded. E
 
 Production runtime HTTP checks also passed Admin/wrong-tenant/Viewer authorization, SPA and all eight SQL-backed API reads. Production public /health is 200; portal/API browser requests, including forged platform identity headers, return Microsoft sign-in redirects. GitHub dev workflow [38395456218](https://github.com/BrianDWalker/BDWUS/actions/runs/38395456218) succeeded through OIDC login, shared-registry build/push and Container App update. Production workflow [38395679316](https://github.com/BrianDWalker/BDWUS/actions/runs/38395679316) also succeeded: owner review recorded using the authenticated owner account under the explicit chat approval, reviewer-policy verification, OIDC login, image push and app update. Both environments run image tag `8314bd8dd001d33938e14b50b86d4d28cd90aff6`. Dev runtime API checks passed again after the GitHub rollout.
 
+## Follow-up preparation — 14 October 2026
+
+Status: Preparation authorized; Azure changes and deployment NOT authorized.
+
+Owner requests security-first follow-up PRs: deny-by-default route/actor authorization, assistant boundaries/idempotency, quote conversion and modal fixes, deployment identity Bicep proposals, legacy/docs/SEO cleanup, a lean CI proposal, explicit production demo-data proposal, branch audit and read-only live inventory. Every PR requires Codex review; findings must be fixed or answered before merge. App PR merges would trigger Azure dev deployment, so keep PRs open until the owner approves a specific Azure change list. No Azure mutations, branch deletions, production data changes or branch-protection activation in this follow-up.
+
 ## Follow-up status — 15 October 2026
 
 The owner reported “it worked” for initial interactive sign-in. Legacy assistant-service source and stale handoff notes are removed in the cleanup PR. The portal assistant is retained in pricing-microservice. Security follow-up PRs and infrastructure/data proposals are not merged or deployed: no Azure changes, Azure resource or branch deletions, production data load, or branch-protection activation are authorized in this follow-up.
