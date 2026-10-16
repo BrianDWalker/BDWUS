@@ -1,3 +1,4 @@
+import { roleAuthHeaders } from "./permissions";
 import { fetchWithTimeout } from "./fetchTimeout";
 import { platformApiBase } from "./platformApi";
 
@@ -22,13 +23,15 @@ function assistantUrl(path) {
 }
 
 async function requestJson(path, options = {}) {
+  const authHeaders = await roleAuthHeaders(assistantApiBase);
   const response = await fetchWithTimeout(assistantUrl(path), {
+    ...options,
     headers: {
       "Content-Type": "application/json",
-      ...(options.headers || {})
+      ...(options.headers || {}),
+      ...authHeaders
     },
-    timeoutMs: ASSISTANT_REQUEST_TIMEOUT_MS,
-    ...options
+    timeoutMs: ASSISTANT_REQUEST_TIMEOUT_MS
   });
 
   if (!response.ok) {

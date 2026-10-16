@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextvars import ContextVar
 import base64
 import hashlib
 import hmac
@@ -24,6 +25,9 @@ ROLE_CAPABILITIES: dict[str, set[str]] = {
     "Admin": {"*"},
 }
 
+for _role in ("Executive", "Sales", "Care", "Billing", "Ops"):
+    ROLE_CAPABILITIES[_role].update({"view:pricing", "view:knowledge", "use:assistant"})
+
 DEFAULT_ROLE = "Viewer"
 ROLE_HEADER = "x-user-role"
 DEMO_ROLE_HEADER = "x-demo-role"
@@ -33,26 +37,150 @@ DEMO_AUTH_TTL_SECONDS = int(os.getenv("PLATFORM_AUTH_TOKEN_TTL_SECONDS", "28800"
 ALLOW_ROLE_HEADERS = os.getenv("ALLOW_ROLE_HEADERS", "").lower() in {"1", "true", "yes"}
 
 
-PROTECTED_MUTATION_RULES: tuple[tuple[str, re.Pattern[str], str], ...] = (
-    ("POST", re.compile(r"^/api/platform/customer-service/tickets/?$"), "create:ticket"),
-    ("PUT", re.compile(r"^/api/platform/customer-service/tickets/[^/]+/?$"), "update:ticket"),
-    ("POST", re.compile(r"^/api/platform/customer-service/tickets/[^/]+/notes/?$"), "comment:ticket"),
-    ("POST", re.compile(r"^/api/ops/orders/?$"), "create:order"),
-    ("PUT", re.compile(r"^/api/ops/orders/[^/]+/?$"), "update:order"),
-    ("POST", re.compile(r"^/api/ops/provisioning-jobs/?$"), "create:provisioning-job"),
-    ("POST", re.compile(r"^/api/ops/network-events/?$"), "create:provisioning-job"),
-    ("POST", re.compile(r"^/api/ops/carrier-settlement/?$"), "create:adjustment"),
-    ("POST", re.compile(r"^/api/admin/(users|roles|integrations)/?$"), "admin:write"),
-    ("POST", re.compile(r"^/api/test-support/.*$"), "admin:write"),
-    ("DELETE", re.compile(r"^/api/test-support/.*$"), "admin:write"),
-    ("POST", re.compile(r"^/api/billing-workflows/invoices/[^/]+/actions/?$"), "create:invoice-action"),
-    ("POST", re.compile(r"^/api/billing-workflows/adjustments/?$"), "create:adjustment"),
-    ("POST", re.compile(r"^/api/sales/quotes/[^/]+/convert-to-order/?$"), "create:order"),
-    ("POST", re.compile(r"^/api/sales/(leads|accounts|opportunities|custom-pricing|quotes|approvals|contracts)(/.*)?$"), "create:quote"),
-    ("PUT", re.compile(r"^/api/sales/(leads|accounts|opportunities|custom-pricing|quotes|contracts)(/.*)?$"), "create:quote"),
-    ("DELETE", re.compile(r"^/api/sales/(leads|accounts|opportunities|custom-pricing|quotes|contracts)(/.*)?$"), "create:quote"),
+# Explicit inventory: additions require policy and role-matrix review.
+ROUTE_CAPABILITIES: dict[tuple[str, str], str] = {
+    ('DELETE', '/api/sales/accounts/{account_id}'): 'create:quote',
+    ('DELETE', '/api/sales/contracts/{contract_id}'): 'create:quote',
+    ('DELETE', '/api/sales/contracts/{contract_id}/files/{file_id}'): 'create:quote',
+    ('DELETE', '/api/sales/custom-pricing/{request_id}'): 'create:quote',
+    ('DELETE', '/api/sales/leads/{lead_id}'): 'create:quote',
+    ('DELETE', '/api/sales/opportunities/{opportunity_id}'): 'create:quote',
+    ('DELETE', '/api/sales/opportunities/{opportunity_id}/products/{product_id}'): 'create:quote',
+    ('DELETE', '/api/sales/quotes/{quote_id}'): 'create:quote',
+    ('DELETE', '/api/sales/quotes/{quote_id}/line-items/{line_item_id}'): 'create:quote',
+    ('DELETE', '/api/test-support/namespaces/{namespace}'): 'admin:write',
+    ('GET', '/api/admin/integrations'): 'admin:read',
+    ('GET', '/api/admin/roles'): 'admin:read',
+    ('GET', '/api/admin/users'): 'admin:read',
+    ('GET', '/api/assistant/github/branches'): 'admin:read',
+    ('GET', '/api/assistant/github/file'): 'admin:read',
+    ('GET', '/api/assistant/github/tree'): 'admin:read',
+    ('GET', '/api/assistant/ui-overrides'): 'view:knowledge',
+    ('GET', '/api/auth/me'): 'authenticated',
+    ('GET', '/api/billing-facts/{resource}'): 'view:billing',
+    ('GET', '/api/billing-workflows/adjustments'): 'view:billing',
+    ('GET', '/api/billing-workflows/invoices'): 'view:billing',
+    ('GET', '/api/billing-workflows/invoices/{invoice_id}'): 'view:billing',
+    ('GET', '/api/billing-workflows/invoices/{invoice_id}/actions'): 'view:billing',
+    ('GET', '/api/billing/billing-codes'): 'view:pricing',
+    ('GET', '/api/billing/billing-elements'): 'view:pricing',
+    ('GET', '/api/billing/customer-lookup/{customer_number}'): 'view:customers',
+    ('GET', '/api/billing/customers'): 'view:customers',
+    ('GET', '/api/billing/customers/{customer_number}'): 'view:customers',
+    ('GET', '/api/billing/offers'): 'view:pricing',
+    ('GET', '/api/billing/product-hierarchy'): 'view:pricing',
+    ('GET', '/api/billing/products'): 'view:pricing',
+    ('GET', '/api/billing/products/{product_id}'): 'view:pricing',
+    ('GET', '/api/billing/promotions'): 'view:pricing',
+    ('GET', '/api/billing/rate-plans'): 'view:pricing',
+    ('GET', '/api/ops/bootstrap'): 'view:dashboard',
+    ('GET', '/api/ops/carrier-settlement'): 'view:billing',
+    ('GET', '/api/ops/network-events'): 'view:network',
+    ('GET', '/api/ops/orders'): 'view:orders',
+    ('GET', '/api/ops/provisioning-jobs'): 'view:network',
+    ('GET', '/api/platform/administration/summary'): 'admin:read',
+    ('GET', '/api/platform/bootstrap'): 'view:dashboard',
+    ('GET', '/api/platform/customer-360/{customer_number}'): 'view:customers',
+    ('GET', '/api/platform/customer-service/overview'): 'view:care',
+    ('GET', '/api/platform/customer-service/tickets'): 'view:care',
+    ('GET', '/api/platform/customer-service/tickets/{ticket_id}'): 'view:care',
+    ('GET', '/api/platform/knowledge/bootstrap'): 'view:knowledge',
+    ('GET', '/api/platform/knowledge/documents'): 'view:knowledge',
+    ('GET', '/api/platform/knowledge/topics'): 'view:knowledge',
+    ('GET', '/api/platform/product-pricing/overview'): 'view:pricing',
+    ('GET', '/api/platform/reports/definitions'): 'view:reports',
+    ('GET', '/api/platform/reports/{report_id}'): 'view:reports',
+    ('GET', '/api/sales/accounts'): 'view:sales',
+    ('GET', '/api/sales/accounts/{account_id}'): 'view:sales',
+    ('GET', '/api/sales/approvals'): 'view:sales',
+    ('GET', '/api/sales/approvals/{approval_id}'): 'view:sales',
+    ('GET', '/api/sales/bootstrap'): 'view:sales',
+    ('GET', '/api/sales/contracts'): 'view:sales',
+    ('GET', '/api/sales/contracts/{contract_id}'): 'view:sales',
+    ('GET', '/api/sales/contracts/{contract_id}/files'): 'view:sales',
+    ('GET', '/api/sales/contracts/{contract_id}/history'): 'view:sales',
+    ('GET', '/api/sales/custom-pricing'): 'view:sales',
+    ('GET', '/api/sales/custom-pricing/{request_id}'): 'view:sales',
+    ('GET', '/api/sales/dashboard'): 'view:sales',
+    ('GET', '/api/sales/leads'): 'view:sales',
+    ('GET', '/api/sales/leads/{lead_id}'): 'view:sales',
+    ('GET', '/api/sales/leads/{lead_id}/activities'): 'view:sales',
+    ('GET', '/api/sales/opportunities'): 'view:sales',
+    ('GET', '/api/sales/opportunities/{opportunity_id}'): 'view:sales',
+    ('GET', '/api/sales/opportunities/{opportunity_id}/notes'): 'view:sales',
+    ('GET', '/api/sales/opportunities/{opportunity_id}/products'): 'view:sales',
+    ('GET', '/api/sales/quotes'): 'view:sales',
+    ('GET', '/api/sales/quotes/{quote_id}'): 'view:sales',
+    ('GET', '/api/sales/quotes/{quote_id}/line-items'): 'view:sales',
+    ('POST', '/api/admin/integrations'): 'admin:write',
+    ('POST', '/api/admin/roles'): 'admin:write',
+    ('POST', '/api/admin/users'): 'admin:write',
+    ('POST', '/api/assistant/change-requests/{change_request_id}/approve'): 'admin:write',
+    ('POST', '/api/assistant/change-requests/{change_request_id}/reject'): 'admin:write',
+    ('POST', '/api/assistant/chat'): 'use:assistant',
+    ('POST', '/api/auth/demo-token'): 'authenticated',
+    ('POST', '/api/billing-workflows/adjustments'): 'create:adjustment',
+    ('POST', '/api/billing-workflows/invoices/{invoice_id}/actions'): 'create:invoice-action',
+    ('POST', '/api/ops/carrier-settlement'): 'create:adjustment',
+    ('POST', '/api/ops/network-events'): 'create:provisioning-job',
+    ('POST', '/api/ops/orders'): 'create:order',
+    ('POST', '/api/ops/provisioning-jobs'): 'create:provisioning-job',
+    ('POST', '/api/platform/customer-service/tickets'): 'create:ticket',
+    ('POST', '/api/platform/customer-service/tickets/{ticket_id}/notes'): 'comment:ticket',
+    ('POST', '/api/sales/accounts'): 'create:quote',
+    ('POST', '/api/sales/approvals/{approval_id}/approve'): 'approve:quote',
+    ('POST', '/api/sales/approvals/{approval_id}/reject'): 'approve:quote',
+    ('POST', '/api/sales/approvals/{approval_id}/request-changes'): 'approve:quote',
+    ('POST', '/api/sales/contracts'): 'create:quote',
+    ('POST', '/api/sales/contracts/{contract_id}/files'): 'create:quote',
+    ('POST', '/api/sales/custom-pricing'): 'create:quote',
+    ('POST', '/api/sales/custom-pricing/{request_id}/submit'): 'create:quote',
+    ('POST', '/api/sales/leads'): 'create:quote',
+    ('POST', '/api/sales/leads/{lead_id}/activities'): 'create:quote',
+    ('POST', '/api/sales/leads/{lead_id}/convert'): 'create:quote',
+    ('POST', '/api/sales/opportunities'): 'create:quote',
+    ('POST', '/api/sales/opportunities/{opportunity_id}/notes'): 'create:quote',
+    ('POST', '/api/sales/opportunities/{opportunity_id}/products'): 'create:quote',
+    ('POST', '/api/sales/quotes'): 'create:quote',
+    ('POST', '/api/sales/quotes/{quote_id}/convert-to-order'): 'create:order',
+    ('POST', '/api/sales/quotes/{quote_id}/line-items'): 'create:quote',
+    ('POST', '/api/sales/quotes/{quote_id}/price'): 'create:quote',
+    ('POST', '/api/sales/quotes/{quote_id}/submit-approval'): 'create:quote',
+    ('POST', '/api/sales/serviceability/check'): 'create:quote',
+    ('POST', '/api/test-support/namespaces/{namespace}/workflow-seed'): 'admin:write',
+    ('PUT', '/api/ops/orders/{order_id}'): 'update:order',
+    ('PUT', '/api/ops/provisioning-jobs/{job_id}'): 'create:provisioning-job',
+    ('PUT', '/api/platform/customer-service/tickets/{ticket_id}'): 'update:ticket',
+    ('PUT', '/api/sales/accounts/{account_id}'): 'create:quote',
+    ('PUT', '/api/sales/contracts/{contract_id}'): 'create:quote',
+    ('PUT', '/api/sales/custom-pricing/{request_id}'): 'create:quote',
+    ('PUT', '/api/sales/leads/{lead_id}'): 'create:quote',
+    ('PUT', '/api/sales/opportunities/{opportunity_id}'): 'create:quote',
+    ('PUT', '/api/sales/opportunities/{opportunity_id}/products/{product_id}'): 'create:quote',
+    ('PUT', '/api/sales/quotes/{quote_id}'): 'create:quote',
+    ('PUT', '/api/sales/quotes/{quote_id}/line-items/{line_item_id}'): 'create:quote',
+}
+
+ROUTE_RULES = tuple(
+    (method, re.compile("^" + re.sub(r"\{[^}]+\}", "[^/]+", path) + "/?$"), capability)
+    for (method, path), capability in ROUTE_CAPABILITIES.items()
 )
 
+# Request-local audit identity, propagated to synchronous handlers.
+ACTOR = ContextVar("authenticated_actor", default="local:Viewer")
+
+def authenticated_actor() -> str:
+    return ACTOR.get()
+
+def actor_from_request(request: Request) -> str:
+    if auth_mode() == "local":
+        return "local:" + active_role_from_request(request)
+    claims = platform_principal(request)["claims"]
+    for claim_type in ("oid", "http://schemas.microsoft.com/identity/claims/objectidentifier", "sub"):
+        for claim in claims:
+            if claim["typ"] == claim_type and claim["val"]:
+                return claim["val"]
+    raise HTTPException(status_code=401, detail="Authenticated subject is required")
 
 def normalize_role(role: str | None) -> str:
     if not role:
@@ -171,12 +299,12 @@ def active_role_from_request(request: Request) -> str:
 
 def role_can(role: str | None, capability: str) -> bool:
     capabilities = capabilities_for_role(role)
-    return "*" in capabilities or capability in capabilities
+    return capability == "authenticated" or "*" in capabilities or capability in capabilities
 
 
 def required_capability_for_request(method: str, path: str) -> str | None:
     normalized_method = method.upper()
-    for rule_method, pattern, capability in PROTECTED_MUTATION_RULES:
+    for rule_method, pattern, capability in ROUTE_RULES:
         if rule_method == normalized_method and pattern.match(path):
             return capability
     return None

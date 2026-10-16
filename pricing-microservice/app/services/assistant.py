@@ -1,3 +1,4 @@
+from app.services.authz import authenticated_actor
 import json
 import os
 import re
@@ -949,9 +950,9 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
           """,
           "Approved",
           approved_at,
-          request.approvedBy,
+          authenticated_actor(),
           approved_at,
-          request.approvedBy,
+          authenticated_actor(),
           change_request_id,
       )
       if record.kind in {"ui_override", "ui_patch"}:
@@ -975,7 +976,7 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
     finally:
       conn.close()
     log_audit("change_request_approved", "change_request", str(change_request_id), {
-        "approvedBy": request.approvedBy,
+        "approvedBy": authenticated_actor(),
         "overrides": record.patch.get("overrides", []),
     })
     updated = get_change_request(change_request_id)
@@ -999,7 +1000,7 @@ def reject_change_request(change_request_id: uuid.UUID, rejected_by: str = "admi
           WHERE ChangeRequestId = ?
           """,
           "Rejected",
-          rejected_by,
+          authenticated_actor(),
           None,
           None,
           None,
@@ -1009,7 +1010,7 @@ def reject_change_request(change_request_id: uuid.UUID, rejected_by: str = "admi
     finally:
       conn.close()
     log_audit("change_request_rejected", "change_request", str(change_request_id), {
-        "rejectedBy": rejected_by,
+        "rejectedBy": authenticated_actor(),
     })
     updated = get_change_request(change_request_id)
     if updated is None:

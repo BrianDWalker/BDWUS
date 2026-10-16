@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.services.authz import authenticated_actor
+
 import uuid
 from typing import Any
 
@@ -205,7 +207,7 @@ def convert_lead_compat(lead_id: uuid.UUID, payload: dict[str, Any]):
                 opportunity_id,
                 "Conversion",
                 f"Lead converted from {lead.get('LeadNumber') or lead_id}.",
-                trim(payload.get("approvedBy")) or lead.get("OwnerName") or "Admin",
+                trim(authenticated_actor()) or lead.get("OwnerName") or "Admin",
             ),
         )
         invalidate_bootstrap_cache()
@@ -239,7 +241,7 @@ def create_opportunity_note_compat(opportunity_id: uuid.UUID, payload: dict[str,
                 str(opportunity_id),
                 note_type,
                 note,
-                trim(payload.get("createdBy")) or "Admin",
+                trim(authenticated_actor()) or "Admin",
             ),
         )
         invalidate_bootstrap_cache()
