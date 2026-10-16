@@ -4,6 +4,8 @@ targetScope = 'subscription'
 param environmentName string
 param location string = 'eastus'
 param sharedRegistryResourceId string
+@allowed(['LegacyRegistryPermissions', 'AbacRepositoryPermissions'])
+param registryRoleAssignmentMode string = 'LegacyRegistryPermissions' 
 param sharedWorkspaceResourceId string
 param sqlServerResourceId string
 param sqlLocation string = 'eastus'
@@ -51,7 +53,7 @@ module foundation './modules/foundation.bicep' = {
 module registryAccess './modules/registry-access.bicep' = {
   name: 'bdwus-registry-${environmentName}'
   scope: resourceGroup(registryParts[2], registryParts[4])
-  params: { registryName: last(registryParts), principalId: foundation.outputs.principalId }
+  params: { registryName: last(registryParts), principalId: foundation.outputs.principalId, useAbac: registryRoleAssignmentMode == 'AbacRepositoryPermissions' }
 }
 
 module database './modules/database.bicep' = {

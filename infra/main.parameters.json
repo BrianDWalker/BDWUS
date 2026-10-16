@@ -42,6 +42,9 @@
     },
     "publicIngress": {
       "value": "${PORTAL_PUBLIC_INGRESS}"
+    },
+    "registryRoleAssignmentMode": {
+      "value": "${REGISTRY_ROLE_ASSIGNMENT_MODE}"
     }
   }
 }

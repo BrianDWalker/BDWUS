@@ -10,6 +10,12 @@ param verifiedRegistryRoleAssignmentMode string
 // Existing registry mode changes require an approved consumer migration.
 // This template deliberately does not change shared registry configuration.
 var registryParts = split(sharedRegistryResourceId, '/')
+// Existing bdwuscr also serves the retained bdwusca app through its environment identity.
+module legacyReader './legacy-registry-reader.bicep' = if (toLower(last(registryParts)) == 'bdwuscr') {
+  name: 'bdwus-legacy-repository-reader'
+  scope: resourceGroup(registryParts[2], registryParts[4])
+  params: { registryName: last(registryParts) }
+}
 resource deploymentRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
   name: guid(subscription().id, 'bdwus-portal-deployer-v1')
   properties: {

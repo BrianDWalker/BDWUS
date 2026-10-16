@@ -34,3 +34,8 @@ Read the chosen registry's live mode first. While it still reports LegacyRegistr
 For approved bdwuscr reuse, deploy the retained legacy environment identity's `pricing-microservice` Reader using the cutover module in PR #29 before switching. No AXIOM registry mode change is authorized. Only after all replacement assignments are visible, switch bdwuscr to AbacRepositoryPermissions, read back the live mode, and use `verifiedRegistryRoleAssignmentMode=AbacRepositoryPermissions` for subsequent identity maintenance. Verify actual pushes/pulls and portal health before removing obsolete broad grants. Incremental Bicep cannot revoke them automatically.
 
 The identity template is a maintenance proposal for the already-existing portal apps and environments; it is not an initial empty-resource-group bootstrap. Its live deployment compatibility remains unverified until approved.
+
+
+## Ongoing foundation maintenance after cutover
+
+The full foundation template also accepts `registryRoleAssignmentMode`, supplied by `REGISTRY_ROLE_ASSIGNMENT_MODE` in each azd environment. Set it to the observed mode, AbacRepositoryPermissions after this cutover, and point SHARED_REGISTRY_RESOURCE_ID at bdwuscr. Its runtime assignment then uses the same conditional Reader role and deterministic assignment ID as the targeted identity template, rather than reintroducing ineffective AcrPull. Existing legacy deployments require LegacyRegistryPermissions explicitly in their environment. Do not re-provision the full foundation as part of this targeted migration.
