@@ -771,8 +771,13 @@ def normalize_github_files_patch(github: dict[str, Any]) -> list[dict[str, str]]
                 "filePath": file_path,
                 "content": content,
             })
-    legacy_path = normalize_github_path(str(github.get("filePath") or ""))
+    legacy_raw_path = github.get("filePath")
+    if legacy_raw_path is not None and not isinstance(legacy_raw_path, str):
+        raise ValueError("GitHub legacy filePath must be a string")
+    legacy_path = normalize_github_path(legacy_raw_path or "")
     legacy_content = github.get("content")
+    if legacy_path and not isinstance(legacy_content, str):
+        raise ValueError("GitHub legacy content must be a string")
     if legacy_path and isinstance(legacy_content, str) and not any(item["filePath"] == legacy_path for item in files):
         files.append({
             "filePath": legacy_path,
