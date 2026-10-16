@@ -1473,7 +1473,7 @@ export function SalesQuoteDetail({ id, setRoute, showToast }) {
         title={quote.AccountName}
         status={quote.ApprovalStatus}
         subtitle={`${quote.OpportunityName} · ${money(quote.TotalMrc)} MRC`}
-        actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setPriceModal(true)}>Review</button><button className="button" type="button" onClick={() => setEditModal(true)}>Edit Quote</button><button className="button" type="button" onClick={() => setApprovalModal(true)}>Submit Approval</button><button className="button" type="button" onClick={() => setContractModal(true)}>Create Order</button></div>}
+        actions={<div className="module-toolbar"><button className="button" type="button" onClick={() => setPriceModal(true)}>Review</button><button className="button" type="button" onClick={() => setEditModal(true)}>Edit Quote</button><button className="button" type="button" onClick={() => setApprovalModal(true)}>Submit Approval</button><button className="button" type="button" onClick={() => { setOrderError(""); setContractModal(true); }}>Create Order</button></div>}
       />
       <SummaryStrip items={[
         { label: "Opportunity", value: quote.OpportunityName, note: quote.QuoteNumber },
