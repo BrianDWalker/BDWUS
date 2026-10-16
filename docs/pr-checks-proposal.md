@@ -7,3 +7,6 @@ At 20 PRs/month with 2 runs each, estimate 80–120 runner minutes/month (2–3 
 After the owner approves: merge this workflow, require the observed Portal checks context on main, keep PRs required, and enable dismissal of stale approvals/requiring the latest reviewed head as appropriate. Do not enable branch protection here. Codex review remains a separate human-reviewed merge gate: request it on every final head, wait for completion, fix/answer every finding and re-request after meaningful fixes. A green build is not a completed Codex review.
 
 Source: [GitHub Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions).
+
+
+Owner approved and enabled Portal checks as a required GitHub Actions check on main on 16 October 2026. Hosted validations passed within the under-three-minute target. Existing PR/force-push/deletion policies were retained. Stacked PRs were checked at their exact heads and applicable merge checks before merging; completed Codex reviews and finding dispositions were verified separately.

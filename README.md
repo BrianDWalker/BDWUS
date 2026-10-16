@@ -119,7 +119,7 @@ azd provision
 azd deploy portal
 ```
 
-The last command is optional after the second provision already starts the exact reviewed image; use azd deploy for subsequent local approved releases. Provisioning must use a real built image, not a placeholder. First validate unauthenticated redirects, assigned-user sign-in, cross-tenant denial, role-denied mutations, SQL reads and vault/registry access in dev. Update callback URI to the app's computed host before testing. Cut over prod only after approval. Previous Static Web Apps resources and old BDWUS registry/workspace are retained for an owner-decided retirement; workflows are retired in the hosting PR.
+The last command is optional after the second provision already starts the exact reviewed image; use azd deploy for subsequent local approved releases. Provisioning must use a real built image, not a placeholder. First validate unauthenticated redirects, assigned-user sign-in, cross-tenant denial, role-denied mutations, SQL reads and vault/registry access in dev. Update callback URI to the app's computed host before testing. Cut over prod only after approval. The old Static Web App is deleted. bdwuscr is retained as the BDWUS registry; the old Container App, environment and workspace remain. AXIOM registry settings are unchanged.
 
 After resources are approved and provisioned, the single GitHub deploy workflow builds once, pushes through OIDC and updates the existing app. Main pushes deploy dev; prod only via workflow_dispatch with environment prod and GitHub owner approval. It never provisions, migrates SQL, or reads credentials from static workflow secrets. Local checks replace the old CI test/browser/deployed-smoke jobs to reduce Actions minutes.
 
@@ -144,3 +144,6 @@ See [read-only inventory and cost report](docs/azure-owner-review.md). September
 Owner approval received and executed on 12–13 October 2026: dev/prod resources, production catalog reconciliation, dev schema/seed, additive billing SQL, runtime grants, assignment-required Entra apps, owner Admin assignments, Key Vault credentials and GitHub OIDC environments are configured. Both portals are live behind Easy Auth. The repository deployment approval flag is enabled. The owner confirmed initial Microsoft sign-in succeeded. Never use azd down to clean up the existing production data or shared AXIOM resources.
 
 Live portals: [dev](https://ca-bdwus-dev.politesmoke-b8649377.eastus.azurecontainerapps.io) · [production](https://ca-bdwus-prod.happytree-d3cda5bf.eastus.azurecontainerapps.io). See [.azure/deployment-plan.md](.azure/deployment-plan.md) for validation evidence and workflow results.
+
+
+The approved security follow-up is deployed to dev and production. See [owner checklist](docs/owner-checklist.md) and [current live verification](docs/live-state-review.md) for deployment, data and retirement results. `ms.vPricingContext` is synthetic; the billing facts pages read the SQL views and now show the explicitly approved demo records.

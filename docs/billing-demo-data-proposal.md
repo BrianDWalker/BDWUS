@@ -13,3 +13,8 @@ Approval must identify this manifest and its checksum, allow dev rehearsal, and 
 Production manifest SHA-256: `f9de7bb79df167ff82c9d6454e000d5398a0c3e408a799d03bfd21320027612f`.
 
 Dev rehearsal: [billing-demo-dev-v1.json](../pricing-microservice/proposals/billing-demo-dev-v1.json), bound to AZBDWUSDEV. SHA-256: `75182503fe87c7a2d063d05b0bc41290c73c21a281cee8e47097c234b49dfc02`. Its zero-row and foreign-key checks are required preconditions because dev SQL could not be read currently. Do not approve its load until those read-only checks succeed.
+
+
+## Execution — 16 October 2026
+
+Owner approved both exact manifests. After matching foreign keys and empty-table preconditions in dev, a single transaction inserted the four rows. Dev retry was a no-op. The same checks and transaction succeeded separately in production, and its retry was also a no-op. Final view counts in each database are 1 subscription, 1 payment and 2 usage events. No existing invoice balance was changed. The JSON documents retain proposalOnly=true as the immutable approved payloads; this execution record does not alter their checksums.

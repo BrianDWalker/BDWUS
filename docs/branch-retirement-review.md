@@ -1,6 +1,6 @@
 # Branch retirement review — 15 October 2026
 
-Baseline: origin/main at c227fd9057df6d2acb66070869552cab82c328bc. No branches deleted. Evidence uses `git merge-base --is-ancestor`, `git rev-list --count origin/main..origin/<branch>` and `git cherry origin/main origin/<branch>`. Recheck current heads immediately before any owner-approved deletion; a later push invalidates this snapshot. Preserve main and all open follow-up PR branches.
+Historical approval baseline: origin/main at c227fd9057df6d2acb66070869552cab82c328bc. Owner approved the listed candidates on 16 October. Thirteen were deleted after exact-tip and ancestry rechecks; BDWUS_SITE, backup-web-ui-before-platform-upgrade and feature-web-ui-platform-upgrade were already absent. Unique-work branches were retained. Evidence uses `git merge-base --is-ancestor`, `git rev-list --count origin/main..origin/<branch>` and `git cherry origin/main origin/<branch>`. Recheck current heads immediately before any owner-approved deletion; a later push invalidates this snapshot. Preserve main and all open follow-up PR branches.
 
 ## Safe candidates: fully contained in main
 
@@ -50,4 +50,4 @@ Every branch below is an ancestor of main and has zero commits ahead / zero uniq
 
 Old push-trigger workflows remain in backup, feature-change, BDWUS_SITE, backup-web-ui-before-platform-upgrade, feature-web-ui-platform-upgrade, fc-gpt-deep-review-audit and the Copilot investigation branch. The first five are ancestor candidates above; the latter two contain unique work and are retained. Do not push to these stale branches while old deployment workflows/secrets remain. Removing files on main does not rewrite those branches.
 
-Approval must enumerate names and current tips from the safe table. No deletion command has been run or scheduled.
+The exact listed candidates are now absent remotely. This historical evidence table preserves their approved tips; their history remains reachable from main. New follow-up branches are retained.

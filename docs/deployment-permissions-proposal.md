@@ -39,3 +39,8 @@ The identity template is a maintenance proposal for the already-existing portal 
 ## Ongoing foundation maintenance after cutover
 
 The full foundation template also accepts `registryRoleAssignmentMode`, supplied by `REGISTRY_ROLE_ASSIGNMENT_MODE` in each azd environment. Set it to the observed mode, AbacRepositoryPermissions after this cutover, and point SHARED_REGISTRY_RESOURCE_ID at bdwuscr. Its runtime assignment then uses the same conditional Reader role and deterministic assignment ID as the targeted identity template, rather than reintroducing ineffective AcrPull. Existing legacy deployments require LegacyRegistryPermissions explicitly in their environment. Do not re-provision the full foundation as part of this targeted migration.
+
+
+## Executed decision — 16 October 2026
+
+The owner approved bdwuscr reuse and the named role replacement/cutover/removals. All replacement roles, including the retained legacy reader, were staged and verified before enabling ABAC. Reader conditions include only actual Reader actions. Live dev and production OIDC build/push/update deployments succeeded after the four named old broad deployment grants were removed. Registry ARM Reader supports az acr login; repository data access remains conditional. No AXIOM registry mode change occurred.
