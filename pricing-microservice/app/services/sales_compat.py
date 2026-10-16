@@ -254,27 +254,27 @@ def create_opportunity_note_compat(opportunity_id: uuid.UUID, payload: dict[str,
 def convert_quote_to_order(quote_id: uuid.UUID, payload: dict[str, Any] | None = None):
     ensure_sales_storage()
     ensure_ops_storage()
-    order_payload = _quote_order_payload(str(quote_id), payload or {})
     try:
         with sql_transaction() as conn:
             cur = conn.cursor()
-            # Serialize on the source quote; association + order commit together.
+            # Serialize on the unique source association before rebuilding any
+            # potentially deleted quote/opportunity context needed only for insert.
+            existing = cur.execute("SELECT * FROM ops.Orders WITH (UPDLOCK, HOLDLOCK) WHERE SourceQuoteId = ?", (str(quote_id),)).fetchone()
+            if existing:
+                return {"order": row_to_dict(cur, existing), "source": {"QuoteId": str(quote_id)}}
             locked_quote = cur.execute("SELECT ApprovalStatus FROM ms.Quotes WITH (UPDLOCK, HOLDLOCK) WHERE QuoteId = ? AND IsDeleted = 0", (str(quote_id),)).fetchone()
             if not locked_quote:
                 raise HTTPException(status_code=404, detail="Quote not found")
-            existing = cur.execute("SELECT * FROM ops.Orders WHERE SourceQuoteId = ?", (str(quote_id),)).fetchone()
-            if existing:
-                order = row_to_dict(cur, existing)
-            else:
-                if str(locked_quote[0] or "").lower() not in {"approved", "ready"}:
-                    raise HTTPException(status_code=400, detail="Quote must be approved before creating an order")
-                order_id = str(uuid.uuid4())
-                cur.execute(
-                    "INSERT INTO ops.Orders (OrderId, SourceQuoteId, OrderNumber, CustomerNumber, AccountName, ServiceName, LifecycleStage, OverallStatus, SlaStatus, DueDate, AssignedTeam, CircuitId, Location) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (order_id, str(quote_id), order_payload["orderNumber"], order_payload["customerNumber"], order_payload["accountName"], order_payload["serviceName"], order_payload["lifecycleStage"], order_payload["overallStatus"], order_payload["slaStatus"], order_payload["dueDate"], order_payload["assignedTeam"], order_payload["circuitId"], order_payload["location"]),
-                )
-                row = cur.execute("SELECT * FROM ops.Orders WHERE OrderId = ?", (order_id,)).fetchone()
-                order = row_to_dict(cur, row)
+            if str(locked_quote[0] or "").lower() not in {"approved", "ready"}:
+                raise HTTPException(status_code=400, detail="Quote must be approved before creating an order")
+            order_payload = _quote_order_payload(str(quote_id), payload or {})
+            order_id = str(uuid.uuid4())
+            cur.execute(
+                "INSERT INTO ops.Orders (OrderId, SourceQuoteId, OrderNumber, CustomerNumber, AccountName, ServiceName, LifecycleStage, OverallStatus, SlaStatus, DueDate, AssignedTeam, CircuitId, Location) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (order_id, str(quote_id), order_payload["orderNumber"], order_payload["customerNumber"], order_payload["accountName"], order_payload["serviceName"], order_payload["lifecycleStage"], order_payload["overallStatus"], order_payload["slaStatus"], order_payload["dueDate"], order_payload["assignedTeam"], order_payload["circuitId"], order_payload["location"]),
+            )
+            row = cur.execute("SELECT * FROM ops.Orders WHERE OrderId = ?", (order_id,)).fetchone()
+            order = row_to_dict(cur, row)
     except pyodbc.ProgrammingError as exc:
         if "SourceQuoteId" in str(exc):
             raise HTTPException(status_code=503, detail="Quote conversion requires the owner-approved source-quote migration") from None

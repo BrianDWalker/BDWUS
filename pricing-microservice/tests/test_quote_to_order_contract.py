@@ -76,7 +76,8 @@ def test_repeated_and_concurrent_conversion_returns_one_order(monkeypatch):
     class Cursor:
         description = [("OrderId",), ("SourceQuoteId",)]
         def execute(self, sql, params):
-            if "UPDLOCK, HOLDLOCK" in sql:
+            if "FROM ms.Quotes" in sql:
+                assert "UPDLOCK, HOLDLOCK" in sql
                 self.result = (approval[0],)
             elif "INSERT INTO ops.Orders" in sql:
                 assert "SourceQuoteId" in sql
@@ -100,6 +101,7 @@ def test_repeated_and_concurrent_conversion_returns_one_order(monkeypatch):
     monkeypatch.setattr(sales_compat, "sql_transaction", transaction)
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(lambda _: sales_compat.convert_quote_to_order(quote_id, {}), range(2)))
+    monkeypatch.setattr(sales_compat, "_quote_order_payload", lambda *args: pytest.fail("deleted opportunity context must not be rebuilt for retries"))
     approval[0] = "Rejected"
     third = sales_compat.convert_quote_to_order(quote_id, {})
     with pytest.raises(HTTPException) as error:
