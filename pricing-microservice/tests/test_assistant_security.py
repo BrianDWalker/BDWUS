@@ -238,3 +238,16 @@ def test_ancestor_conflicting_files_are_rejected_before_claim(monkeypatch, paths
     assert error.value.status_code == 400
     assert "descendants" in error.value.detail
     assert record.status == "Proposed"
+
+
+@pytest.mark.parametrize("path,content", [(["docs/readme.md"], "demo"), (42, "demo"), ({"path": "demo"}, "demo"), ("demo.txt", ["invalid"])])
+def test_legacy_github_payload_types_rejected_before_claim(monkeypatch, path, content):
+    monkeypatch.setenv("ASSISTANT_ALLOWED_REPOSITORIES", "BrianDWalker/BDWUS")
+    monkeypatch.setattr(assistant, "ensure_ai_storage", lambda: None)
+    record = SimpleNamespace(status="Proposed", kind="github_update", title="Demo", patch={"github": {"repository": "BrianDWalker/BDWUS", "branch": "main", "filePath": path, "content": content}})
+    monkeypatch.setattr(assistant, "get_change_request", lambda _: record)
+    monkeypatch.setattr(assistant, "claim_change_request", lambda _: pytest.fail("invalid legacy payload must not be claimed"))
+    with pytest.raises(HTTPException) as error:
+        assistant.approve_change_request(uuid4(), SimpleNamespace())
+    assert error.value.status_code == 400
+    assert record.status == "Proposed"
