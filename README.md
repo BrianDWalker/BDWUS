@@ -2,7 +2,7 @@
 
 BDWUS is a telecom operations portal for customer accounts, product and rate-plan pricing, sales quotes/opportunities, billing, care and service operations. React 19 + Vite provides the UI; FastAPI provides pricing and SQL-backed workflows. Azure SQL remains the system of record.
 
-**Dev and production are deployed** behind tenant-restricted Entra sign-in on Azure Container Apps. The owner confirmed initial sign-in worked. Dev has seeded demo records; production billing facts are empty until a separately approved data load. The October security follow-up PRs are prepared and are not deployed; their merges would trigger dev deployment and require specific owner approval. See [SQL review](docs/database-review.md), [data sources](docs/data-source-status.md).
+**Dev and production are deployed** behind tenant-restricted Entra sign-in on Azure Container Apps. The owner confirmed initial sign-in worked. The approved October security follow-up is deployed to both environments, and each has the four explicitly approved billing demo facts. See [current live checks](docs/live-state-review.md), [SQL review](docs/database-review.md) and [data sources](docs/data-source-status.md).
 
 ## Repository
 

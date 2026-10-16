@@ -1,4 +1,4 @@
-# Billing demo-data proposal — awaiting owner approval
+# Billing demo data — approved and loaded 16 October 2026
 
 Production was verified on 15 October to have zero subscriptions, payments and usage events. Dev counts could not be reverified in this session; zero is a rehearsal precondition to check, not an observed dev count. The original dev seeder populates prerequisite business tables; it does not populate these new billing facts. Therefore there is no existing dev billing-facts dataset to copy. Propose the same small deterministic dataset in dev first, validate the UI, then load the identical facts into prod after a separate approval. The dev and prod manifests bind different target database names and have separate checksums; never ignore or override that binding. Use DefaultAzureCredential / the existing managed-identity SQL connection, parameterized inserts and one transaction; no SQL password, CSV export, Blob upload, schema change, invoice-balance update, delete or update of any existing row.
 
@@ -6,13 +6,13 @@ Exact proposed production rows are versioned in [billing-demo-v1.json](../pricin
 
 On an approved future load: verify the target DB name, manifest SHA, all prerequisites/ownership (invoice belongs to the customer), all four IDs/values and table counts under transaction locks. For the first load, all manifest IDs must be absent and all three table totals must satisfy expectedExistingRowCounts=0/0/0; insert all four rows atomically. For a rerun, compare the four stored rows exactly and return a no-op when they all match; do not apply the initial zero-count requirement on that path. Reject partial prior loads, collisions or mismatches and roll back without inserting anything. Use a transaction with locking/unique keys; never infer customer/payment relations by row order. Capture before/after counts and verify the three views, without modifying existing invoices. No loader or prod seeder permission has been enabled here; bootstrap_demo_data.py still refuses prod.
 
-Approval must identify this manifest and its checksum, allow dev rehearsal, and separately allow four production inserts. No production data was written.
+The owner approved both checksum-pinned manifests and the dev-first four-row loads. Both loads are complete, with exact-match no-op reruns verified.
 
 `ms.vPricingContext` is synthetic: it contains generated subscription identifiers and fixed pricing assumptions. It is legacy pricing/demo context, not a billing ledger, payment history or measured usage source.
 
 Production manifest SHA-256: `f9de7bb79df167ff82c9d6454e000d5398a0c3e408a799d03bfd21320027612f`.
 
-Dev rehearsal: [billing-demo-dev-v1.json](../pricing-microservice/proposals/billing-demo-dev-v1.json), bound to AZBDWUSDEV. SHA-256: `75182503fe87c7a2d063d05b0bc41290c73c21a281cee8e47097c234b49dfc02`. Its zero-row and foreign-key checks are required preconditions because dev SQL could not be read currently. Do not approve its load until those read-only checks succeed.
+Dev rehearsal: [billing-demo-dev-v1.json](../pricing-microservice/proposals/billing-demo-dev-v1.json), bound to AZBDWUSDEV. SHA-256: `75182503fe87c7a2d063d05b0bc41290c73c21a281cee8e47097c234b49dfc02`. Its first-load zero-row and foreign-key preconditions were verified before the approved dev transaction. The initial proposal text above records the earlier inventory; current counts and execution are below.
 
 
 ## Execution — 16 October 2026
