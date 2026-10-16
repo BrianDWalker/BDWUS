@@ -200,3 +200,27 @@ def test_invalid_git_branch_rejected_before_claim(monkeypatch, branch):
 @pytest.mark.parametrize("branch", ["main", "feature/order-123", "codex/fix_api", "release/v1.2.3"])
 def test_valid_git_branch_names_remain_supported(branch):
     assert assistant.normalize_github_branch(branch) == branch
+
+
+@pytest.mark.parametrize("message", [["invalid"], {"text": "invalid"}, True, 42, "   ", "bad\0message"])
+def test_invalid_commit_message_does_not_claim(monkeypatch, message):
+    monkeypatch.setenv("ASSISTANT_ALLOWED_REPOSITORIES", "BrianDWalker/BDWUS")
+    monkeypatch.setattr(assistant, "ensure_ai_storage", lambda: None)
+    record = SimpleNamespace(status="Proposed", title="Valid fallback", kind="github_update", patch={"github": {"repository": "BrianDWalker/BDWUS", "branch": "main", "commitMessage": message, "files": [{"path": "demo.txt", "content": "demo"}]}})
+    monkeypatch.setattr(assistant, "get_change_request", lambda _: record)
+    monkeypatch.setattr(assistant, "claim_change_request", lambda _: pytest.fail("invalid message must not be claimed"))
+    with pytest.raises(HTTPException) as error:
+        assistant.approve_change_request(uuid4(), SimpleNamespace())
+    assert error.value.status_code == 400
+    assert record.status == "Proposed"
+
+
+@pytest.mark.parametrize("draft", [{"estimatedValue": [1]}, {"estimatedValue": float("inf")}, {"accountName": "x" * 201}, {"serviceNeeds": {}}, {"customerInfo": []}])
+def test_locally_invalid_lead_fields_are_rejected(draft):
+    with pytest.raises(HTTPException):
+        assistant.validate_proposal_payload(SimpleNamespace(kind="lead_create", patch={"leadDraft": draft}))
+
+
+def test_commit_message_falls_back_to_title_only_for_absent_or_empty_text():
+    assert assistant.github_commit_message({}, "Proposal title") == "Proposal title"
+    assert assistant.github_commit_message({"commitMessage": ""}, "Proposal title") == "Proposal title"
