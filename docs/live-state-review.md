@@ -1,6 +1,6 @@
-# Read-only live state — 15 October 2026
+# Read-only live state — refreshed 16 October 2026
 
-Subscription Azure subscription 1, a8f3fd5d-0d2f-4715-b685-728b21d1cc10; tenant 4e1db426-c797-4336-bd16-7e771a5de494. Azure and GitHub read access succeeded. No Azure configuration, role assignment, schema/data, secrets or branch protection changed. SQL reads may wake an auto-paused database.
+Subscription Azure subscription 1, a8f3fd5d-0d2f-4715-b685-728b21d1cc10; tenant 4e1db426-c797-4336-bd16-7e771a5de494. Azure/GitHub control-plane reads were refreshed on 16 October and their security settings, budgets, inventory and obsolete secret names were unchanged. The successful production SQL runtime read below was on 15 October; dev SQL remains unverified in this follow-up. No Azure configuration, role assignment, schema/data, secrets or branch protection changed. SQL reads may wake an auto-paused database.
 
 | Item | Observed |
 | --- | --- |
@@ -9,8 +9,8 @@ Subscription Azure subscription 1, a8f3fd5d-0d2f-4715-b685-728b21d1cc10; tenant 
 | Both Entra enterprise apps | appRoleAssignmentRequired=true |
 | Budgets | Dev $10/prod $25, 80% and 100% actual plus 100% forecast email to owner; alerts, not caps |
 | Dev SQL AZBDWUSDEV | GP_S_Gen5 serverless, useFreeLimit=true, exhaustion AutoPause, autoPauseDelay=60; observed paused before checks |
-| Prod SQL grants | id-bdwus-prod belongs to bdwus_portal; SELECT/INSERT/UPDATE/DELETE/EXECUTE on ai, billing, ms, ops, admin, billingops, care; SELECT on report/knowledge. No DDL grant in this role |
-| Prod billing facts | Subscriptions=0, Payments=0, UsageEvents=0 confirmed by runtime SQL read |
+| Prod SQL grants (15 October) | id-bdwus-prod belongs to bdwus_portal; SELECT/INSERT/UPDATE/DELETE/EXECUTE on ai, billing, ms, ops, admin, billingops, care; SELECT on report/knowledge. No DDL grant in this role |
+| Prod billing facts (15 October) | Subscriptions=0, Payments=0, UsageEvents=0 confirmed by runtime SQL read |
 | Registry | Both bdwuscr and shared AXIOM registry exist, Basic, LegacyRegistryPermissions |
 | Old SWA | bdwus-telecom in AZURE-SQL-PNG, eastus2, still exists |
 | GitHub prod | Sole reviewer BrianDWalker, main-only branch policy; self-review allowed and admin bypass allowed |

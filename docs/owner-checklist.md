@@ -1,4 +1,4 @@
-# Owner checklist — 15 October 2026
+# Owner checklist — 16 October 2026
 
 The initial rollout is live. These follow-up PRs are open, not deployed. No Azure changes, resource/branch deletions, production data writes or branch-protection updates were made. Follow this order; already-completed items are verification, not instructions to recreate them.
 
