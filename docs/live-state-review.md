@@ -24,12 +24,15 @@ Control-plane reads used az containerapp show, authConfigs/current GET, az ad sp
 ## Read-only recheck commands
 
 ```sh
+# Entra directory commands are tenant-scoped and do not accept --subscription.
+# Stop rather than query another signed-in directory.
+test "$(az account show --query tenantId -o tsv)" = '4e1db426-c797-4336-bd16-7e771a5de494' || exit 1
 az containerapp show -g rg-bdwus-dev -n ca-bdwus-dev --query properties.configuration.ingress --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
 az containerapp show -g rg-bdwus-prod -n ca-bdwus-prod --query properties.configuration.ingress --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
 # Repeat for dev/prod; GET only:
 az rest --method GET --url 'https://management.azure.com/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-bdwus-dev/providers/Microsoft.App/containerApps/ca-bdwus-dev/authConfigs/current?api-version=2024-03-01' --query '{enabled:properties.platform.enabled,validation:properties.globalValidation,aad:properties.identityProviders.azureActiveDirectory.registration.clientId,issuer:properties.identityProviders.azureActiveDirectory.registration.openIdIssuer}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
-az ad sp show --id 4aaa3bab-43a3-4f4c-9f6c-ebfcfb88de97 --query appRoleAssignmentRequired --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
-az ad sp show --id 02880795-d949-4cc1-beac-47ec2e1b880c --query appRoleAssignmentRequired --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
+az ad sp show --id 4aaa3bab-43a3-4f4c-9f6c-ebfcfb88de97 --query appRoleAssignmentRequired
+az ad sp show --id 02880795-d949-4cc1-beac-47ec2e1b880c --query appRoleAssignmentRequired
 az sql db show -g AZURE-SQL-PNG -s bdwus -n AZBDWUSDEV --query '{free:useFreeLimit,behavior:freeLimitExhaustionBehavior,autoPause:autoPauseDelay,sku:sku}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
 az rest --method GET --url 'https://management.azure.com/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-bdwus-dev/providers/Microsoft.Consumption/budgets?api-version=2023-11-01' --query 'value[].properties.{amount:amount,notifications:notifications}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
 az rest --method GET --url 'https://management.azure.com/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-bdwus-prod/providers/Microsoft.Consumption/budgets?api-version=2023-11-01' --query 'value[].properties.{amount:amount,notifications:notifications}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
