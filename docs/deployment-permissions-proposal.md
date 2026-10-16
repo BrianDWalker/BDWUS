@@ -27,8 +27,10 @@ Azure RBAC cannot restrict containerApps/write to the image field: an identity t
 
 Do not run either provisioning template yet. Approval must identify the registry option, the new assignments, app/variable cutover, and the four old assignments above. No branch or Azure resource deletion is bundled with this proposal.
 
-## Mandatory registry-mode gate for EVERY target
+## Mandatory staged migration for an existing registry
 
-Before applying the identity template, read `az acr show --ids <chosen-registry-resource-id> --query roleAssignmentMode -o tsv`. It must report `AbacRepositoryPermissions`. If it reports `LegacyRegistryPermissions`, STOP: this applies equally to existing `bdwuscr` and AXIOM's shared registry. Inventory all current role assignments/consumers and approve a specific mode migration first. Only after verifying the live result, pass `verifiedRegistryRoleAssignmentMode=AbacRepositoryPermissions` explicitly; the template accepts no other value and has no default. This acknowledgement does not itself inspect or change the registry. Incremental deployment cannot revoke the old broad roles.
+Read the chosen registry's live mode first. While it still reports LegacyRegistryPermissions, apply the identity template with `verifiedRegistryRoleAssignmentMode=LegacyRegistryPermissions` to stage Repository Writer/Reader roles and registry-scoped ARM Reader for deploy identities (`az acr login` needs metadata resolution). Reader grants no registry credentials or repository content. This does not change the registry mode. Stage and verify replacement read roles for EVERY retained consumer too. Wait for assignments to propagate before switching; legacy AcrPull/AcrPush continue working during staging.
+
+For approved bdwuscr reuse, deploy the retained legacy environment identity's `pricing-microservice` Reader using the cutover module in PR #29 before switching. No AXIOM registry mode change is authorized. Only after all replacement assignments are visible, switch bdwuscr to AbacRepositoryPermissions, read back the live mode, and use `verifiedRegistryRoleAssignmentMode=AbacRepositoryPermissions` for subsequent identity maintenance. Verify actual pushes/pulls and portal health before removing obsolete broad grants. Incremental Bicep cannot revoke them automatically.
 
 The identity template is a maintenance proposal for the already-existing portal apps and environments; it is not an initial empty-resource-group bootstrap. Its live deployment compatibility remains unverified until approved.

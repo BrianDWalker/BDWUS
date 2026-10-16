@@ -24,3 +24,14 @@ resource repositoryAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' =
       '''
   }
 }
+
+// az acr login resolves the registry through ARM before using repository data access.
+resource registryMetadataRead 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (writeAccess) {
+  name: guid(registry.id, principalId, 'registry-metadata-reader')
+  scope: registry
+  properties: {
+    principalId: principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
+  }
+}
