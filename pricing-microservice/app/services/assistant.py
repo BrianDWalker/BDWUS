@@ -1,5 +1,6 @@
 from app.services.authz import authenticated_actor, auth_mode
 import json
+import math
 import os
 import re
 import uuid
@@ -752,14 +753,20 @@ def get_github_commits(repository: str, branch: str, limit: int = 5) -> dict[str
 def normalize_github_files_patch(github: dict[str, Any]) -> list[dict[str, str]]:
     files: list[dict[str, str]] = []
     raw_files = github.get("files")
+    if raw_files is not None and not isinstance(raw_files, list):
+        raise ValueError("GitHub files must be a list")
     if isinstance(raw_files, list):
         for item in raw_files:
             if not isinstance(item, dict):
-                continue
-            file_path = normalize_github_path(str(item.get("filePath") or item.get("path") or ""))
+                raise ValueError("Each GitHub file must be an object")
+            raw_path = item.get("filePath") or item.get("path")
+            if not isinstance(raw_path, str):
+                raise ValueError("Each GitHub file needs a string path")
+            file_path = normalize_github_path(raw_path)
             content = item.get("content")
             if not file_path or not isinstance(content, str):
-                continue
+                raise ValueError("Each GitHub file needs a relative path and string content")
+            content.encode("utf-8")
             files.append({
                 "filePath": file_path,
                 "content": content,
@@ -787,7 +794,7 @@ def execute_github_update(record: AssistantChangeRequest) -> dict[str, Any]:
     github = record.patch.get("github") or {}
     repository = normalize_github_repository(str(github.get("repository") or ""))
     branch = normalize_github_branch(str(github.get("branch") or ""))
-    commit_message = github.get("commitMessage") or record.title
+    commit_message = github_commit_message(github, record.title)
     files = normalize_github_files_patch(github)
 
     ref = github_request("GET", f"/repos/{repository}/git/ref/heads/{urlparse.quote(branch, safe='/')}")
@@ -973,29 +980,56 @@ def get_change_request(change_request_id: uuid.UUID) -> AssistantChangeRequest |
       conn.close()
 
 
+def github_commit_message(github: dict, title: str) -> str:
+    message = github.get("commitMessage")
+    if message is not None and not isinstance(message, str):
+        raise ValueError("GitHub commitMessage must be a string when supplied")
+    effective = message or title
+    if not isinstance(effective, str) or not effective.strip() or "\x00" in effective:
+        raise ValueError("GitHub commit message must be nonempty text")
+    effective.encode("utf-8")
+    return effective
+
+
 def validate_proposal_payload(record: AssistantChangeRequest) -> None:
     """Reject deterministic validation errors before committing the durable claim."""
     if not isinstance(record.patch, dict):
         raise HTTPException(status_code=400, detail="Proposal patch must be an object")
     try:
         if record.kind == "lead_create":
-            if not isinstance(record.patch.get("leadDraft"), dict):
+            draft = record.patch.get("leadDraft")
+            if not isinstance(draft, dict):
                 raise ValueError("Lead proposal needs a leadDraft object")
+            limits = {"leadNumber": 32, "customerNumber": 32, "CustomerNumber": 32, "accountName": 200, "AccountName": 200, "leadName": 200, "contactName": 200, "source": 100, "qualification": 100, "status": 30, "ownerName": 200, "owner": 200, "productInterest": 200, "product": 200, "notes": None}
+            for key, limit in limits.items():
+                value = draft.get(key)
+                if value is not None and (not isinstance(value, str) or (limit and len(value.encode("utf-16-le")) // 2 > limit)):
+                    raise ValueError(f"Invalid lead field: {key}")
+            amount = draft.get("estimatedValue", 0)
+            if amount is not None and (isinstance(amount, bool) or not isinstance(amount, (int, float)) or not math.isfinite(amount) or abs(amount) >= 10**16):
+                raise ValueError("Lead estimatedValue must be a finite decimal(18,2) number")
+            for key, kind in (("serviceNeeds", list), ("ServiceNeeds", list), ("customerInfo", dict), ("CustomerInfo", dict)):
+                if draft.get(key) is not None and not isinstance(draft[key], kind):
+                    raise ValueError(f"Invalid lead field: {key}")
+            json.dumps(draft, allow_nan=False)
         elif record.kind == "github_update":
             github = record.patch.get("github")
             if not isinstance(github, dict):
                 raise ValueError("GitHub proposal needs a github object")
-            normalize_github_repository(str(github.get("repository") or ""))
-            normalize_github_branch(str(github.get("branch") or ""))
+            if not isinstance(github.get("repository"), str) or not isinstance(github.get("branch"), str):
+                raise ValueError("GitHub repository and branch must be strings")
+            normalize_github_repository(github["repository"])
+            normalize_github_branch(github["branch"])
             normalize_github_files_patch(github)
+            github_commit_message(github, getattr(record, "title", ""))
         elif record.kind in {"ui_override", "ui_patch"}:
             overrides = record.patch.get("overrides")
             if not isinstance(overrides, list) or not overrides:
                 raise ValueError("UI proposal needs nonempty overrides")
             for override in overrides:
-                if not isinstance(override, dict) or not isinstance(override.get("targetKey"), str) or not override["targetKey"].strip() or "value" not in override:
+                if not isinstance(override, dict) or not isinstance(override.get("targetKey"), str) or not override["targetKey"].strip() or len(override["targetKey"].encode("utf-16-le")) // 2 > 200 or "value" not in override:
                     raise ValueError("Each override needs targetKey and value")
-            safe_json(overrides)
+            json.dumps(overrides, allow_nan=False)
     except (ValueError, TypeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
