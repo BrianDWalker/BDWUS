@@ -182,3 +182,21 @@ def test_github_traversal_denied_before_credentials(monkeypatch, path):
 
 def test_github_redirects_do_not_forward_credentials():
     assert assistant.NoGithubRedirect().redirect_request(None, None, 301, "Moved", {}, "https://other.example/") is None
+
+
+@pytest.mark.parametrize("branch", ["bad~branch", "foo//bar", "bad.", "foo.lock", ".hidden", "foo/.hidden", "@", "HEAD", "bad name", "bad?name", "bad[ref", "bad@{ref", "/main", "main/", "-branch"])
+def test_invalid_git_branch_rejected_before_claim(monkeypatch, branch):
+    monkeypatch.setenv("ASSISTANT_ALLOWED_REPOSITORIES", "BrianDWalker/BDWUS")
+    monkeypatch.setattr(assistant, "ensure_ai_storage", lambda: None)
+    record = SimpleNamespace(status="Proposed", kind="github_update", patch={"github": {"repository": "BrianDWalker/BDWUS", "branch": branch, "files": [{"path": "demo.txt", "content": "demo"}]}})
+    monkeypatch.setattr(assistant, "get_change_request", lambda _: record)
+    monkeypatch.setattr(assistant, "claim_change_request", lambda _: pytest.fail("invalid branch must not be claimed"))
+    with pytest.raises(HTTPException) as error:
+        assistant.approve_change_request(uuid4(), SimpleNamespace())
+    assert error.value.status_code == 400
+    assert record.status == "Proposed"
+
+
+@pytest.mark.parametrize("branch", ["main", "feature/order-123", "codex/fix_api", "release/v1.2.3"])
+def test_valid_git_branch_names_remain_supported(branch):
+    assert assistant.normalize_github_branch(branch) == branch
