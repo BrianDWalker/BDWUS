@@ -5,7 +5,14 @@ from datetime import datetime, timezone
 from typing import Any
 
 
+def validate_runtime_security() -> None:
+    azure = any(os.getenv(key) for key in ("CONTAINER_APP_NAME", "CONTAINER_APP_REVISION", "WEBSITE_INSTANCE_ID", "IDENTITY_ENDPOINT")) or os.getenv("PLATFORM_ENVIRONMENT", "").lower() in {"dev", "prod", "production", "azure"}
+    if azure and (os.getenv("PLATFORM_RUNTIME_SMOKE_MODE", "").lower() in {"1", "true", "yes"} or os.getenv("PLATFORM_AUTH_MODE", "entra") != "entra"):
+        raise RuntimeError("Azure requires Entra authentication; smoke/local authentication is forbidden")
+
+
 def smoke_mode_enabled() -> bool:
+    validate_runtime_security()
     return os.getenv("PLATFORM_RUNTIME_SMOKE_MODE", "").lower() in {"1", "true", "yes"}
 
 

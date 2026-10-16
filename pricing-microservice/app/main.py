@@ -20,9 +20,11 @@ from app.services.ops_write import admin_write_router, billing_write_router, ops
 from app.services.platform import router as platform_router
 from app.services.sales import billing_router, router as sales_router, sales_dashboard
 from app.services.sales_compat import router as sales_compat_router
-from app.services.smoke_data import smoke_mode_enabled
+from app.services.smoke_data import smoke_mode_enabled, validate_runtime_security
 from app.services.test_support import router as test_support_router
 
+
+validate_runtime_security()
 
 SERVICE_NAME = os.getenv("PLATFORM_API_SERVICE_NAME", "BDWUS Platform API")
 SERVICE_VERSION = os.getenv("PLATFORM_API_VERSION", "5.0.0")

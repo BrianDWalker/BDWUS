@@ -12,7 +12,7 @@ import secrets
 import time
 
 from fastapi import HTTPException, Request
-from app.services.smoke_data import smoke_mode_enabled
+from app.services.smoke_data import smoke_mode_enabled, validate_runtime_security
 
 
 ROLE_CAPABILITIES: dict[str, set[str]] = {
@@ -252,6 +252,7 @@ def bearer_token_from_request(request: Request) -> str | None:
 
 
 def auth_mode() -> str:
+    validate_runtime_security()
     return os.getenv("PLATFORM_AUTH_MODE", "local" if smoke_mode_enabled() else "entra")
 
 
