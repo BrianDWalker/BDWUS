@@ -64,3 +64,5 @@ export const fetchCustomerServiceTicket = id => requestJson(`/api/platform/custo
 export const createCustomerServiceTicket = payload => requestJson("/api/platform/customer-service/tickets", { method: "POST", body: JSON.stringify(payload) });
 export const updateCustomerServiceTicket = (id, payload) => requestJson(`/api/platform/customer-service/tickets/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(payload) });
 export const createCustomerServiceTicketNote = (id, payload) => requestJson(`/api/platform/customer-service/tickets/${encodeURIComponent(id)}/notes`, { method: "POST", body: JSON.stringify(payload) });
+
+export const fetchBillingFacts = (resource, page = 0) => requestJson(`/api/billing-facts/${encodeURIComponent(resource.toLowerCase())}?limit=100&offset=${page * 100}`);

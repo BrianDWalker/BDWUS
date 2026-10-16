@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { DataTable, Panel } from "../../components/Primitives";
-import { fetchWithTimeout } from "../../utils/fetchTimeout";
-import { platformApiBase } from "../../utils/platformApi";
+import { fetchBillingFacts } from "../../utils/platformApi";
 
 const columns = {
   Subscriptions: ["CustomerNumber", "CustomerName", "ServiceName", "PlanName", "Quantity", "Status"],
@@ -17,10 +16,8 @@ export default function BillingFacts({ resource }) {
   useEffect(() => {
     let active = true;
     setState({ loading: true, error: "", rows: [] });
-    fetchWithTimeout(`${platformApiBase}/api/billing-facts/${resource.toLowerCase()}?limit=100&offset=${page * 100}`)
-      .then(async response => {
-        const body = await response.json();
-        if (!response.ok) throw new Error(body.detail || "Unable to load billing data");
+    fetchBillingFacts(resource, page)
+      .then(body => {
         if (active) setState({ loading: false, error: "", rows: body });
       })
       .catch(error => { if (active) setState({ loading: false, error: error.message, rows: [] }); });
