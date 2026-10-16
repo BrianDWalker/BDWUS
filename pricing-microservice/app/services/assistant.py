@@ -94,6 +94,11 @@ def normalize_github_branch(branch: str) -> str:
     if not cleaned:
         raise ValueError("GitHub branch is required.")
     reject_github_dot_segments(cleaned)
+    if (cleaned in {"@", "HEAD"} or cleaned.startswith(("-", "/")) or cleaned.endswith(("/", "."))
+            or "//" in cleaned or ".." in cleaned or "@{" in cleaned
+            or any(ord(c) <= 32 or c in "~^:?*[\\" for c in cleaned)
+            or any(part.startswith(".") or part.endswith(".lock") for part in cleaned.split("/"))):
+        raise HTTPException(status_code=400, detail="Invalid GitHub branch name")
     return cleaned
 
 
