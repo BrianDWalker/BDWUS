@@ -65,6 +65,9 @@ test("failed order save stays in modal with retry", async ({ page }) => {
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(page).toHaveURL(/#\/details\/quote/);
   await expect(page.getByRole("button", { name: "Create", exact: true })).toBeEnabled();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Create Order", exact: true }).click();
+  await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
 
