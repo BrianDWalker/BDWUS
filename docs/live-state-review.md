@@ -24,17 +24,17 @@ Control-plane reads used az containerapp show, authConfigs/current GET, az ad sp
 ## Read-only recheck commands
 
 ```sh
-az containerapp show -g rg-bdwus-dev -n ca-bdwus-dev --query properties.configuration.ingress
-az containerapp show -g rg-bdwus-prod -n ca-bdwus-prod --query properties.configuration.ingress
+az containerapp show -g rg-bdwus-dev -n ca-bdwus-dev --query properties.configuration.ingress --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
+az containerapp show -g rg-bdwus-prod -n ca-bdwus-prod --query properties.configuration.ingress --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
 # Repeat for dev/prod; GET only:
-az rest --method GET --url 'https://management.azure.com/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-bdwus-dev/providers/Microsoft.App/containerApps/ca-bdwus-dev/authConfigs/current?api-version=2024-03-01' --query '{enabled:properties.platform.enabled,validation:properties.globalValidation,aad:properties.identityProviders.azureActiveDirectory.registration.clientId,issuer:properties.identityProviders.azureActiveDirectory.registration.openIdIssuer}'
-az ad sp show --id 4aaa3bab-43a3-4f4c-9f6c-ebfcfb88de97 --query appRoleAssignmentRequired
-az ad sp show --id 02880795-d949-4cc1-beac-47ec2e1b880c --query appRoleAssignmentRequired
-az sql db show -g AZURE-SQL-PNG -s bdwus -n AZBDWUSDEV --query '{free:useFreeLimit,behavior:freeLimitExhaustionBehavior,autoPause:autoPauseDelay,sku:sku}'
-az rest --method GET --url 'https://management.azure.com/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-bdwus-dev/providers/Microsoft.Consumption/budgets?api-version=2023-11-01' --query 'value[].properties.{amount:amount,notifications:notifications}'
-az rest --method GET --url 'https://management.azure.com/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-bdwus-prod/providers/Microsoft.Consumption/budgets?api-version=2023-11-01' --query 'value[].properties.{amount:amount,notifications:notifications}'
-az resource list --resource-type Microsoft.Web/staticSites --query '[].{name:name,id:id}'
-az acr show -n bdwuscr --query '{id:id,sku:sku.name,mode:roleAssignmentMode}'
+az rest --method GET --url 'https://management.azure.com/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-bdwus-dev/providers/Microsoft.App/containerApps/ca-bdwus-dev/authConfigs/current?api-version=2024-03-01' --query '{enabled:properties.platform.enabled,validation:properties.globalValidation,aad:properties.identityProviders.azureActiveDirectory.registration.clientId,issuer:properties.identityProviders.azureActiveDirectory.registration.openIdIssuer}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
+az ad sp show --id 4aaa3bab-43a3-4f4c-9f6c-ebfcfb88de97 --query appRoleAssignmentRequired --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
+az ad sp show --id 02880795-d949-4cc1-beac-47ec2e1b880c --query appRoleAssignmentRequired --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
+az sql db show -g AZURE-SQL-PNG -s bdwus -n AZBDWUSDEV --query '{free:useFreeLimit,behavior:freeLimitExhaustionBehavior,autoPause:autoPauseDelay,sku:sku}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
+az rest --method GET --url 'https://management.azure.com/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-bdwus-dev/providers/Microsoft.Consumption/budgets?api-version=2023-11-01' --query 'value[].properties.{amount:amount,notifications:notifications}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
+az rest --method GET --url 'https://management.azure.com/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourceGroups/rg-bdwus-prod/providers/Microsoft.Consumption/budgets?api-version=2023-11-01' --query 'value[].properties.{amount:amount,notifications:notifications}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
+az resource list --resource-type Microsoft.Web/staticSites --query '[].{name:name,id:id}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
+az acr show -n bdwuscr --query '{id:id,sku:sku.name,mode:roleAssignmentMode}' --subscription a8f3fd5d-0d2f-4715-b685-728b21d1cc10
 gh secret list --repo BrianDWalker/BDWUS
 gh variable get BDWUS_DEPLOY_APPROVED --repo BrianDWalker/BDWUS
 gh api repos/BrianDWalker/BDWUS/environments/prod --jq '{protection_rules,deployment_branch_policy,can_admins_bypass}'
@@ -48,6 +48,26 @@ SELECT DB_NAME(), HAS_PERMS_BY_NAME('billing.Customers','OBJECT','SELECT') AS Ca
        HAS_PERMS_BY_NAME(DB_NAME(),'DATABASE','CREATE TABLE') AS CanCreateTable,
        IS_ROLEMEMBER('db_owner') AS IsDbOwner;
 -- Expected runtime: intended DB, 1, 0, 0.
+-- These three values alone do not prove DDL denial. Check effective inherited rights too:
+SELECT entity_name,permission_name FROM fn_my_permissions(NULL,'DATABASE')
+WHERE permission_name LIKE 'CREATE %' OR permission_name LIKE 'ALTER%'
+   OR permission_name IN ('CONTROL','TAKE OWNERSHIP','IMPERSONATE ANY USER');
+SELECT name FROM sys.schemas
+WHERE HAS_PERMS_BY_NAME(name,'SCHEMA','ALTER')=1
+   OR HAS_PERMS_BY_NAME(name,'SCHEMA','CONTROL')=1
+   OR HAS_PERMS_BY_NAME(name,'SCHEMA','TAKE OWNERSHIP')=1;
+SELECT SCHEMA_NAME(schema_id),name FROM sys.objects WHERE is_ms_shipped=0 AND (
+ HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(schema_id))+'.'+QUOTENAME(name),'OBJECT','ALTER')=1
+ OR HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(schema_id))+'.'+QUOTENAME(name),'OBJECT','CONTROL')=1
+ OR HAS_PERMS_BY_NAME(QUOTENAME(SCHEMA_NAME(schema_id))+'.'+QUOTENAME(name),'OBJECT','TAKE OWNERSHIP')=1);
+-- Expected: no effective DDL/control/ownership rows in all three result sets.
+WITH memberships AS (
+ SELECT role_principal_id FROM sys.database_role_members WHERE member_principal_id=USER_ID()
+ UNION ALL SELECT m.role_principal_id FROM sys.database_role_members m
+ JOIN memberships r ON m.member_principal_id=r.role_principal_id
+) SELECT DISTINCT USER_NAME(role_principal_id) FROM memberships;
+-- Inspect all recursively inherited memberships, not just grants directly on bdwus_portal.
+
 SELECT u.name, r.name FROM sys.database_role_members m
 JOIN sys.database_principals u ON u.principal_id=m.member_principal_id
 JOIN sys.database_principals r ON r.principal_id=m.role_principal_id
