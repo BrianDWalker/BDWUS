@@ -1,5 +1,6 @@
-from app.services.authz import authenticated_actor
+from app.services.authz import authenticated_actor, auth_mode
 import json
+import math
 import os
 import re
 import uuid
@@ -12,7 +13,7 @@ from urllib import request as urlrequest
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import OpenAI
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 
 from app.database import get_sql_connection
 from app.models import (
@@ -51,22 +52,60 @@ router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 
 
 def normalize_github_repository(repository: str) -> str:
-    cleaned = (repository or "").strip().strip("/")
-    parts = [item for item in cleaned.split("/") if item]
-    if len(parts) != 2:
-        raise ValueError("GitHub repository must be formatted as owner/repo.")
-    return "/".join(parts)
+    cleaned = (repository or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", cleaned) or any(part in {".", ".."} for part in cleaned.split("/")):
+        raise HTTPException(status_code=400, detail="GitHub repository must be owner/repo")
+    allowed = {item.strip().casefold() for item in os.getenv("ASSISTANT_ALLOWED_REPOSITORIES", "").split(",") if item.strip()}
+    if cleaned.casefold() not in allowed:
+        raise HTTPException(status_code=403, detail="Repository is not allowed")
+    return cleaned
+
+
+def require_github_write() -> None:
+    enabled = os.getenv("ASSISTANT_GITHUB_WRITES_ENABLED", "false").lower() == "true"
+    owner = os.getenv("ASSISTANT_OWNER_OBJECT_ID", "").strip()
+    if not enabled or auth_mode() != "entra" or not owner or authenticated_actor() != owner:
+        raise HTTPException(status_code=403, detail="GitHub writes require explicit enablement and the owner identity")
+
+
+def reject_github_dot_segments(value: str) -> None:
+    if "\\" in value or any(ord(c) < 32 or ord(c) == 127 for c in value):
+        raise HTTPException(status_code=400, detail="Invalid GitHub path")
+    decoded = value
+    for _ in range(8):
+        if "\\" in decoded or any(ord(c) < 32 or ord(c) == 127 for c in decoded):
+            raise HTTPException(status_code=400, detail="Invalid encoded GitHub path")
+        if any(part in {".", ".."} for part in decoded.split("/")):
+            raise HTTPException(status_code=400, detail="GitHub dot segments are forbidden")
+        next_value = urlparse.unquote(decoded)
+        if next_value == decoded:
+            return
+        decoded = next_value
+    raise HTTPException(status_code=400, detail="Excessively encoded GitHub path")
+
+
+class NoGithubRedirect(urlrequest.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Repository renames/transfers must be explicitly re-allowlisted.
+        return None
 
 
 def normalize_github_branch(branch: str) -> str:
     cleaned = (branch or "").strip()
     if not cleaned:
         raise ValueError("GitHub branch is required.")
+    reject_github_dot_segments(cleaned)
+    if (cleaned in {"@", "HEAD"} or cleaned.startswith(("-", "/")) or cleaned.endswith(("/", "."))
+            or "//" in cleaned or ".." in cleaned or "@{" in cleaned
+            or any(ord(c) <= 32 or c in "~^:?*[\\" for c in cleaned)
+            or any(part.startswith(".") or part.endswith(".lock") for part in cleaned.split("/"))):
+        raise HTTPException(status_code=400, detail="Invalid GitHub branch name")
     return cleaned
 
 
 def normalize_github_path(path: str) -> str:
     cleaned = (path or "").strip().strip("/")
+    reject_github_dot_segments(cleaned)
     return cleaned
 
 
@@ -543,7 +582,7 @@ def create_change_request(
           """,
           change_request_id,
           conversation_id,
-          request.userName,
+          authenticated_actor(),
           request.mode,
           request.context.route or request.context.pageTitle or "knowledge",
           proposal.title,
@@ -571,6 +610,13 @@ def github_api_path(path: str, params: dict[str, str] | None = None) -> str:
 
 
 def github_request(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
+    reject_github_dot_segments(urlparse.urlsplit(path).path)
+    target = re.match(r"^/repos/([^/]+/[^/?]+)(?:/|\?|$)", path)
+    if not target:
+        raise HTTPException(status_code=403, detail="Only allowed repository endpoints are supported")
+    normalize_github_repository(target.group(1))
+    if method.upper() != "GET":
+        require_github_write()
     token = github_token()
     if not token:
       raise ValueError("GitHub execution requires github-token in the environment Key Vault.")
@@ -587,7 +633,7 @@ def github_request(method: str, path: str, payload: dict[str, Any] | None = None
         },
     )
     try:
-      with urlrequest.urlopen(req, timeout=30) as response:
+      with urlrequest.build_opener(NoGithubRedirect()).open(req, timeout=30) as response:
         raw = response.read().decode("utf-8")
         return json.loads(raw) if raw else {}
     except urlerror.HTTPError as exc:
@@ -707,20 +753,31 @@ def get_github_commits(repository: str, branch: str, limit: int = 5) -> dict[str
 def normalize_github_files_patch(github: dict[str, Any]) -> list[dict[str, str]]:
     files: list[dict[str, str]] = []
     raw_files = github.get("files")
+    if raw_files is not None and not isinstance(raw_files, list):
+        raise ValueError("GitHub files must be a list")
     if isinstance(raw_files, list):
         for item in raw_files:
             if not isinstance(item, dict):
-                continue
-            file_path = normalize_github_path(str(item.get("filePath") or item.get("path") or ""))
+                raise ValueError("Each GitHub file must be an object")
+            raw_path = item.get("filePath") or item.get("path")
+            if not isinstance(raw_path, str):
+                raise ValueError("Each GitHub file needs a string path")
+            file_path = normalize_github_path(raw_path)
             content = item.get("content")
             if not file_path or not isinstance(content, str):
-                continue
+                raise ValueError("Each GitHub file needs a relative path and string content")
+            content.encode("utf-8")
             files.append({
                 "filePath": file_path,
                 "content": content,
             })
-    legacy_path = normalize_github_path(str(github.get("filePath") or ""))
+    legacy_raw_path = github.get("filePath")
+    if legacy_raw_path is not None and not isinstance(legacy_raw_path, str):
+        raise ValueError("GitHub legacy filePath must be a string")
+    legacy_path = normalize_github_path(legacy_raw_path or "")
     legacy_content = github.get("content")
+    if legacy_path and not isinstance(legacy_content, str):
+        raise ValueError("GitHub legacy content must be a string")
     if legacy_path and isinstance(legacy_content, str) and not any(item["filePath"] == legacy_path for item in files):
         files.append({
             "filePath": legacy_path,
@@ -731,6 +788,11 @@ def normalize_github_files_patch(github: dict[str, Any]) -> list[dict[str, str]]
     deduped: dict[str, str] = {}
     for item in files:
         deduped[item["filePath"]] = item["content"]
+    paths = set(deduped)
+    for file_path in paths:
+        parts = file_path.split("/")
+        if any("/".join(parts[:index]) in paths for index in range(1, len(parts))):
+            raise ValueError("GitHub file paths cannot include both a file and its descendants")
     return [
         {"filePath": file_path, "content": content}
         for file_path, content in deduped.items()
@@ -738,10 +800,11 @@ def normalize_github_files_patch(github: dict[str, Any]) -> list[dict[str, str]]
 
 
 def execute_github_update(record: AssistantChangeRequest) -> dict[str, Any]:
+    require_github_write()
     github = record.patch.get("github") or {}
     repository = normalize_github_repository(str(github.get("repository") or ""))
     branch = normalize_github_branch(str(github.get("branch") or ""))
-    commit_message = github.get("commitMessage") or record.title
+    commit_message = github_commit_message(github, record.title)
     files = normalize_github_files_patch(github)
 
     ref = github_request("GET", f"/repos/{repository}/git/ref/heads/{urlparse.quote(branch, safe='/')}")
@@ -927,6 +990,76 @@ def get_change_request(change_request_id: uuid.UUID) -> AssistantChangeRequest |
       conn.close()
 
 
+def github_commit_message(github: dict, title: str) -> str:
+    message = github.get("commitMessage")
+    if message is not None and not isinstance(message, str):
+        raise ValueError("GitHub commitMessage must be a string when supplied")
+    effective = message or title
+    if not isinstance(effective, str) or not effective.strip() or "\x00" in effective:
+        raise ValueError("GitHub commit message must be nonempty text")
+    effective.encode("utf-8")
+    return effective
+
+
+def validate_proposal_payload(record: AssistantChangeRequest) -> None:
+    """Reject deterministic validation errors before committing the durable claim."""
+    if not isinstance(record.patch, dict):
+        raise HTTPException(status_code=400, detail="Proposal patch must be an object")
+    try:
+        if record.kind == "lead_create":
+            draft = record.patch.get("leadDraft")
+            if not isinstance(draft, dict):
+                raise ValueError("Lead proposal needs a leadDraft object")
+            limits = {"leadNumber": 32, "customerNumber": 32, "CustomerNumber": 32, "accountName": 200, "AccountName": 200, "leadName": 200, "contactName": 200, "source": 100, "qualification": 100, "status": 30, "ownerName": 200, "owner": 200, "productInterest": 200, "product": 200, "notes": None}
+            for key, limit in limits.items():
+                value = draft.get(key)
+                if value is not None and (not isinstance(value, str) or (limit and len(value.encode("utf-16-le")) // 2 > limit)):
+                    raise ValueError(f"Invalid lead field: {key}")
+            amount = draft.get("estimatedValue", 0)
+            if amount is not None and (isinstance(amount, bool) or not isinstance(amount, (int, float)) or not math.isfinite(amount) or abs(amount) >= 10**16):
+                raise ValueError("Lead estimatedValue must be a finite decimal(18,2) number")
+            for key, kind in (("serviceNeeds", list), ("ServiceNeeds", list), ("customerInfo", dict), ("CustomerInfo", dict)):
+                if draft.get(key) is not None and not isinstance(draft[key], kind):
+                    raise ValueError(f"Invalid lead field: {key}")
+            json.dumps(draft, allow_nan=False)
+        elif record.kind == "github_update":
+            github = record.patch.get("github")
+            if not isinstance(github, dict):
+                raise ValueError("GitHub proposal needs a github object")
+            if not isinstance(github.get("repository"), str) or not isinstance(github.get("branch"), str):
+                raise ValueError("GitHub repository and branch must be strings")
+            normalize_github_repository(github["repository"])
+            normalize_github_branch(github["branch"])
+            normalize_github_files_patch(github)
+            github_commit_message(github, getattr(record, "title", ""))
+        elif record.kind in {"ui_override", "ui_patch"}:
+            overrides = record.patch.get("overrides")
+            if not isinstance(overrides, list) or not overrides:
+                raise ValueError("UI proposal needs nonempty overrides")
+            for override in overrides:
+                if not isinstance(override, dict) or not isinstance(override.get("targetKey"), str) or not override["targetKey"].strip() or len(override["targetKey"].encode("utf-16-le")) // 2 > 200 or "value" not in override:
+                    raise ValueError("Each override needs targetKey and value")
+            json.dumps(overrides, allow_nan=False)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
+def claim_change_request(change_request_id: uuid.UUID) -> bool:
+    conn = get_sql_connection()
+    try:
+        row = conn.cursor().execute(
+            f"UPDATE {AI_SCHEMA}.ChangeRequests SET Status = 'Applying' OUTPUT inserted.ChangeRequestId WHERE ChangeRequestId = ? AND Status = 'Proposed'",
+            change_request_id,
+        ).fetchone()
+        conn.commit()
+        return row is not None
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 @router.post("/change-requests/{change_request_id}/approve")
 def approve_change_request(change_request_id: uuid.UUID, request: AssistantApprovalRequest) -> AssistantChangeRequest:
     ensure_ai_storage()
@@ -934,10 +1067,23 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
     if record is None:
       raise ValueError("Change request not found.")
 
+    if record.status == "Approved":
+        return record
+    if record.status != "Proposed":
+        raise HTTPException(status_code=409, detail="Request is already claimed or no longer proposed")
+    if record.kind not in {"lead_create", "github_update", "ui_override", "ui_patch", "note"}:
+        raise HTTPException(status_code=400, detail="Unsupported change request kind")
+    validate_proposal_payload(record)
+    if record.kind == "github_update":
+        require_github_write()
+    if not claim_change_request(change_request_id):
+        raise HTTPException(status_code=409, detail="Request was claimed concurrently")
+    # The durable claim is committed BEFORE external effects. A crash or uncertain
+    # outcome leaves Applying and requires reconciliation, never an automatic retry.
     if record.kind == "lead_create":
-      execute_lead_create(record)
+        execute_lead_create(record)
     elif record.kind == "github_update":
-      execute_github_update(record)
+        execute_github_update(record)
 
     conn = get_sql_connection()
     try:
@@ -946,7 +1092,7 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
           f"""
           UPDATE {AI_SCHEMA}.ChangeRequests
           SET Status = ?, ApprovedAtUtc = ?, ApprovedBy = ?, AppliedAtUtc = ?, AppliedBy = ?
-          WHERE ChangeRequestId = ?
+          WHERE ChangeRequestId = ? AND Status = 'Applying'
           """,
           "Approved",
           approved_at,
@@ -993,11 +1139,12 @@ def reject_change_request(change_request_id: uuid.UUID, rejected_by: str = "admi
       raise ValueError("Change request not found.")
     conn = get_sql_connection()
     try:
-      conn.cursor().execute(
+      row = conn.cursor().execute(
           f"""
           UPDATE {AI_SCHEMA}.ChangeRequests
           SET Status = ?, ApprovedBy = ?, ApprovedAtUtc = ?, AppliedAtUtc = ?, AppliedBy = ?
-          WHERE ChangeRequestId = ?
+          OUTPUT inserted.ChangeRequestId
+          WHERE ChangeRequestId = ? AND Status = 'Proposed'
           """,
           "Rejected",
           authenticated_actor(),
@@ -1005,7 +1152,10 @@ def reject_change_request(change_request_id: uuid.UUID, rejected_by: str = "admi
           None,
           None,
           change_request_id,
-      )
+      ).fetchone()
+      if not row:
+          conn.rollback()
+          raise HTTPException(status_code=409, detail="Only proposed requests can be rejected")
       conn.commit()
     finally:
       conn.close()
