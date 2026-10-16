@@ -11,7 +11,7 @@ resource repositoryAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' =
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roleId)
     conditionVersion: '2.0'
-    condition: '''
+    condition: writeAccess ? '''
       (
         (
           !(ActionMatches{'Microsoft.ContainerRegistry/registries/repositories/content/read'})
@@ -19,6 +19,12 @@ resource repositoryAccess 'Microsoft.Authorization/roleAssignments@2022-04-01' =
           AND !(ActionMatches{'Microsoft.ContainerRegistry/registries/repositories/content/write'})
           AND !(ActionMatches{'Microsoft.ContainerRegistry/registries/repositories/metadata/write'})
         )
+        OR (@Request[Microsoft.ContainerRegistry/registries/repositories:name] StringEqualsIgnoreCase 'bdwus-portal')
+      )
+      ''' : '''
+      (
+        (!(ActionMatches{'Microsoft.ContainerRegistry/registries/repositories/content/read'})
+          AND !(ActionMatches{'Microsoft.ContainerRegistry/registries/repositories/metadata/read'}))
         OR (@Request[Microsoft.ContainerRegistry/registries/repositories:name] StringEqualsIgnoreCase 'bdwus-portal')
       )
       '''
