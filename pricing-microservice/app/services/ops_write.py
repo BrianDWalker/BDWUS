@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.services.authz import authenticated_actor
+
 import uuid
 from typing import Any
 
@@ -195,7 +197,7 @@ def create_invoice_action(invoice_id: uuid.UUID, payload: dict[str, Any]):
             str(invoice_id),
             payload.get("actionType") or "Review",
             payload.get("status") or "Open",
-            payload.get("requestedBy") or "Billing Ops",
+            authenticated_actor() or "Billing Ops",
             payload.get("notes") or "",
         ),
     )
@@ -216,7 +218,7 @@ def create_adjustment(payload: dict[str, Any]):
             payload.get("amount") or 0,
             payload.get("status") or "Pending",
             payload.get("reason") or "",
-            payload.get("createdBy") or "Billing Ops",
+            authenticated_actor() or "Billing Ops",
         ),
     )
     return require_row("SELECT TOP 1 * FROM billingops.Adjustments WHERE AdjustmentId = ?", (adjustment_id,))

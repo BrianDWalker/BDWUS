@@ -112,6 +112,6 @@ def test_billing_action_and_adjustment_contracts(monkeypatch):
     })
 
     assert 'INSERT INTO billingops.InvoiceActions' in executed[0][0]
-    assert executed[0][1][1:] == (str(invoice_id), 'Review', 'Open', 'Billing Ops', 'Created from billing module')
+    assert executed[0][1][1:] == (str(invoice_id), 'Review', 'Open', 'local:Viewer', 'Created from billing module')
     assert 'INSERT INTO billingops.Adjustments' in executed[1][0]
-    assert executed[1][1][1:] == (str(invoice_id), 'ADJ-4444', 'Credit', -100, 'Pending', 'Created from billing module', 'Billing Ops')
+    assert executed[1][1][1:] == (str(invoice_id), 'ADJ-4444', 'Credit', -100, 'Pending', 'Created from billing module', 'local:Viewer')

@@ -1,3 +1,4 @@
+import { roleAuthHeaders } from "./permissions";
 import { fetchWithTimeout } from "./fetchTimeout";
 
 const DEFAULT_OPS_API_BASE = "";
@@ -14,8 +15,9 @@ function url(path) {
 }
 
 async function requestJson(path) {
+  const authHeaders = await roleAuthHeaders(opsApiBase);
   const response = await fetchWithTimeout(url(path), {
-    headers: { "Content-Type": "application/json" }
+    headers: { "Content-Type": "application/json", ...authHeaders }
   });
   if (!response.ok) {
     let detail;

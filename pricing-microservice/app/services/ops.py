@@ -1,4 +1,5 @@
 from __future__ import annotations
+from app.services.authz import active_role_from_request, role_can
 
 import json
 import threading
@@ -6,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import Request, APIRouter, HTTPException
 
 from app.database import get_sql_connection
 from app.services import smoke_data
@@ -182,11 +183,14 @@ def seed_ops_data() -> None:
 
 
 @ops_router.get("/bootstrap")
-def ops_bootstrap() -> dict[str, Any]:
+def ops_bootstrap(request: Request) -> dict[str, Any]:
+    role = active_role_from_request(request)
+    capabilities = {"orders": "view:orders", "networkEvents": "view:network", "provisioningJobs": "view:network", "settlements": "view:billing"}
     if smoke_data.smoke_mode_enabled():
-        return smoke_data.ops_bootstrap()
+        return {key: value for key, value in smoke_data.ops_bootstrap().items() if key in capabilities and role_can(role, capabilities[key])}
     ensure_ops_storage()
-    return {"orders": fetch_all("SELECT * FROM ops.Orders WHERE IsDeleted = 0 ORDER BY CreatedAtUtc DESC"), "networkEvents": fetch_all("SELECT * FROM ops.NetworkEvents ORDER BY CreatedAtUtc DESC"), "provisioningJobs": fetch_all("SELECT * FROM ops.ProvisioningJobs ORDER BY CreatedAtUtc DESC"), "settlements": fetch_all("SELECT * FROM ops.Settlements ORDER BY CreatedAtUtc DESC")}
+    tables = {"orders": "ops.Orders WHERE IsDeleted = 0", "networkEvents": "ops.NetworkEvents", "provisioningJobs": "ops.ProvisioningJobs", "settlements": "ops.Settlements"}
+    return {key: fetch_all(f"SELECT * FROM {table} ORDER BY CreatedAtUtc DESC") for key, table in tables.items() if role_can(role, capabilities[key])}
 
 
 @ops_router.get("/orders")

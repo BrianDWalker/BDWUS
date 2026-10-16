@@ -17,8 +17,8 @@ function url(path) {
 async function requestJson(path, options = {}) {
   const authHeaders = await roleAuthHeaders(opsApiBase);
   const response = await fetchWithTimeout(url(path), {
-    headers: { "Content-Type": "application/json", ...authHeaders, ...(options.headers || {}) },
-    ...options
+    ...options,
+    headers: { "Content-Type": "application/json", ...(options.headers || {}), ...authHeaders }
   });
   if (!response.ok) {
     let detail;

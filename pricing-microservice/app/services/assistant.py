@@ -1,3 +1,4 @@
+from app.services.authz import authenticated_actor, auth_mode
 import json
 import os
 import re
@@ -11,7 +12,7 @@ from urllib import request as urlrequest
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import OpenAI
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 
 from app.database import get_sql_connection
 from app.models import (
@@ -50,22 +51,55 @@ router = APIRouter(prefix="/api/assistant", tags=["assistant"])
 
 
 def normalize_github_repository(repository: str) -> str:
-    cleaned = (repository or "").strip().strip("/")
-    parts = [item for item in cleaned.split("/") if item]
-    if len(parts) != 2:
-        raise ValueError("GitHub repository must be formatted as owner/repo.")
-    return "/".join(parts)
+    cleaned = (repository or "").strip()
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", cleaned) or any(part in {".", ".."} for part in cleaned.split("/")):
+        raise HTTPException(status_code=400, detail="GitHub repository must be owner/repo")
+    allowed = {item.strip().casefold() for item in os.getenv("ASSISTANT_ALLOWED_REPOSITORIES", "").split(",") if item.strip()}
+    if cleaned.casefold() not in allowed:
+        raise HTTPException(status_code=403, detail="Repository is not allowed")
+    return cleaned
+
+
+def require_github_write() -> None:
+    enabled = os.getenv("ASSISTANT_GITHUB_WRITES_ENABLED", "false").lower() == "true"
+    owner = os.getenv("ASSISTANT_OWNER_OBJECT_ID", "").strip()
+    if not enabled or auth_mode() != "entra" or not owner or authenticated_actor() != owner:
+        raise HTTPException(status_code=403, detail="GitHub writes require explicit enablement and the owner identity")
+
+
+def reject_github_dot_segments(value: str) -> None:
+    if "\\" in value or any(ord(c) < 32 or ord(c) == 127 for c in value):
+        raise HTTPException(status_code=400, detail="Invalid GitHub path")
+    decoded = value
+    for _ in range(8):
+        if "\\" in decoded or any(ord(c) < 32 or ord(c) == 127 for c in decoded):
+            raise HTTPException(status_code=400, detail="Invalid encoded GitHub path")
+        if any(part in {".", ".."} for part in decoded.split("/")):
+            raise HTTPException(status_code=400, detail="GitHub dot segments are forbidden")
+        next_value = urlparse.unquote(decoded)
+        if next_value == decoded:
+            return
+        decoded = next_value
+    raise HTTPException(status_code=400, detail="Excessively encoded GitHub path")
+
+
+class NoGithubRedirect(urlrequest.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Repository renames/transfers must be explicitly re-allowlisted.
+        return None
 
 
 def normalize_github_branch(branch: str) -> str:
     cleaned = (branch or "").strip()
     if not cleaned:
         raise ValueError("GitHub branch is required.")
+    reject_github_dot_segments(cleaned)
     return cleaned
 
 
 def normalize_github_path(path: str) -> str:
     cleaned = (path or "").strip().strip("/")
+    reject_github_dot_segments(cleaned)
     return cleaned
 
 
@@ -542,7 +576,7 @@ def create_change_request(
           """,
           change_request_id,
           conversation_id,
-          request.userName,
+          authenticated_actor(),
           request.mode,
           request.context.route or request.context.pageTitle or "knowledge",
           proposal.title,
@@ -570,6 +604,13 @@ def github_api_path(path: str, params: dict[str, str] | None = None) -> str:
 
 
 def github_request(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
+    reject_github_dot_segments(urlparse.urlsplit(path).path)
+    target = re.match(r"^/repos/([^/]+/[^/?]+)(?:/|\?|$)", path)
+    if not target:
+        raise HTTPException(status_code=403, detail="Only allowed repository endpoints are supported")
+    normalize_github_repository(target.group(1))
+    if method.upper() != "GET":
+        require_github_write()
     token = github_token()
     if not token:
       raise ValueError("GitHub execution requires github-token in the environment Key Vault.")
@@ -586,7 +627,7 @@ def github_request(method: str, path: str, payload: dict[str, Any] | None = None
         },
     )
     try:
-      with urlrequest.urlopen(req, timeout=30) as response:
+      with urlrequest.build_opener(NoGithubRedirect()).open(req, timeout=30) as response:
         raw = response.read().decode("utf-8")
         return json.loads(raw) if raw else {}
     except urlerror.HTTPError as exc:
@@ -737,6 +778,7 @@ def normalize_github_files_patch(github: dict[str, Any]) -> list[dict[str, str]]
 
 
 def execute_github_update(record: AssistantChangeRequest) -> dict[str, Any]:
+    require_github_write()
     github = record.patch.get("github") or {}
     repository = normalize_github_repository(str(github.get("repository") or ""))
     branch = normalize_github_branch(str(github.get("branch") or ""))
@@ -926,6 +968,49 @@ def get_change_request(change_request_id: uuid.UUID) -> AssistantChangeRequest |
       conn.close()
 
 
+def validate_proposal_payload(record: AssistantChangeRequest) -> None:
+    """Reject deterministic validation errors before committing the durable claim."""
+    if not isinstance(record.patch, dict):
+        raise HTTPException(status_code=400, detail="Proposal patch must be an object")
+    try:
+        if record.kind == "lead_create":
+            if not isinstance(record.patch.get("leadDraft"), dict):
+                raise ValueError("Lead proposal needs a leadDraft object")
+        elif record.kind == "github_update":
+            github = record.patch.get("github")
+            if not isinstance(github, dict):
+                raise ValueError("GitHub proposal needs a github object")
+            normalize_github_repository(str(github.get("repository") or ""))
+            normalize_github_branch(str(github.get("branch") or ""))
+            normalize_github_files_patch(github)
+        elif record.kind in {"ui_override", "ui_patch"}:
+            overrides = record.patch.get("overrides")
+            if not isinstance(overrides, list) or not overrides:
+                raise ValueError("UI proposal needs nonempty overrides")
+            for override in overrides:
+                if not isinstance(override, dict) or not isinstance(override.get("targetKey"), str) or not override["targetKey"].strip() or "value" not in override:
+                    raise ValueError("Each override needs targetKey and value")
+            safe_json(overrides)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
+def claim_change_request(change_request_id: uuid.UUID) -> bool:
+    conn = get_sql_connection()
+    try:
+        row = conn.cursor().execute(
+            f"UPDATE {AI_SCHEMA}.ChangeRequests SET Status = 'Applying' OUTPUT inserted.ChangeRequestId WHERE ChangeRequestId = ? AND Status = 'Proposed'",
+            change_request_id,
+        ).fetchone()
+        conn.commit()
+        return row is not None
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 @router.post("/change-requests/{change_request_id}/approve")
 def approve_change_request(change_request_id: uuid.UUID, request: AssistantApprovalRequest) -> AssistantChangeRequest:
     ensure_ai_storage()
@@ -933,10 +1018,23 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
     if record is None:
       raise ValueError("Change request not found.")
 
+    if record.status == "Approved":
+        return record
+    if record.status != "Proposed":
+        raise HTTPException(status_code=409, detail="Request is already claimed or no longer proposed")
+    if record.kind not in {"lead_create", "github_update", "ui_override", "ui_patch", "note"}:
+        raise HTTPException(status_code=400, detail="Unsupported change request kind")
+    validate_proposal_payload(record)
+    if record.kind == "github_update":
+        require_github_write()
+    if not claim_change_request(change_request_id):
+        raise HTTPException(status_code=409, detail="Request was claimed concurrently")
+    # The durable claim is committed BEFORE external effects. A crash or uncertain
+    # outcome leaves Applying and requires reconciliation, never an automatic retry.
     if record.kind == "lead_create":
-      execute_lead_create(record)
+        execute_lead_create(record)
     elif record.kind == "github_update":
-      execute_github_update(record)
+        execute_github_update(record)
 
     conn = get_sql_connection()
     try:
@@ -945,13 +1043,13 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
           f"""
           UPDATE {AI_SCHEMA}.ChangeRequests
           SET Status = ?, ApprovedAtUtc = ?, ApprovedBy = ?, AppliedAtUtc = ?, AppliedBy = ?
-          WHERE ChangeRequestId = ?
+          WHERE ChangeRequestId = ? AND Status = 'Applying'
           """,
           "Approved",
           approved_at,
-          request.approvedBy,
+          authenticated_actor(),
           approved_at,
-          request.approvedBy,
+          authenticated_actor(),
           change_request_id,
       )
       if record.kind in {"ui_override", "ui_patch"}:
@@ -975,7 +1073,7 @@ def approve_change_request(change_request_id: uuid.UUID, request: AssistantAppro
     finally:
       conn.close()
     log_audit("change_request_approved", "change_request", str(change_request_id), {
-        "approvedBy": request.approvedBy,
+        "approvedBy": authenticated_actor(),
         "overrides": record.patch.get("overrides", []),
     })
     updated = get_change_request(change_request_id)
@@ -992,24 +1090,28 @@ def reject_change_request(change_request_id: uuid.UUID, rejected_by: str = "admi
       raise ValueError("Change request not found.")
     conn = get_sql_connection()
     try:
-      conn.cursor().execute(
+      row = conn.cursor().execute(
           f"""
           UPDATE {AI_SCHEMA}.ChangeRequests
           SET Status = ?, ApprovedBy = ?, ApprovedAtUtc = ?, AppliedAtUtc = ?, AppliedBy = ?
-          WHERE ChangeRequestId = ?
+          OUTPUT inserted.ChangeRequestId
+          WHERE ChangeRequestId = ? AND Status = 'Proposed'
           """,
           "Rejected",
-          rejected_by,
+          authenticated_actor(),
           None,
           None,
           None,
           change_request_id,
-      )
+      ).fetchone()
+      if not row:
+          conn.rollback()
+          raise HTTPException(status_code=409, detail="Only proposed requests can be rejected")
       conn.commit()
     finally:
       conn.close()
     log_audit("change_request_rejected", "change_request", str(change_request_id), {
-        "rejectedBy": rejected_by,
+        "rejectedBy": authenticated_actor(),
     })
     updated = get_change_request(change_request_id)
     if updated is None:
