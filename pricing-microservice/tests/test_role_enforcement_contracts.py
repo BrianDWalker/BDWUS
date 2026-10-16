@@ -1,3 +1,4 @@
+from tests.route_helpers import iter_effective_routes
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from app.main import app, enforce_role_permissions
@@ -87,14 +88,25 @@ probe.middleware("http")(enforce_role_permissions)
 for (_method, _path), _capability in ROUTE_CAPABILITIES.items():
     probe.add_api_route(re.sub(r"\{[^}]+\}", "sample", _path), lambda: {"ok": True}, methods=[_method])
 probe.add_api_route("/api/unclassified", lambda: {"ok": True}, methods=["GET", "POST", "PUT", "DELETE"])
+probe.add_api_route("/api", lambda: {"ok": True}, methods=["GET", "POST", "PUT", "DELETE"])
 probe_client = TestClient(probe)
 
 
+def route_inventory(application):
+    return {(method, route.path) for route in iter_effective_routes(application.routes)
+            if getattr(route, "path", "") == "/api" or getattr(route, "path", "").startswith("/api/")
+            for method in route.methods}
+
+
 def test_every_registered_route_has_explicit_policy():
-    inventory = {(method.upper(), path) for path, operations in app.openapi()["paths"].items()
-                 if path.startswith("/api/") for method in operations
-                 if method in {"get", "post", "put", "patch", "delete", "head", "options"}}
-    assert inventory == set(ROUTE_CAPABILITIES)
+    # Runtime routes include include_in_schema=False endpoints, unlike OpenAPI.
+    assert route_inventory(app) == set(ROUTE_CAPABILITIES)
+
+
+def test_hidden_new_route_cannot_escape_policy_inventory():
+    hidden = FastAPI()
+    hidden.add_api_route("/api/hidden", lambda: {}, methods=["POST"], include_in_schema=False)
+    assert ("POST", "/api/hidden") in route_inventory(hidden) - set(ROUTE_CAPABILITIES)
 
 
 @pytest.mark.parametrize("role", list(ROLE_CAPABILITIES))
@@ -108,10 +120,11 @@ def test_role_route_matrix(role, route, capability):
     assert response.status_code == (200 if allowed else 403)
 
 
+@pytest.mark.parametrize("path", ["/api", "/api/unclassified"])
 @pytest.mark.parametrize("method", ["GET", "POST", "PUT", "DELETE"])
-def test_unmapped_route_denied_even_to_admin(method):
+def test_unmapped_route_denied_even_to_admin(method, path):
     token = issue_demo_role_token("Admin")["token"]
-    assert probe_client.request(method, "/api/unclassified", headers={"authorization": f"Bearer {token}"}).status_code == 403
+    assert probe_client.request(method, path, headers={"authorization": f"Bearer {token}"}).status_code == 403
 
 
 def test_actor_comes_from_platform_not_payload(monkeypatch):

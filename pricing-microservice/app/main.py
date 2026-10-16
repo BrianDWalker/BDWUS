@@ -70,7 +70,7 @@ async def enforce_role_permissions(request: Request, call_next):
     required_capability = required_capability_for_request(request.method, request.url.path)
     if request.url.path.startswith("/health/"):
         required_capability = "admin:read"
-    if request.url.path.startswith("/api/") and required_capability is None:
+    if (request.url.path == "/api" or request.url.path.startswith("/api/")) and required_capability is None:
         return JSONResponse(status_code=403, content={"detail": "API route has no authorization policy"})
     if required_capability:
         role = active_role_from_request(request)
