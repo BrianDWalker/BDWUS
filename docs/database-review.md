@@ -4,7 +4,7 @@ Owner approved all prepared changes on 12 October 2026. Production resumed after
 
 The single guarded runner prints SQL by default and refuses all targets except AZBDWUSDEV. It successfully built dev from scratch. The explicit dev-only seeder populated demo records in core sales/catalog/ops/care tables. Production received only the separately shown additive billing migration and runtime identity grants; existing tables and customer data were not rewritten. Both databases now have 55 tables.
 
-`billing_facts_proposal.sql` is the owner-approved additive migration for Subscriptions, Payments, UsageEvents and their three portal views. Its name is retained for the original review link. The views return actual table records; newly created tables are empty until real data is entered. No stored procedures are required for those paginated read-only endpoints.
+`billing_facts_proposal.sql` is the owner-approved additive migration for Subscriptions, Payments, UsageEvents and their three portal views. Its name is retained for the original review link. The views return actual table records; the explicitly approved demo load now supplies one subscription, one payment and two usage events in each database. No stored procedures are required for those paginated read-only endpoints.
 
 `grant_portal_access.sql` grants per-environment managed identities schema-scoped data permissions without db_owner or db_ddladmin. Creating users as the existing human Entra administrator succeeded without additional directory-wide permissions. No grants are hidden in automatic deployment hooks.
 

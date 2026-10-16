@@ -1,6 +1,6 @@
 # BDWUS Azure deployment plan
 
-Status: Deployed — dev/prod portals live; initial owner sign-in confirmed successful.
+Status: Deployed — approved security follow-up complete in dev/prod; initial owner sign-in confirmed successful.
 
 Prepared 12 October 2026 from the attached owner-approved seven-part scope. Owner explicitly approved all prepared changes on 12 October 2026. Foundation provisioning and approved SQL changes are complete. The existing production database, shared AXIOM resources and legacy hosting resources are retained. Work is isolated in an attached worktree; original local UI edits remain untouched.
 
@@ -106,3 +106,14 @@ Owner requests security-first follow-up PRs: deny-by-default route/actor authori
 ## Follow-up status — 15 October 2026
 
 The owner reported “it worked” for initial interactive sign-in. Legacy assistant-service source and stale handoff notes are removed in the cleanup PR. The portal assistant is retained in pricing-microservice. Security follow-up PRs and infrastructure/data proposals are not merged or deployed: no Azure changes, Azure resource or branch deletions, production data load, or branch-protection activation are authorized in this follow-up.
+
+
+## Follow-up completed — 16 October 2026
+
+Owner approval covered the specific follow-up checklist. Targeted Bicep validation and dev/prod previews passed; no resources were re-created. Existing bdwuscr is retained in ABAC mode, with conditional Writer for each GitHub identity, conditional Reader for each runtime identity, and preserved pricing-microservice Reader for the old environment identity. AXIOM registry settings remain unchanged. Both old RG Contributor and shared-registry AcrPush deployment grants are removed. Live dev and prod OIDC deployments succeeded using the narrower roles.
+
+Both databases received the approved nullable SourceQuoteId column and unique filtered index. Exact checksum-pinned billing manifests inserted one subscription, one demo payment and two usage events per database; dev ran first and repeat runs were no-ops. Existing invoices were not changed. Effective permission checks show SELECT=1, CREATE TABLE=0, db_owner=0, no inherited database/schema/object DDL/control/ownership permissions, and only the bdwus_portal application role in both databases.
+
+The required Portal checks job is active on main, with 977 passing API tests, lint and Vite build. Codex reviewed all PRs; findings were fixed or answered before merging. Thirteen approved merged branches were deleted; three other listed candidates were already absent. Unique-work branches remain. The obsolete SWA and five named old repository credentials are removed; old Container App/environment/logging remain. AI GitHub writes remain disabled.
+
+Dev deployment: https://github.com/BrianDWalker/BDWUS/actions/runs/38940464250; production deployment: https://github.com/BrianDWalker/BDWUS/actions/runs/38940798495. Final image tag: 4ac8f8354b913bc80204ba82d26ca1e82a8bc384. See docs/live-state-review.md for current observations.

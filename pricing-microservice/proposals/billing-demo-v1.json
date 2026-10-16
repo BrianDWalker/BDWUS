@@ -1,0 +1,48 @@
+{
+  "proposalOnly": true,
+  "database": "AZBDWUSP",
+  "expectedExistingRowCounts": {
+    "billing.Subscriptions": 0,
+    "billing.Payments": 0,
+    "billing.UsageEvents": 0
+  },
+  "billing.Subscriptions": [
+    {
+      "SubscriptionId": "e06e4f99-7b61-55d6-8ddc-025a990451dd",
+      "CustomerNumber": "CUST-1001",
+      "ServiceId": "A0C0946E-7FF6-5AC7-AE92-FD76AF37974A",
+      "RatePlanId": "F6743019-079A-52B1-A59D-2B8C4B8D31DA",
+      "Quantity": 10,
+      "Status": "Active",
+      "StartedAtUtc": "2026-10-01T00:00:00",
+      "EndedAtUtc": null
+    }
+  ],
+  "billing.Payments": [
+    {
+      "PaymentId": "b5eb72ca-6536-5147-8c29-48b1b0c4f5bd",
+      "CustomerNumber": "CUST-1001",
+      "InvoiceId": "99451D73-9E96-52CC-ADF6-EE0259DCD96B",
+      "Amount": "50.00",
+      "Currency": "USD",
+      "Status": "Demo",
+      "PaidAtUtc": "2026-10-10T12:00:00"
+    }
+  ],
+  "billing.UsageEvents": [
+    {
+      "UsageEventId": "01c4bf81-7b7f-57bf-a7a0-80f63b8a61b5",
+      "SubscriptionId": "e06e4f99-7b61-55d6-8ddc-025a990451dd",
+      "Quantity": "125.0000",
+      "Unit": "minutes",
+      "OccurredAtUtc": "2026-10-10T12:00:00"
+    },
+    {
+      "UsageEventId": "3d7c6a38-fab8-58d7-b3b6-d235302ea16a",
+      "SubscriptionId": "e06e4f99-7b61-55d6-8ddc-025a990451dd",
+      "Quantity": "80.0000",
+      "Unit": "minutes",
+      "OccurredAtUtc": "2026-10-11T12:00:00"
+    }
+  ]
+}

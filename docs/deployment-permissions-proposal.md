@@ -1,6 +1,6 @@
-# Deployment permission proposal — owner approval required
+# Deployment permissions — approved and executed 16 October 2026
 
-No live roles or registry settings changed. Both deployment identities still have Contributor on their own resource group and AcrPush across the AXIOM registry; the exact removal candidates are below.
+The owner-approved bdwuscr cutover and role reduction are complete. Both deployment identities now use resource-scoped deployment roles and conditional repository Writer; their old RG Contributor and AXIOM AcrPush grants were removed. The original alternatives and exact removed IDs below are retained as an audit record.
 
 ## Recommended decision
 
@@ -16,7 +16,7 @@ Source: [Microsoft ABAC migration and conditions](https://learn.microsoft.com/en
 
 Replace RG Contributor with a custom BDWUS Portal Deployer role assigned only to the existing Container App, managed environment and runtime identity. On these scopes it can read/update the app, read revisions/environment/identity and assign that one identity. The current `az containerapp update` implementation also reads existing app secrets, so listSecrets is explicitly included; removing it requires a separately reviewed REST deployment implementation. It cannot manage SQL, vaults, budgets, other resource-group resources, RBAC or delete the app.
 
-Azure RBAC cannot restrict containerApps/write to the image field: an identity that updates the app can change its configuration or run code as its runtime identity. The remaining trust boundary is the protected main branch and production environment approval. This is narrower than Contributor, not image-only security. Compile passed; live least-privilege deployment validation awaits approval. Incremental Bicep does NOT remove prior grants.
+Azure RBAC cannot restrict containerApps/write to the image field: an identity that updates the app can change its configuration or run code as its runtime identity. The remaining trust boundary is the protected main branch and production environment approval. This is narrower than Contributor, not image-only security. Compile, Azure validation and live least-privilege deployments passed in dev and production. Incremental Bicep does NOT remove prior grants.
 
 ## Specific old assignments to remove AFTER approval and replacement validation
 
@@ -25,7 +25,7 @@ Azure RBAC cannot restrict containerApps/write to the image field: an identity t
 - prod Contributor: `/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourcegroups/rg-bdwus-prod/providers/Microsoft.Authorization/roleAssignments/767e378b-b53a-53ee-a702-7f932b57ee9c`
 - prod AcrPush: `/subscriptions/a8f3fd5d-0d2f-4715-b685-728b21d1cc10/resourcegroups/rg-financial-advisor-8a42/providers/Microsoft.ContainerRegistry/registries/crfinancialadvisor8a42vuti2u/providers/Microsoft.Authorization/roleAssignments/8fcda206-8850-557a-85cc-423903506ad6`
 
-Do not run either provisioning template yet. Approval must identify the registry option, the new assignments, app/variable cutover, and the four old assignments above. No branch or Azure resource deletion is bundled with this proposal.
+The owner approved bdwuscr reuse, new assignments, app/variable cutover and the four old assignment removals above. They are complete; the alternative new-registry template was not used.
 
 ## Mandatory staged migration for an existing registry
 
@@ -33,9 +33,14 @@ Read the chosen registry's live mode first. While it still reports LegacyRegistr
 
 For approved bdwuscr reuse, deploy the retained legacy environment identity's `pricing-microservice` Reader using the cutover module in PR #29 before switching. No AXIOM registry mode change is authorized. Only after all replacement assignments are visible, switch bdwuscr to AbacRepositoryPermissions, read back the live mode, and use `verifiedRegistryRoleAssignmentMode=AbacRepositoryPermissions` for subsequent identity maintenance. Verify actual pushes/pulls and portal health before removing obsolete broad grants. Incremental Bicep cannot revoke them automatically.
 
-The identity template is a maintenance proposal for the already-existing portal apps and environments; it is not an initial empty-resource-group bootstrap. Its live deployment compatibility remains unverified until approved.
+The identity template is a maintenance proposal for the already-existing portal apps and environments; it is not an initial empty-resource-group bootstrap. Its live compatibility was verified by successful dev/prod OIDC deployments using only the replacement roles.
 
 
 ## Ongoing foundation maintenance after cutover
 
 The full foundation template also accepts `registryRoleAssignmentMode`, supplied by `REGISTRY_ROLE_ASSIGNMENT_MODE` in each azd environment. Set it to the observed mode, AbacRepositoryPermissions after this cutover, and point SHARED_REGISTRY_RESOURCE_ID at bdwuscr. Its runtime assignment then uses the same conditional Reader role and deterministic assignment ID as the targeted identity template, rather than reintroducing ineffective AcrPull. Existing legacy deployments require LegacyRegistryPermissions explicitly in their environment. Do not re-provision the full foundation as part of this targeted migration.
+
+
+## Executed decision — 16 October 2026
+
+The owner approved bdwuscr reuse and the named role replacement/cutover/removals. All replacement roles, including the retained legacy reader, were staged and verified before enabling ABAC. Reader conditions include only actual Reader actions. Live dev and production OIDC build/push/update deployments succeeded after the four named old broad deployment grants were removed. Registry ARM Reader supports az acr login; repository data access remains conditional. No AXIOM registry mode change occurred.

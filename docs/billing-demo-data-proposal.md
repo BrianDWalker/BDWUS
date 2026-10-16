@@ -1,0 +1,20 @@
+# Billing demo data — approved and loaded 16 October 2026
+
+Production was verified on 15 October to have zero subscriptions, payments and usage events. Dev counts could not be reverified in this session; zero is a rehearsal precondition to check, not an observed dev count. The original dev seeder populates prerequisite business tables; it does not populate these new billing facts. Therefore there is no existing dev billing-facts dataset to copy. Propose the same small deterministic dataset in dev first, validate the UI, then load the identical facts into prod after a separate approval. The dev and prod manifests bind different target database names and have separate checksums; never ignore or override that binding. Use DefaultAzureCredential / the existing managed-identity SQL connection, parameterized inserts and one transaction; no SQL password, CSV export, Blob upload, schema change, invoice-balance update, delete or update of any existing row.
+
+Exact proposed production rows are versioned in [billing-demo-v1.json](../pricing-microservice/proposals/billing-demo-v1.json). The manifest fixes IDs, amounts, dates, status and all foreign keys; it is not an executable load and is not in the bootstrap manifest. It adds **1 Subscription, 1 Payment and 2 UsageEvents**, then the existing three views expose those rows without a view change. Payment status Demo labels the synthetic payment; it does not collect money or settle an invoice. Existing prerequisite IDs were read from production: CUST-1001, Cloud Voice service/plan and INV-1001. Confirm the same references in dev before its rehearsal; if they differ, stop and issue a separately reviewed manifest rather than substitute IDs silently.
+
+On an approved future load: verify the target DB name, manifest SHA, all prerequisites/ownership (invoice belongs to the customer), all four IDs/values and table counts under transaction locks. For the first load, all manifest IDs must be absent and all three table totals must satisfy expectedExistingRowCounts=0/0/0; insert all four rows atomically. For a rerun, compare the four stored rows exactly and return a no-op when they all match; do not apply the initial zero-count requirement on that path. Reject partial prior loads, collisions or mismatches and roll back without inserting anything. Use a transaction with locking/unique keys; never infer customer/payment relations by row order. Capture before/after counts and verify the three views, without modifying existing invoices. No loader or prod seeder permission has been enabled here; bootstrap_demo_data.py still refuses prod.
+
+The owner approved both checksum-pinned manifests and the dev-first four-row loads. Both loads are complete, with exact-match no-op reruns verified.
+
+`ms.vPricingContext` is synthetic: it contains generated subscription identifiers and fixed pricing assumptions. It is legacy pricing/demo context, not a billing ledger, payment history or measured usage source.
+
+Production manifest SHA-256: `f9de7bb79df167ff82c9d6454e000d5398a0c3e408a799d03bfd21320027612f`.
+
+Dev rehearsal: [billing-demo-dev-v1.json](../pricing-microservice/proposals/billing-demo-dev-v1.json), bound to AZBDWUSDEV. SHA-256: `75182503fe87c7a2d063d05b0bc41290c73c21a281cee8e47097c234b49dfc02`. Its first-load zero-row and foreign-key preconditions were verified before the approved dev transaction. The initial proposal text above records the earlier inventory; current counts and execution are below.
+
+
+## Execution — 16 October 2026
+
+Owner approved both exact manifests. After matching foreign keys and empty-table preconditions in dev, a single transaction inserted the four rows. Dev retry was a no-op. The same checks and transaction succeeded separately in production, and its retry was also a no-op. Final view counts in each database are 1 subscription, 1 payment and 2 usage events. No existing invoice balance was changed. The JSON documents retain proposalOnly=true as the immutable approved payloads; this execution record does not alter their checksums.
