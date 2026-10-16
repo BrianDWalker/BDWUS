@@ -170,7 +170,7 @@ def test_note_proposal_is_valid_without_side_effects():
     assistant.validate_proposal_payload(SimpleNamespace(kind="note", patch={}))
 
 
-@pytest.mark.parametrize("path", ["../../../../user/repos", "%2e%2e/%2e%2e/user/repos", "%252e%252e/user/repos", "folder/../secret", "folder/./secret"])
+@pytest.mark.parametrize("path", ["../../../../user/repos", "%2e%2e/%2e%2e/user/repos", "%252e%252e/user/repos", "folder/../secret", "folder/./secret", "%2e%2e%5c%2e%2e%5cuser/repos", "safe%0aname"])
 def test_github_traversal_denied_before_credentials(monkeypatch, path):
     monkeypatch.setenv("ASSISTANT_ALLOWED_REPOSITORIES", "BrianDWalker/BDWUS")
     monkeypatch.setattr(assistant, "github_token", lambda: pytest.fail("no credentials for traversal"))

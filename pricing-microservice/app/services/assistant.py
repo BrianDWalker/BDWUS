@@ -72,6 +72,8 @@ def reject_github_dot_segments(value: str) -> None:
         raise HTTPException(status_code=400, detail="Invalid GitHub path")
     decoded = value
     for _ in range(8):
+        if "\\" in decoded or any(ord(c) < 32 or ord(c) == 127 for c in decoded):
+            raise HTTPException(status_code=400, detail="Invalid encoded GitHub path")
         if any(part in {".", ".."} for part in decoded.split("/")):
             raise HTTPException(status_code=400, detail="GitHub dot segments are forbidden")
         next_value = urlparse.unquote(decoded)
