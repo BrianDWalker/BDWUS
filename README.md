@@ -95,7 +95,17 @@ azd provision
 
 Foundations create the dev database, identity, vault, consumption environment, Insights and budget. Before the second provisioning: populate entra-client-secret, configure assignment-required Entra sign-in, review and apply dev SQL, review and execute grant_portal_access.sql in each database as the Entra SQL administrator, and publish the reviewed image. Do not grant db_owner/db_ddladmin to runtime identities. Do not apply dev schema files to prod.
 
-After the required setup and approval:
+After the required setup and approval, local image publishing additionally needs an authorized Repository Writer assignment for bdwus-portal; Owner alone grants no repository data access in ABAC mode. Existing releases normally use the GitHub OIDC workflow, whose identities already have that assignment.
+
+Update and verify the separate GitHub variables for BOTH dev and prod during registry cutover (repeat with `--env prod`):
+
+```sh
+gh variable set ACR_NAME --repo BrianDWalker/BDWUS --env dev --body bdwuscr
+gh variable set ACR_LOGIN_SERVER --repo BrianDWalker/BDWUS --env dev --body bdwuscr.azurecr.io
+gh variable list --repo BrianDWalker/BDWUS --env dev
+```
+
+Both environments were updated and their OIDC deployments verified during the approved follow-up. For an authorized local publishing identity:
 
 ```sh
 az acr login --name bdwuscr
