@@ -30,7 +30,7 @@ jobs:
       PORTAL_RESOURCE_GROUP: ${{ vars.PORTAL_RESOURCE_GROUP }}
       PORTAL_APP_NAME: ${{ vars.PORTAL_APP_NAME }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify production requires the owner reviewer
         if: inputs.environment == 'prod'
         env:
@@ -40,7 +40,7 @@ jobs:
           gh api "repos/$GITHUB_REPOSITORY/environments/prod" | \
             jq -e --arg owner "$GITHUB_REPOSITORY_OWNER" \
               'any(.protection_rules[]?; .type == "required_reviewers" and (.reviewers | length) == 1 and .reviewers[0].reviewer.login == $owner)' >/dev/null
-      - uses: azure/login@v2
+      - uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
