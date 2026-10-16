@@ -4,10 +4,10 @@ param environmentName string
 param location string = 'eastus'
 param repository string = 'BrianDWalker/BDWUS'
 param sharedRegistryResourceId string
-// Required acknowledgement only after the read-only live mode check in the runbook.
-@allowed(['AbacRepositoryPermissions'])
+// Acknowledge the observed mode. Stage replacement roles in legacy mode BEFORE switching.
+@allowed(['LegacyRegistryPermissions', 'AbacRepositoryPermissions'])
 param verifiedRegistryRoleAssignmentMode string
-// Existing shared registry MUST first undergo an owner-approved ABAC migration.
+// Existing registry mode changes require an approved consumer migration.
 // This template deliberately does not change shared registry configuration.
 var registryParts = split(sharedRegistryResourceId, '/')
 resource deploymentRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
