@@ -1,0 +1,13 @@
+# Billing demo-data proposal — awaiting owner approval
+
+Both environments currently have zero subscriptions, payments and usage events. The original dev seeder populates prerequisite business tables; it does not populate these new billing facts. Therefore there is no existing dev billing-facts dataset to copy. Propose the same small deterministic dataset in dev first, validate the UI, then load the identical facts into prod after a separate approval. Use DefaultAzureCredential / the existing managed-identity SQL connection, parameterized inserts and one transaction; no SQL password, CSV export, Blob upload, schema change, invoice-balance update, delete or update of any existing row.
+
+Exact proposed production rows are versioned in [billing-demo-v1.json](../pricing-microservice/proposals/billing-demo-v1.json). The manifest fixes IDs, amounts, dates, status and all foreign keys; it is not an executable load and is not in the bootstrap manifest. It adds **1 Subscription, 1 Payment and 2 UsageEvents**, then the existing three views expose those rows without a view change. Payment status Demo labels the synthetic payment; it does not collect money or settle an invoice. Existing prerequisite IDs were read from production: CUST-1001, Cloud Voice service/plan and INV-1001. Confirm the same references in dev before its rehearsal; if they differ, stop and issue a separately reviewed manifest rather than substitute IDs silently.
+
+On an approved future load: verify the target DB name, manifest SHA, all prerequisites/ownership (invoice belongs to the customer), absence of existing rows or an exact prior manifest match, and unchanged expected counts. Insert missing IDs only, compare existing ID values exactly, and roll back on any collision or mismatch. A second run is a no-op only when all four stored rows exactly match. Use a transaction with locking/unique keys; never infer customer/payment relations by row order. Capture before/after counts and verify the three views, without modifying existing invoices. No loader or prod seeder permission has been enabled here; bootstrap_demo_data.py still refuses prod.
+
+Approval must identify this manifest and its checksum, allow dev rehearsal, and separately allow four production inserts. No production data was written.
+
+`ms.vPricingContext` is synthetic: it contains generated subscription identifiers and fixed pricing assumptions. It is legacy pricing/demo context, not a billing ledger, payment history or measured usage source.
+
+Manifest SHA-256: `f9de7bb79df167ff82c9d6454e000d5398a0c3e408a799d03bfd21320027612f`.
