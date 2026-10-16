@@ -168,3 +168,17 @@ def test_invalid_proposal_remains_proposed(monkeypatch, kind, patch):
 
 def test_note_proposal_is_valid_without_side_effects():
     assistant.validate_proposal_payload(SimpleNamespace(kind="note", patch={}))
+
+
+@pytest.mark.parametrize("path", ["../../../../user/repos", "%2e%2e/%2e%2e/user/repos", "%252e%252e/user/repos", "folder/../secret", "folder/./secret"])
+def test_github_traversal_denied_before_credentials(monkeypatch, path):
+    monkeypatch.setenv("ASSISTANT_ALLOWED_REPOSITORIES", "BrianDWalker/BDWUS")
+    monkeypatch.setattr(assistant, "github_token", lambda: pytest.fail("no credentials for traversal"))
+    with pytest.raises(HTTPException):
+        assistant.get_github_file("BrianDWalker/BDWUS", "main", path)
+    with pytest.raises(HTTPException):
+        assistant.github_request("GET", "/repos/BrianDWalker/BDWUS/contents/" + path)
+
+
+def test_github_redirects_do_not_forward_credentials():
+    assert assistant.NoGithubRedirect().redirect_request(None, None, 301, "Moved", {}, "https://other.example/") is None

@@ -67,15 +67,37 @@ def require_github_write() -> None:
         raise HTTPException(status_code=403, detail="GitHub writes require explicit enablement and the owner identity")
 
 
+def reject_github_dot_segments(value: str) -> None:
+    if "\\" in value or any(ord(c) < 32 or ord(c) == 127 for c in value):
+        raise HTTPException(status_code=400, detail="Invalid GitHub path")
+    decoded = value
+    for _ in range(8):
+        if any(part in {".", ".."} for part in decoded.split("/")):
+            raise HTTPException(status_code=400, detail="GitHub dot segments are forbidden")
+        next_value = urlparse.unquote(decoded)
+        if next_value == decoded:
+            return
+        decoded = next_value
+    raise HTTPException(status_code=400, detail="Excessively encoded GitHub path")
+
+
+class NoGithubRedirect(urlrequest.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # Repository renames/transfers must be explicitly re-allowlisted.
+        return None
+
+
 def normalize_github_branch(branch: str) -> str:
     cleaned = (branch or "").strip()
     if not cleaned:
         raise ValueError("GitHub branch is required.")
+    reject_github_dot_segments(cleaned)
     return cleaned
 
 
 def normalize_github_path(path: str) -> str:
     cleaned = (path or "").strip().strip("/")
+    reject_github_dot_segments(cleaned)
     return cleaned
 
 
@@ -580,6 +602,7 @@ def github_api_path(path: str, params: dict[str, str] | None = None) -> str:
 
 
 def github_request(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
+    reject_github_dot_segments(urlparse.urlsplit(path).path)
     target = re.match(r"^/repos/([^/]+/[^/?]+)(?:/|\?|$)", path)
     if not target:
         raise HTTPException(status_code=403, detail="Only allowed repository endpoints are supported")
@@ -602,7 +625,7 @@ def github_request(method: str, path: str, payload: dict[str, Any] | None = None
         },
     )
     try:
-      with urlrequest.urlopen(req, timeout=30) as response:
+      with urlrequest.build_opener(NoGithubRedirect()).open(req, timeout=30) as response:
         raw = response.read().decode("utf-8")
         return json.loads(raw) if raw else {}
     except urlerror.HTTPError as exc:
