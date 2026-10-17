@@ -1,11 +1,11 @@
-FROM node:22-bookworm-slim AS ui
+FROM node:25-bookworm-slim AS ui
 WORKDIR /ui
 COPY web-ui/package*.json ./
 RUN npm ci
 COPY web-ui/ ./
 RUN npm run build
 
-FROM python:3.11-slim-bookworm
+FROM python:3.15-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORTAL_STATIC_DIR=/app/static
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates unixodbc && \
