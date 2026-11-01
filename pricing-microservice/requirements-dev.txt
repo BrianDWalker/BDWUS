@@ -2,5 +2,5 @@
 pytest
 
 httpx
-ruff==0.17.0
+ruff==0.17.3
 pre-commit
